@@ -2,11 +2,11 @@ export interface BazaarProduct {
   product_id: string
   quick_status: {
     productId: string
-    sellPrice: number   // lowest instant-sell ask  (what sellers ask)
+    sellPrice: number   // lowest ask  (sellers want this much)
     sellVolume: number
     sellMovingWeek: number
     sellOrders: number
-    buyPrice: number    // highest instant-buy bid   (what buyers offer)
+    buyPrice: number    // highest bid (buyers offer this much)
     buyVolume: number
     buyMovingWeek: number
     buyOrders: number
@@ -24,26 +24,26 @@ export interface FlipRow {
   name: string
   iconUrl: string
 
-  // ── Instant flip (no waiting) ──────────────────────────────────────────────
-  // Buy at lowest ask (sellPrice), immediately resell at highest bid (buyPrice)
-  instantBuyPrice: number
-  instantSellPrice: number
-  instantProfit: number   // per item, after tax
-  instantMargin: number   // %
+  // ── Order flip (the main money-maker) ─────────────────────────────────────
+  // Post buy order just above top bid → you fill before the queue
+  // Post sell order just below lowest ask → you fill before the queue
+  // Profit = spread minus 1.25% sell tax
+  buyOrder: number
+  sellOrder: number
+  orderProfit: number   // per item, after tax
+  orderMargin: number   // %
 
-  // ── Order flip (place orders, wait for fills) ──────────────────────────────
-  // Post buy order 1 coin above highest bid → fills before queue
-  // Post sell order 1 coin below lowest ask → fills before queue
-  buyOrder: number        // price you post your buy order at
-  sellOrder: number       // price you post your sell order at
-  orderProfit: number     // per item gross, after tax
-  orderMargin: number     // %
+  // ── Instant flip (buy ask, sell bid immediately) ───────────────────────────
+  instantBuyPrice: number   // = sellPrice (lowest ask) — what you pay
+  instantSellPrice: number  // = buyPrice  (highest bid) — what you get back
+  instantProfit: number     // usually negative — buying spread, not closing it
+  instantMargin: number     // %
 
-  // ── Liquidity / fill-speed signals ────────────────────────────────────────
-  weeklyVolume: number    // buyMovingWeek
-  buyOrders: number       // # of open buy orders (competition for your buy)
-  sellOrders: number      // # of open sell orders (competition for your sell)
-  fillScore: number       // 0–100 composite: high vol + few orders = fast fill
+  // ── Liquidity signals ─────────────────────────────────────────────────────
+  weeklyVolume: number
+  buyOrders: number
+  sellOrders: number
+  fillScore: number   // 0–100; high = fast fills
 
   flipType: 'instant' | 'order'
 }
@@ -66,19 +66,16 @@ function fmt(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-// Normalise a value in [0, max] to [0, 100]
 function norm(val: number, max: number): number {
   return Math.min(100, (val / max) * 100)
 }
 
 export async function fetchBazaarFlips(): Promise<FlipRow[]> {
   const res = await fetch(BAZAAR_URL, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`Hypixel API error: ${res.status}`)
+  if (!res.ok) throw new Error(`Hypixel API ${res.status}`)
   const data: BazaarResponse = await res.json()
 
   const products = Object.values(data.products)
-
-  // Pre-compute max weekly volume for normalisation
   const maxVol = Math.max(...products.map((p) => p.quick_status.buyMovingWeek))
 
   const rows: FlipRow[] = []
@@ -87,29 +84,28 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
     const { quick_status: q } = product
     const id = product.product_id
 
-    // Must have real prices and real market activity
-    if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek < 1000) continue
-    // Skip items with negative spread (market is crossed / stale)
-    if (q.sellPrice <= q.buyPrice) continue
+    if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
 
-    // ── Instant flip ────────────────────────────────────────────────────────
-    // You pay the lowest ask (sellPrice), get the highest bid (buyPrice) back
-    const instantProfit = fmt(q.buyPrice * (1 - TAX) - q.sellPrice)
-    const instantMargin = fmt((instantProfit / q.sellPrice) * 100)
+    // sellPrice = lowest ask, buyPrice = highest bid
+    // Normal market: sellPrice > buyPrice (ask above bid)
+    // Order flip profit = spread - tax. Skip if spread is zero or negative.
+    const spread = q.sellPrice - q.buyPrice
+    if (spread <= 0) continue
 
     // ── Order flip ──────────────────────────────────────────────────────────
-    // Post buy order at (buyPrice + 0.1) — 1 tick above top bid → fills first
-    // Post sell order at (sellPrice - 0.1) — 1 tick below lowest ask → fills first
-    // The spread between ask and bid is your gross profit
+    // Undercut queue by 0.1 on both sides
     const buyOrder = fmt(q.buyPrice + 0.1)
     const sellOrder = fmt(q.sellPrice - 0.1)
     const orderProfit = fmt(sellOrder * (1 - TAX) - buyOrder)
     const orderMargin = fmt((orderProfit / buyOrder) * 100)
 
+    // ── Instant flip ────────────────────────────────────────────────────────
+    // Pay the ask, get the bid back — almost always a loss on tightly priced items
+    const instantProfit = fmt(q.buyPrice * (1 - TAX) - q.sellPrice)
+    const instantMargin = fmt((instantProfit / q.sellPrice) * 100)
+
     // ── Fill score ──────────────────────────────────────────────────────────
-    // Higher volume = faster fills. More open orders = more competition = slower.
-    // Score = 70% volume signal + 30% order-depth signal
-    const volScore = norm(q.buyMovingWeek, maxVol) // 0–100, high = good
+    const volScore = norm(q.buyMovingWeek, maxVol)
     const depthPenalty = Math.min(100, ((q.buyOrders + q.sellOrders) / 200) * 100)
     const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
 
@@ -117,14 +113,14 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
       id,
       name: formatName(id),
       iconUrl: iconUrl(id),
-      instantBuyPrice: q.sellPrice,
-      instantSellPrice: q.buyPrice,
-      instantProfit,
-      instantMargin,
       buyOrder,
       sellOrder,
       orderProfit,
       orderMargin,
+      instantBuyPrice: q.sellPrice,
+      instantSellPrice: q.buyPrice,
+      instantProfit,
+      instantMargin,
       weeklyVolume: q.buyMovingWeek,
       buyOrders: q.buyOrders,
       sellOrders: q.sellOrders,

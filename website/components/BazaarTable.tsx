@@ -60,7 +60,7 @@ export default function BazaarTable() {
 
   const [mode, setMode] = useState<'instant' | 'order'>('order')
   const [minProfit, setMinProfit] = useState(0)
-  const [minVolume, setMinVolume] = useState(50_000)
+  const [minVolume, setMinVolume] = useState(0)
   const [search, setSearch] = useState('')
 
   // ── Budget / qty inputs ──
@@ -123,7 +123,7 @@ export default function BazaarTable() {
   const filtered = useMemo(() => {
     const profit = (r: FlipRow) => (mode === 'instant' ? r.instantProfit : r.orderProfit)
     return rows
-      .filter((r) => profit(r) > 0)                         // only positive flips
+      .filter((r) => mode === 'order' ? r.orderProfit > 0 : true)
       .filter((r) => profit(r) >= minProfit)
       .filter((r) => r.weeklyVolume >= minVolume)
       .filter((r) => (search ? r.name.toLowerCase().includes(search.toLowerCase()) : true))
@@ -448,7 +448,9 @@ export default function BazaarTable() {
 
                   {/* Profit / item */}
                   <td className="px-3 py-3 text-right">
-                    <span className="badge-green">+{coins(profit)}</span>
+                    <span className={profit >= 0 ? 'badge-green' : 'badge-red'}>
+                      {profit >= 0 ? '+' : ''}{coins(profit)}
+                    </span>
                   </td>
 
                   {/* Margin */}
