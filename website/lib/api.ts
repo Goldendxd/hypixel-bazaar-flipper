@@ -71,7 +71,7 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
     const id = product.product_id
 
     // Skip items with no market activity
-    if (!q.buyPrice || !q.sellPrice || q.weeklyVolume === 0) continue
+    if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
 
     // --- Instant flip ---
     // You buy at the lowest ask (sellPrice) and resell at the highest bid (buyPrice)

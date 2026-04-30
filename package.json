@@ -1,0 +1,12 @@
+{
+  "name": "hypixel-bazaar-flipper",
+  "private": true,
+  "workspaces": [
+    "website"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace website",
+    "build": "npm run build --workspace website",
+    "start": "npm run start --workspace website"
+  }
+}
