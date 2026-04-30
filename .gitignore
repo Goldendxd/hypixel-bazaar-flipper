@@ -26,3 +26,9 @@ Thumbs.db
 # Editor
 .vscode/
 *.swp
+
+# Claude Code internals
+.claude/
+
+# Planning files
+plan/
