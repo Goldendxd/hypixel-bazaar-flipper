@@ -49,7 +49,7 @@ export interface FlipRow {
   flipType: 'instant' | 'order'
 }
 
-const BAZAAR_URL = 'https://api.hypixel.net/skyblock/bazaar'
+const BAZAAR_URL = '/api/bazaar'
 const TAX = 0.0125
 
 export function formatName(id: string): string {
