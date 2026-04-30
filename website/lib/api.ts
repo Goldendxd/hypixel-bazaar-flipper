@@ -87,10 +87,10 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
 
     if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
 
-    // sellPrice = lowest ask, buyPrice = highest bid
-    // Normal market: sellPrice > buyPrice (ask above bid)
-    // Order flip profit = spread - tax. Skip if spread is zero or negative.
-    const spread = q.sellPrice - q.buyPrice
+    // buyPrice = highest bid, sellPrice = lowest ask
+    // In a healthy Bazaar market, buyPrice should be below sellPrice.
+    // If the spread is inverted or flat, there is no order-flip opportunity.
+    const spread = q.buyPrice - q.sellPrice
     if (spread <= 0) continue
 
     // ── Order flip ──────────────────────────────────────────────────────────

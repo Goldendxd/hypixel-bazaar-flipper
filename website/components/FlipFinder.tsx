@@ -180,10 +180,10 @@ export default function FlipFinder() {
   // Filters
   const [maxMoney, setMaxMoney]           = useState<number | ''>(10_000_000)
   const [maxItems, setMaxItems]           = useState<number | ''>(71_680)
-  const [minWeeklyBuy, setMinWeeklyBuy]   = useState<number | ''>(10_000)
-  const [minWeeklySell, setMinWeeklySell] = useState<number | ''>(10_000)
-  const [minCurBuy, setMinCurBuy]         = useState<number | ''>(1_000)
-  const [minCurSell, setMinCurSell]       = useState<number | ''>(1_000)
+  const [minWeeklyBuy, setMinWeeklyBuy]   = useState<number | ''>(0)
+  const [minWeeklySell, setMinWeeklySell] = useState<number | ''>(0)
+  const [minCurBuy, setMinCurBuy]         = useState<number | ''>(0)
+  const [minCurSell, setMinCurSell]       = useState<number | ''>(0)
 
   const [showFilter, setShowFilter] = useState<'all' | 'starred'>('all')
   const [starred, setStarred]   = useState<Set<string>>(new Set())
@@ -221,7 +221,6 @@ export default function FlipFinder() {
   const filtered = useMemo(() => {
     return rows
       .filter((r) => !blocked.has(r.id))
-      .filter((r) => r.orderProfit > 0)
       .filter((r) => minWeeklyBuy   === '' || r.weeklyVolume      >= minWeeklyBuy)
       .filter((r) => minWeeklySell  === '' || r.sellMovingWeek    >= minWeeklySell)
       .filter((r) => minCurBuy      === '' || r.buyOrders         >= minCurBuy)
@@ -309,8 +308,8 @@ export default function FlipFinder() {
         {!loading && filtered.length === 0 && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
             <div style={{ fontSize: '2rem', marginBottom: 10, opacity: 0.3 }}>⊘</div>
-            <div style={{ fontWeight: 600 }}>No profitable flips match your filters</div>
-            <div style={{ fontSize: '0.82rem', marginTop: 4, opacity: 0.6 }}>Try raising the budget or lowering volume requirements</div>
+            <div style={{ fontWeight: 600 }}>No flips match your filters</div>
+            <div style={{ fontSize: '0.82rem', marginTop: 4, opacity: 0.6 }}>Try lowering the volume requirements or clearing hidden items</div>
           </div>
         )}
 
