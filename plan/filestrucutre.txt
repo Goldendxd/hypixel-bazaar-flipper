@@ -1,0 +1,20 @@
+project-root/
+├── website/ # Next.js app
+│ ├── package.json
+│ ├── next.config.js
+│ ├── vercel.json
+│ ├── app/
+│ │ ├── layout.tsx
+│ │ ├── page.tsx
+│ │ └── globals.css
+│ ├── components/
+│ │ └── BazaarTable.tsx
+│ └── lib/
+│ └── api.ts
+├── bot/
+│ ├── bot.py
+│ ├── requirements.txt
+│ └── .env.example
+└── .github/
+└── workflows/
+└── flip.yml

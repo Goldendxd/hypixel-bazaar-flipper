@@ -1,0 +1,27 @@
+You are a world-class full-stack developer and DevOps engineer. You will build a complete, ready‑to‑deploy Hypixel SkyBlock Bazaar Flipper solution consisting of two independent parts:
+
+## Part 1: Website (like bzflipper.imtimo.dev)
+- A Next.js static site (App Router) that fetches live Bazaar data from the Hypixel API **client-side**. No backend.
+- The site shows a table of the best bazaar flips (both "instant buy → instant sell" spreads and "order flip" margins).
+- It must have filters: minimum profit, minimum volume, item whitelist/blacklist, and a toggle between "instant flip" and "order flip".
+- Each row shows: item icon (using Hypixel's image URL), item name, buy price, sell price, estimated profit (coins), profit margin %, daily buy volume, and a "copy /viewauction" button for the item (for when it's a crafted item sold on AH).
+- The design should be dark‑themed, clean, and responsive.
+- The site will be deployed to Vercel (free). Generate a `vercel.json` for static export if needed, otherwise default Next.js settings.
+
+## Part 2: Discord Flip Alerts Bot (runs on GitHub Actions)
+- A single Python script (`bot.py`) that, when executed, fetches the Hypixel Bazaar API and the Auction House data (via SkyCoflnet's free API or Hypixel's first few pages).
+- It computes:
+  - **Bazaar instant flips**: profit = `buyPrice * (1 - 0.0125) - sellPrice`, only items with profit > 500k and `buyMovingWeek7d > 5M`.
+  - **Bazaar order flips**: margin = `(sellOffer - buyOrder) / buyOrder * 100`, min margin 15%, min weekly volume 1M.
+  - **Auction House snipes**: compare new BIN auctions against a reference price cache (from SkyCoflnet median). If `bin_price < cache[item_id] * 0.6` and profit > 1M, flag it.
+- The script groups the top 3 flips from each category and sends them as rich Discord embeds to a **Discord webhook** (webhook URL stored in a GitHub secret).
+- For AH snipes, the embed must include a plaintext command like `/viewauction AUCTION_ID` that I can copy and paste into Hypixel.
+- The script must handle API errors gracefully and use `requests` library. It must not exceed the rate limits (use a single page fetch for AH).
+
+## GitHub Actions Automation
+- The repo will contain a `.github/workflows/flip.yml` file that runs `bot.py` every 5 minutes using `schedule`.
+- The workflow sets up Python, installs dependencies from `requirements.txt`, and runs the script. The Discord webhook URL is passed as an environment variable from GitHub Secrets.
+- Everything must be completely free, no server costs.
+
+## Deliverables
+Generate ALL the following files with full source code:
