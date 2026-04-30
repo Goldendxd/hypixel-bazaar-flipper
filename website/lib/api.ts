@@ -40,10 +40,11 @@ export interface FlipRow {
   instantMargin: number     // %
 
   // ── Liquidity signals ─────────────────────────────────────────────────────
-  weeklyVolume: number
-  buyOrders: number
-  sellOrders: number
-  fillScore: number   // 0–100; high = fast fills
+  weeklyVolume: number      // buyMovingWeek
+  sellMovingWeek: number    // sellMovingWeek
+  buyOrders: number         // current open buy orders
+  sellOrders: number        // current open sell orders
+  fillScore: number         // 0–100; high = fast fills
 
   flipType: 'instant' | 'order'
 }
@@ -122,6 +123,7 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
       instantProfit,
       instantMargin,
       weeklyVolume: q.buyMovingWeek,
+      sellMovingWeek: q.sellMovingWeek,
       buyOrders: q.buyOrders,
       sellOrders: q.sellOrders,
       fillScore,

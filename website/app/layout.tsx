@@ -2,19 +2,18 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Bazaar Flipper · Hypixel SkyBlock',
-  description: 'Live Bazaar flip opportunities — instant flips & order flips. Real-time data, no API key needed.',
-  keywords: 'Hypixel, SkyBlock, Bazaar, Flipper, coins, flipping, profit',
+  title: 'Bazaar Flip Finder',
+  description: 'Live Hypixel SkyBlock Bazaar flip opportunities',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-screen antialiased relative">{children}</body>
+      <body>{children}</body>
     </html>
   )
 }
