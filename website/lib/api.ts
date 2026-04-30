@@ -49,7 +49,7 @@ export interface FlipRow {
   flipType: 'instant' | 'order'
 }
 
-const BAZAAR_URL = 'https://api.hypixel.net/skyblock/bazaar'
+const BAZAAR_URL = '/api/bazaar'
 const TAX = 0.0125
 
 export function formatName(id: string): string {
@@ -87,10 +87,9 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
 
     if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
 
-    // buyPrice = highest bid, sellPrice = lowest ask
-    // In a healthy Bazaar market, buyPrice should be below sellPrice.
-    // If the spread is inverted or flat, there is no order-flip opportunity.
-    const spread = q.buyPrice - q.sellPrice
+    // sellPrice = lowest ask, buyPrice = highest bid. Ask is always above bid.
+    // Spread = ask - bid. If zero or negative the market is stale, skip it.
+    const spread = q.sellPrice - q.buyPrice
     if (spread <= 0) continue
 
     // ── Order flip ──────────────────────────────────────────────────────────
