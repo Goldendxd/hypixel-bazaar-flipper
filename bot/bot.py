@@ -1,150 +1,190 @@
 """
-Hypixel SkyBlock Bazaar flip alert bot.
-Triggered every 5 minutes via GitHub Actions.
+Hypixel Bazaar Flip Bot
+- Slash command /flip [budget] [top]
+- Auto-posts top flips every 5 min to a configured channel
+- Runs persistently (Railway / any VPS)
 
-Hypixel API field semantics (confirmed from live data):
-  quick_status.buyPrice  = lowest ASK  (you pay this to buy instantly)
-  quick_status.sellPrice = highest BID (you receive this selling instantly)
-  buyPrice > sellPrice is normal — spread = buyPrice - sellPrice
+Required env vars:
+  DISCORD_TOKEN       - bot token from discord.com/developers
+  DISCORD_CHANNEL_ID  - channel ID to auto-post alerts to
 
-Environment variables required:
-  DISCORD_WEBHOOK_URL  — full Discord webhook URL
+Hypixel API field semantics:
+  buyPrice  = lowest ASK  (you pay this to buy instantly)
+  sellPrice = highest BID (you receive this selling instantly)
+  buyPrice > sellPrice is normal
 """
 
 import os
-import json
 import time
-import requests
+import asyncio
+import aiohttp
+import discord
+from discord import app_commands
+from discord.ext import tasks
 
-WEBHOOK_URL: str = os.environ["DISCORD_WEBHOOK_URL"]
+# ── Config ────────────────────────────────────────────────────────────────────
 
-ORDER_MIN_MARGIN_PCT = 5.0
+TOKEN      = os.environ["DISCORD_TOKEN"]
+CHANNEL_ID = int(os.environ["DISCORD_CHANNEL_ID"])
+
+TAX                 = 0.0125
+ORDER_MIN_MARGIN    = 5.0
 ORDER_MIN_WEEKLY_VOL = 50_000
-TOP_N = 5
-TAX = 0.0125
+AUTO_TOP_N          = 5
+BAZAAR_URL          = "https://api.hypixel.net/skyblock/bazaar"
 
-BAZAAR_URL = "https://api.hypixel.net/skyblock/bazaar"
-HEADERS = {"User-Agent": "HypixelBazaarFlipBot/1.0"}
-TIMEOUT = 15
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-COLOR_ORDER = 0x60A5FA
-COLOR_SNIPE = 0xF59E0B
+def fmt(n: float) -> str:
+    if abs(n) >= 1_000_000_000: return f"{n/1_000_000_000:.2f}B"
+    if abs(n) >= 1_000_000:     return f"{n/1_000_000:.2f}M"
+    if abs(n) >= 1_000:         return f"{n/1_000:.1f}k"
+    return f"{n:,.1f}"
 
-def fmt_coins(n: float) -> str:
-    if abs(n) >= 1_000_000_000:
-        return f"{n/1_000_000_000:.2f}B"
-    if abs(n) >= 1_000_000:
-        return f"{n/1_000_000:.2f}M"
-    if abs(n) >= 1_000:
-        return f"{n/1_000:.1f}k"
-    return f"{n:,.0f}"
-
-def pretty_name(item_id: str) -> str:
+def pretty(item_id: str) -> str:
     return " ".join(w.capitalize() for w in item_id.replace(":", "_").split("_"))
 
-def safe_get(url: str, params: dict | None = None) -> dict | None:
-    try:
-        r = requests.get(url, params=params, headers=HEADERS, timeout=TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-    except Exception as exc:
-        print(f"[WARN] GET {url} failed: {exc}".encode('ascii', 'replace').decode())
-        return None
+async def fetch_flips(session: aiohttp.ClientSession, budget: int = 10_000_000, top: int = 5) -> list[dict]:
+    async with session.get(BAZAAR_URL) as r:
+        data = await r.json()
 
-def fetch_bazaar() -> dict:
-    data = safe_get(BAZAAR_URL)
-    if not data or not data.get("success"):
-        raise RuntimeError("Failed to fetch Bazaar data")
-    return data["products"]
-
-def compute_order_flips(products: dict) -> list[dict]:
-    """
-    Order flip: post buy order just above top bid (sellPrice + 0.1),
-    sell order just below lowest ask (buyPrice - 0.1).
-    Profit = (buyPrice - 0.1) * (1 - TAX) - (sellPrice + 0.1)
-    """
+    products = data.get("products", {})
     results = []
+
     for pid, prod in products.items():
         qs = prod.get("quick_status", {})
-        ask = qs.get("buyPrice", 0)    # lowest ask — what you pay to buy instantly
-        bid = qs.get("sellPrice", 0)   # highest bid — what you get selling instantly
+        ask        = qs.get("buyPrice", 0)
+        bid        = qs.get("sellPrice", 0)
         weekly_vol = qs.get("buyMovingWeek", 0)
+        sell_vol   = qs.get("sellMovingWeek", 0)
 
-        if not ask or not bid or ask <= bid:
-            continue
-        if weekly_vol < ORDER_MIN_WEEKLY_VOL:
-            continue
+        if not ask or not bid or ask <= bid: continue
+        if weekly_vol < ORDER_MIN_WEEKLY_VOL: continue
 
         buy_order  = bid + 0.1
         sell_order = ask - 0.1
-        profit = sell_order * (1 - TAX) - buy_order
-        if profit <= 0:
-            continue
+        profit     = sell_order * (1 - TAX) - buy_order
+        if profit <= 0: continue
 
         margin = (profit / buy_order) * 100
-        if margin < ORDER_MIN_MARGIN_PCT:
-            continue
+        if margin < ORDER_MIN_MARGIN: continue
+
+        qty        = max(1, min(int(budget / buy_order), 71_680))
+        total_cost = buy_order * qty
+        total_prof = profit * qty
 
         results.append({
             "id":         pid,
-            "name":       pretty_name(pid),
+            "name":       pretty(pid),
             "buy_order":  buy_order,
             "sell_order": sell_order,
             "profit":     profit,
             "margin":     margin,
             "weekly_vol": weekly_vol,
+            "sell_vol":   sell_vol,
+            "qty":        qty,
+            "total_cost": total_cost,
+            "total_prof": total_prof,
         })
 
-    results.sort(key=lambda x: x["profit"], reverse=True)
-    return results[:TOP_N]
+    results.sort(key=lambda x: x["total_prof"], reverse=True)
+    return results[:top]
 
-def build_order_embed(flips: list[dict]) -> dict:
-    fields = []
-    for f in flips:
-        fields.append({
-            "name": f"💰 {f['name']}",
-            "value": (
-                f"Buy order: **{fmt_coins(f['buy_order'])}**  →  Sell order: **{fmt_coins(f['sell_order'])}**\n"
-                f"Profit/item: **{fmt_coins(f['profit'])}** · Margin: **{f['margin']:.1f}%**\n"
-                f"Weekly vol: {fmt_coins(f['weekly_vol'])}"
-            ),
-            "inline": False,
-        })
-    return {
-        "title": "📋 Top Bazaar Order Flips",
-        "description": "Post buy order above top bid, sell order below lowest ask. Profit after 1.25% tax.",
-        "color": COLOR_ORDER,
-        "fields": fields,
-        "footer": {"text": "Hypixel SkyBlock Bazaar · updates every 5 min"},
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }
+# ── Discord embed builder ─────────────────────────────────────────────────────
 
-def send_webhook(embeds: list[dict]) -> None:
-    payload = {"embeds": embeds}
-    r = requests.post(
-        WEBHOOK_URL,
-        data=json.dumps(payload),
-        headers={"Content-Type": "application/json"},
-        timeout=TIMEOUT,
+def build_embeds(flips: list[dict], budget: int) -> list[discord.Embed]:
+    embeds = []
+    for i, f in enumerate(flips):
+        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+        medal  = medals[i] if i < len(medals) else f"#{i+1}"
+
+        e = discord.Embed(
+            title=f"{medal}  {f['name']}",
+            color=0x00c896,
+        )
+        e.add_field(name="BUY PRICE",   value=f"**{fmt(f['buy_order'])}**",  inline=True)
+        e.add_field(name="SELL PRICE",  value=f"**{fmt(f['sell_order'])}**", inline=True)
+        e.add_field(name="​",      value="​",                       inline=True)
+        e.add_field(name="QUANTITY",    value=f"**{f['qty']:,}**",            inline=True)
+        e.add_field(name="TOTAL COST",  value=f"**{fmt(f['total_cost'])}**",  inline=True)
+        e.add_field(name="MARGIN",      value=f"**{f['margin']:.1f}%**",      inline=True)
+        e.add_field(
+            name="EST. PROFIT",
+            value=f"```\n+{fmt(f['total_prof'])}\n```",
+            inline=False,
+        )
+        e.set_footer(text=f"Wk buy vol: {fmt(f['weekly_vol'])}  |  Wk sell vol: {fmt(f['sell_vol'])}  |  budget: {fmt(budget)}")
+        embeds.append(e)
+    return embeds
+
+def header_embed(count: int, budget: int) -> discord.Embed:
+    e = discord.Embed(
+        title="Bazaar Flip Finder",
+        description=(
+            f"Top **{count}** order flips for a **{fmt(budget)}** coin budget.\n"
+            f"Post buy order just above top bid, sell order just below lowest ask.\n"
+            f"-# Prices include 1.25% sell tax. Always verify in-game."
+        ),
+        color=0x6c8ebf,
+        timestamp=discord.utils.utcnow(),
     )
-    if r.status_code not in (200, 204):
-        raise RuntimeError(f"Webhook POST failed: {r.status_code} — {r.text}")
+    e.set_footer(text="Hypixel SkyBlock Bazaar")
+    return e
 
-def main() -> None:
-    print("[*] Fetching Bazaar data...")
-    products = fetch_bazaar()
-    print(f"    Got {len(products)} products")
+# ── Bot ───────────────────────────────────────────────────────────────────────
 
-    print("[*] Computing order flips...")
-    orders = compute_order_flips(products)
-    print(f"    Found {len(orders)} order flip(s)")
+class FlipBot(discord.Client):
+    def __init__(self):
+        intents = discord.Intents.default()
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
 
-    if not orders:
-        print("[*] No opportunities found -- nothing posted.")
+    async def setup_hook(self):
+        self.tree.copy_global_to(guild=None)
+        await self.tree.sync()
+        self.auto_post.start()
+
+    async def on_ready(self):
+        print(f"[OK] Logged in as {self.user}")
+
+    @tasks.loop(minutes=5)
+    async def auto_post(self):
+        channel = self.get_channel(CHANNEL_ID)
+        if not channel:
+            return
+        async with aiohttp.ClientSession() as session:
+            flips = await fetch_flips(session, budget=10_000_000, top=AUTO_TOP_N)
+        if not flips:
+            return
+        await channel.send(embed=header_embed(len(flips), 10_000_000))
+        for e in build_embeds(flips, 10_000_000):
+            await channel.send(embed=e)
+
+    @auto_post.before_loop
+    async def before_auto(self):
+        await self.wait_until_ready()
+
+
+bot = FlipBot()
+
+
+@bot.tree.command(name="flip", description="Show top Bazaar order flips")
+@app_commands.describe(
+    budget="Your coin budget (default 10,000,000)",
+    top="How many flips to show (default 5, max 10)",
+)
+async def flip_cmd(interaction: discord.Interaction, budget: int = 10_000_000, top: int = 5):
+    top = min(top, 10)
+    await interaction.response.defer(thinking=True)
+    async with aiohttp.ClientSession() as session:
+        flips = await fetch_flips(session, budget=budget, top=top)
+    if not flips:
+        await interaction.followup.send("No profitable flips found right now. Try again in a minute.")
         return
+    await interaction.followup.send(embed=header_embed(len(flips), budget))
+    for e in build_embeds(flips, budget):
+        await interaction.followup.send(embed=e)
 
-    send_webhook([build_order_embed(orders)])
-    print(f"[OK] Posted {len(orders)} flips to Discord.")
 
 if __name__ == "__main__":
-    main()
+    bot.run(TOKEN)

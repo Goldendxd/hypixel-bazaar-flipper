@@ -1,4 +1,4 @@
-name: Bazaar Flip Alerts
+name: Bazaar Flip Alerts (webhook fallback)
 
 on:
   schedule:
@@ -13,23 +13,20 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 4  # fail-safe: job must finish within one cycle
+    timeout-minutes: 4
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
           cache-dependency-path: bot/requirements.txt
 
-      - name: Install dependencies
-        run: pip install -r bot/requirements.txt
+      - run: pip install requests
 
-      - name: Run flip bot
+      - name: Run webhook fallback
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python bot/bot.py
+        run: python bot/webhook_post.py
