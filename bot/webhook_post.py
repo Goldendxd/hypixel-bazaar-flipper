@@ -1,6 +1,6 @@
 import os, json, time, requests
 
-WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
+WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1499671989001130025/EvmIHuFcEbaT5Dt6gmMUh4R3t4Nm13um4W8QTZoX_oOqs6Nf4iHXpU7FYfrvJQf5KVRS")
 TAX         = 0.0125
 MIN_MARGIN  = 5.0
 MIN_VOL     = 50_000
