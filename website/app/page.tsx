@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import FlipDashboard from '@/components/FlipDashboard'
+import FlipFinder from '@/components/FlipFinder'
 
 export default function Home() {
   const [dismissed, setDismissed] = useState(false)
@@ -56,8 +56,8 @@ export default function Home() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 22 }}>💎</span>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#8ab4e8' }}>Hypixel Flipper</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 1 }}>BAZAAR • CRAFT • FUSION</div>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#8ab4e8' }}>Flip Finder</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 1 }}>HYPIXEL SKYBLOCK</div>
               </div>
             </div>
           </div>
@@ -65,15 +65,7 @@ export default function Home() {
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div className="nav-item active">
               <span style={{ fontSize: 16 }}>📈</span>
-              Bazaar flips
-            </div>
-            <div className="nav-item">
-              <span style={{ fontSize: 16 }}>🪓</span>
-              Craft flips
-            </div>
-            <div className="nav-item">
-              <span style={{ fontSize: 16 }}>🧬</span>
-              Fusion flips
+              Flips
             </div>
             <div className="nav-item">
               <span style={{ fontSize: 16 }}>⭐</span>
@@ -83,12 +75,16 @@ export default function Home() {
               <span style={{ fontSize: 16 }}>🚫</span>
               Blacklist
             </div>
+            <div className="nav-item">
+              <span style={{ fontSize: 16 }}>🧬</span>
+              Mutations
+            </div>
           </nav>
         </aside>
 
         {/* Main content */}
         <main style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
-          <FlipDashboard />
+          <FlipFinder />
         </main>
       </div>
     </div>

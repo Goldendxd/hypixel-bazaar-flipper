@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Hypixel Flipper',
-  description: 'Live Hypixel SkyBlock bazaar, craft, and fusion flip opportunities',
+  title: 'Bazaar Flip Finder',
+  description: 'Live Hypixel SkyBlock Bazaar flip opportunities',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
