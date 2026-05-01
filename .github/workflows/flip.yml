@@ -23,14 +23,10 @@ jobs:
           cache-dependency-path: bot/requirements.txt
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip requests
-
-      - name: Verify webhook secret
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python -c "import os; value = os.environ['DISCORD_WEBHOOK_URL'].strip(); assert value, 'DISCORD_WEBHOOK_URL secret is missing or empty'"
+        run: python -m pip install --upgrade pip && pip install -r bot/requirements.txt
 
       - name: Post flips
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SINGLE_RUN: '1'
         run: python -u bot/webhook_post.py
