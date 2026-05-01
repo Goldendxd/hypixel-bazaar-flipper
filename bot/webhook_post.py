@@ -94,5 +94,7 @@ embeds = [header] + cards
 for i in range(0, len(embeds), 10):
     r = requests.post(WEBHOOK_URL, json={"embeds": embeds[i:i+10]}, timeout=15)
     print(f"POST {r.status_code}")
+    if r.status_code >= 400:
+        raise RuntimeError(f"Webhook request failed: {r.status_code} {r.text}")
 
 print(f"[OK] Posted {len(results)} flips.")
