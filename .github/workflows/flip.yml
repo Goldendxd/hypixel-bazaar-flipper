@@ -1,14 +1,9 @@
-name: Bazaar Flip Alerts (webhook fallback)
+name: Bazaar Flip Alerts
 
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Run manually'
-        required: false
-        default: 'true'
 
 jobs:
   run-bot:
@@ -17,7 +12,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -26,7 +20,16 @@ jobs:
 
       - run: pip install requests
 
-      - name: Run webhook fallback
+      # Run twice with ~2.5 min gap to approximate 2-3 min cadence
+      - name: Post flips (run 1)
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python bot/webhook_post.py
+
+      - name: Wait 2.5 minutes
+        run: sleep 150
+
+      - name: Post flips (run 2)
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python bot/webhook_post.py
