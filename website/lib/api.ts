@@ -1,15 +1,20 @@
+// Hypixel Bazaar API field semantics (confirmed from live data):
+//   quick_status.buyPrice  = lowest ask  (you pay this to buy instantly)
+//   quick_status.sellPrice = highest bid (you get this when selling instantly)
+//   buyPrice > sellPrice is normal — the spread is your flip opportunity
+
 export interface BazaarProduct {
   product_id: string
   quick_status: {
     productId: string
-    sellPrice: number   // lowest ask  (sellers want this much)
-    sellVolume: number
-    sellMovingWeek: number
-    sellOrders: number
-    buyPrice: number    // highest bid (buyers offer this much)
+    buyPrice: number        // lowest ask — what you pay to buy instantly
     buyVolume: number
     buyMovingWeek: number
     buyOrders: number
+    sellPrice: number       // highest bid — what you get selling instantly
+    sellVolume: number
+    sellMovingWeek: number
+    sellOrders: number
   }
 }
 
@@ -24,32 +29,26 @@ export interface FlipRow {
   name: string
   iconUrl: string
 
-  // ── Order flip (the main money-maker) ─────────────────────────────────────
-  // Post buy order just above top bid → you fill before the queue
-  // Post sell order just below lowest ask → you fill before the queue
-  // Profit = spread minus 1.25% sell tax
-  buyOrder: number
-  sellOrder: number
-  orderProfit: number   // per item, after tax
-  orderMargin: number   // %
+  // Order flip: post buy order just above top bid, sell order just below lowest ask
+  buyOrder: number        // bid price + 0.1  (you post this buy order)
+  sellOrder: number       // ask price - 0.1  (you post this sell order)
+  orderProfit: number     // per item after 1.25% sell tax
+  orderMargin: number     // %
 
-  // ── Instant flip (buy ask, sell bid immediately) ───────────────────────────
-  instantBuyPrice: number   // = sellPrice (lowest ask) — what you pay
-  instantSellPrice: number  // = buyPrice  (highest bid) — what you get back
-  instantProfit: number     // usually negative — buying spread, not closing it
-  instantMargin: number     // %
+  // Instant flip: pay ask, get bid immediately
+  instantBuyPrice: number   // = buyPrice  (lowest ask)
+  instantSellPrice: number  // = sellPrice (highest bid)
+  instantProfit: number
+  instantMargin: number
 
-  // ── Liquidity signals ─────────────────────────────────────────────────────
   weeklyVolume: number      // buyMovingWeek
-  sellMovingWeek: number    // sellMovingWeek
-  buyOrders: number         // current open buy orders
-  sellOrders: number        // current open sell orders
-  fillScore: number         // 0–100; high = fast fills
-
+  sellMovingWeek: number
+  buyOrders: number
+  sellOrders: number
+  fillScore: number         // 0–100
   flipType: 'instant' | 'order'
 }
 
-const BAZAAR_URL = '/api/bazaar'
 const TAX = 0.0125
 
 export function formatName(id: string): string {
@@ -67,13 +66,9 @@ function fmt(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-function norm(val: number, max: number): number {
-  return Math.min(100, (val / max) * 100)
-}
-
 export async function fetchBazaarFlips(): Promise<FlipRow[]> {
-  const res = await fetch(BAZAAR_URL, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`Hypixel API ${res.status}`)
+  const res = await fetch('/api/bazaar', { cache: 'no-store' })
+  if (!res.ok) throw new Error(`API error ${res.status}`)
   const data: BazaarResponse = await res.json()
 
   const products = Object.values(data.products)
@@ -85,27 +80,26 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
     const { quick_status: q } = product
     const id = product.product_id
 
+    // Need real prices and activity
     if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
 
-    // sellPrice = lowest ask, buyPrice = highest bid. Ask is always above bid.
-    // Spread = ask - bid. If zero or negative the market is stale, skip it.
-    const spread = q.sellPrice - q.buyPrice
+    // buyPrice = ask, sellPrice = bid. Normal: ask > bid.
+    const spread = q.buyPrice - q.sellPrice
     if (spread <= 0) continue
 
-    // ── Order flip ──────────────────────────────────────────────────────────
-    // Undercut queue by 0.1 on both sides
-    const buyOrder = fmt(q.buyPrice + 0.1)
-    const sellOrder = fmt(q.sellPrice - 0.1)
+    // Order flip: undercut both sides by 0.1 to jump the queue
+    // Buy order at (sellPrice + 0.1) — just above the top bid
+    // Sell order at (buyPrice - 0.1) — just below the lowest ask
+    const buyOrder = fmt(q.sellPrice + 0.1)
+    const sellOrder = fmt(q.buyPrice - 0.1)
     const orderProfit = fmt(sellOrder * (1 - TAX) - buyOrder)
     const orderMargin = fmt((orderProfit / buyOrder) * 100)
 
-    // ── Instant flip ────────────────────────────────────────────────────────
-    // Pay the ask, get the bid back — almost always a loss on tightly priced items
-    const instantProfit = fmt(q.buyPrice * (1 - TAX) - q.sellPrice)
-    const instantMargin = fmt((instantProfit / q.sellPrice) * 100)
+    // Instant flip: pay ask, receive bid immediately
+    const instantProfit = fmt(q.sellPrice * (1 - TAX) - q.buyPrice)
+    const instantMargin = fmt((instantProfit / q.buyPrice) * 100)
 
-    // ── Fill score ──────────────────────────────────────────────────────────
-    const volScore = norm(q.buyMovingWeek, maxVol)
+    const volScore = Math.min(100, (q.buyMovingWeek / maxVol) * 100)
     const depthPenalty = Math.min(100, ((q.buyOrders + q.sellOrders) / 200) * 100)
     const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
 
@@ -117,8 +111,8 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
       sellOrder,
       orderProfit,
       orderMargin,
-      instantBuyPrice: q.sellPrice,
-      instantSellPrice: q.buyPrice,
+      instantBuyPrice: q.buyPrice,
+      instantSellPrice: q.sellPrice,
       instantProfit,
       instantMargin,
       weeklyVolume: q.buyMovingWeek,
