@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import Image from 'next/image'
 import { fetchBazaarFlips, FlipRow } from '@/lib/api'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -65,12 +64,22 @@ function FlipCard({
             width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
             background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src={row.iconUrl}
               alt={row.name}
               width={40}
               height={40}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              style={{ objectFit: 'contain' }}
+              onError={(e) => {
+                const img = e.target as HTMLImageElement
+                if (!img.dataset.fallback) {
+                  img.dataset.fallback = '1'
+                  img.src = `https://sky.lea.moe/item/${row.id}`
+                } else {
+                  img.style.display = 'none'
+                }
+              }}
             />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -186,8 +195,14 @@ export default function FlipFinder() {
   const [minCurSell, setMinCurSell]       = useState<number | ''>(0)
 
   const [showFilter, setShowFilter] = useState<'all' | 'starred'>('all')
-  const [starred, setStarred]   = useState<Set<string>>(new Set())
-  const [blocked, setBlocked]   = useState<Set<string>>(new Set())
+  const [starred, setStarred]   = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try { return new Set(JSON.parse(localStorage.getItem('bf_starred') ?? '[]')) } catch { return new Set() }
+  })
+  const [blocked, setBlocked]   = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try { return new Set(JSON.parse(localStorage.getItem('bf_blocked') ?? '[]')) } catch { return new Set() }
+  })
 
   const load = useCallback(async () => {
     try {
@@ -235,10 +250,18 @@ export default function FlipFinder() {
   }, [rows, maxMoney, maxItems, minWeeklyBuy, minWeeklySell, minCurBuy, minCurSell, blocked, starred, showFilter])
 
   function toggleStar(id: string) {
-    setStarred((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+    setStarred((s) => {
+      const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id)
+      localStorage.setItem('bf_starred', JSON.stringify([...n]))
+      return n
+    })
   }
   function toggleBlock(id: string) {
-    setBlocked((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+    setBlocked((s) => {
+      const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id)
+      localStorage.setItem('bf_blocked', JSON.stringify([...n]))
+      return n
+    })
   }
 
   // ── render ─────────────────────────────────────────────────────────────────

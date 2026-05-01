@@ -139,6 +139,17 @@ class FlipBot(discord.Client):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
 
+    async def _get_alert_channel(self):
+        channel = self.get_channel(CHANNEL_ID)
+        if channel is not None:
+            return channel
+
+        try:
+            return await self.fetch_channel(CHANNEL_ID)
+        except discord.DiscordException as exc:
+            print(f"[WARN] Unable to resolve channel {CHANNEL_ID}: {exc}")
+            return None
+
     async def setup_hook(self):
         self.tree.copy_global_to(guild=None)
         await self.tree.sync()
@@ -149,16 +160,20 @@ class FlipBot(discord.Client):
 
     @tasks.loop(minutes=5)
     async def auto_post(self):
-        channel = self.get_channel(CHANNEL_ID)
+        channel = await self._get_alert_channel()
         if not channel:
             return
-        async with aiohttp.ClientSession() as session:
-            flips = await fetch_flips(session, budget=10_000_000, top=AUTO_TOP_N)
-        if not flips:
-            return
-        await channel.send(embed=header_embed(len(flips), 10_000_000))
-        for e in build_embeds(flips, 10_000_000):
-            await channel.send(embed=e)
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                flips = await fetch_flips(session, budget=10_000_000, top=AUTO_TOP_N)
+            if not flips:
+                return
+            await channel.send(embed=header_embed(len(flips), 10_000_000))
+            for e in build_embeds(flips, 10_000_000):
+                await channel.send(embed=e)
+        except Exception as exc:
+            print(f"[ERROR] auto_post failed: {exc}")
 
     @auto_post.before_loop
     async def before_auto(self):

@@ -5,6 +5,10 @@ on:
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: bazaar-flip-alerts
+  cancel-in-progress: true
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
@@ -18,18 +22,15 @@ jobs:
           cache: 'pip'
           cache-dependency-path: bot/requirements.txt
 
-      - run: pip install requests
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip requests
 
-      # Run twice with ~2.5 min gap to approximate 2-3 min cadence
-      - name: Post flips (run 1)
+      - name: Verify webhook secret
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python bot/webhook_post.py
+        run: python -c "import os; value = os.environ['DISCORD_WEBHOOK_URL'].strip(); assert value, 'DISCORD_WEBHOOK_URL secret is missing or empty'"
 
-      - name: Wait 2.5 minutes
-        run: sleep 150
-
-      - name: Post flips (run 2)
+      - name: Post flips
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python bot/webhook_post.py
+        run: python -u bot/webhook_post.py

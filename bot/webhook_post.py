@@ -1,6 +1,6 @@
 import os, json, time, requests
 
-WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1499671989001130025/EvmIHuFcEbaT5Dt6gmMUh4R3t4Nm13um4W8QTZoX_oOqs6Nf4iHXpU7FYfrvJQf5KVRS")
+WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 TAX         = 0.0125
 MIN_MARGIN  = 5.0
 MIN_VOL     = 50_000
@@ -53,7 +53,20 @@ results.sort(key=lambda x: x["total"], reverse=True)
 results = results[:TOP_N]
 
 if not results:
-    print("No flips found.")
+    payload = {
+        "content": "Bazaar flip check completed.",
+        "embeds": [{
+            "title": "Best Flips",
+            "description": f"✓ Data updated at {ts} ({len(products)} products)\nNo profitable flips matched the current filters.",
+            "color": 0x6c8ebf,
+            "footer": {"text": "ALWAYS DOUBLE CHECK INGAME PRICES FOR PRICE MANIPULATION"},
+        }]
+    }
+    r = requests.post(WEBHOOK_URL, json=payload, timeout=15)
+    print(f"POST {r.status_code}")
+    if r.status_code >= 400:
+        raise RuntimeError(f"Webhook request failed: {r.status_code} {r.text}")
+    print("[OK] Posted 0 flips.")
     exit(0)
 
 # ── Build embeds ──────────────────────────────────────────────────────────────
@@ -92,7 +105,11 @@ for i, f in enumerate(results):
 # Post header + all cards (max 10 embeds per request)
 embeds = [header] + cards
 for i in range(0, len(embeds), 10):
-    r = requests.post(WEBHOOK_URL, json={"embeds": embeds[i:i+10]}, timeout=15)
+    payload = {
+        "content": "Bazaar flip check completed.",
+        "embeds": embeds[i:i+10],
+    }
+    r = requests.post(WEBHOOK_URL, json=payload, timeout=15)
     print(f"POST {r.status_code}")
     if r.status_code >= 400:
         raise RuntimeError(f"Webhook request failed: {r.status_code} {r.text}")
