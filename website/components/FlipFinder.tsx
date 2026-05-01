@@ -180,8 +180,8 @@ export default function FlipFinder() {
   // Filters
   const [maxMoney, setMaxMoney]           = useState<number | ''>(10_000_000)
   const [maxItems, setMaxItems]           = useState<number | ''>(71_680)
-  const [minWeeklyBuy, setMinWeeklyBuy]   = useState<number | ''>(0)
-  const [minWeeklySell, setMinWeeklySell] = useState<number | ''>(0)
+  const [minWeeklyBuy, setMinWeeklyBuy]   = useState<number | ''>(20_000)
+  const [minWeeklySell, setMinWeeklySell] = useState<number | ''>(20_000)
   const [minCurBuy, setMinCurBuy]         = useState<number | ''>(0)
   const [minCurSell, setMinCurSell]       = useState<number | ''>(0)
 
