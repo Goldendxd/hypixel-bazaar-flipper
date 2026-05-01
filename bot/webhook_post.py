@@ -156,19 +156,20 @@ def run_once():
 
 
 if __name__ == "__main__":
-    INTERVAL = int(os.environ.get("BOT_INTERVAL_SECONDS", 300))
-    while True:
-        try:
-            run_once()
-            if os.environ.get("SINGLE_RUN", "0") == "1":
-                print("SINGLE_RUN set, exiting after one iteration")
-                break
-        except requests.exceptions.RequestException as e:
-            print("Network error:", e)
-            time.sleep(10)
-        except Exception as e:
-            print("Error during run:", e)
-            time.sleep(10)
-        # wait before next run
-        time.sleep(INTERVAL)
+    if os.environ.get("SINGLE_RUN", "0") == "1":
+        run_once()
+    else:
+        INTERVAL = int(os.environ.get("BOT_INTERVAL_SECONDS", 300))
+        while True:
+            try:
+                run_once()
+            except requests.exceptions.RequestException as e:
+                print("Network error:", e)
+                time.sleep(10)
+                continue
+            except Exception as e:
+                print("Error during run:", e)
+                time.sleep(10)
+                continue
+            time.sleep(INTERVAL)
 
