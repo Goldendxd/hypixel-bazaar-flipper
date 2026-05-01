@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import FlipFinder from '@/components/FlipFinder'
 
 export default function Home() {
@@ -63,22 +64,18 @@ export default function Home() {
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <div className="nav-item active">
+            <Link href="/" className="nav-item active" style={{ textDecoration: 'none' }}>
               <span style={{ fontSize: 16 }}>📈</span>
               Flips
-            </div>
-            <div className="nav-item">
-              <span style={{ fontSize: 16 }}>⭐</span>
-              Whitelist
-            </div>
-            <div className="nav-item">
-              <span style={{ fontSize: 16 }}>🚫</span>
-              Blacklist
-            </div>
-            <div className="nav-item">
+            </Link>
+            <Link href="/craft" className="nav-item" style={{ textDecoration: 'none' }}>
+              <span style={{ fontSize: 16 }}>🪓</span>
+              Craft flips
+            </Link>
+            <Link href="/fusion" className="nav-item" style={{ textDecoration: 'none' }}>
               <span style={{ fontSize: 16 }}>🧬</span>
-              Mutations
-            </div>
+              Fusion flips
+            </Link>
           </nav>
         </aside>
 
