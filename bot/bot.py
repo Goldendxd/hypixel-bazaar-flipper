@@ -48,7 +48,7 @@ def safe_get(url: str, params: dict | None = None) -> dict | None:
         r.raise_for_status()
         return r.json()
     except Exception as exc:
-        print(f"[WARN] GET {url} failed: {exc}")
+        print(f"[WARN] GET {url} failed: {exc}".encode('ascii', 'replace').decode())
         return None
 
 def fetch_bazaar() -> dict:
@@ -131,20 +131,20 @@ def send_webhook(embeds: list[dict]) -> None:
         raise RuntimeError(f"Webhook POST failed: {r.status_code} — {r.text}")
 
 def main() -> None:
-    print("[*] Fetching Bazaar data…")
+    print("[*] Fetching Bazaar data...")
     products = fetch_bazaar()
     print(f"    Got {len(products)} products")
 
-    print("[*] Computing order flips…")
+    print("[*] Computing order flips...")
     orders = compute_order_flips(products)
     print(f"    Found {len(orders)} order flip(s)")
 
     if not orders:
-        print("[*] No opportunities found — nothing posted.")
+        print("[*] No opportunities found -- nothing posted.")
         return
 
     send_webhook([build_order_embed(orders)])
-    print(f"[✓] Posted {len(orders)} flips to Discord.")
+    print(f"[OK] Posted {len(orders)} flips to Discord.")
 
 if __name__ == "__main__":
     main()
