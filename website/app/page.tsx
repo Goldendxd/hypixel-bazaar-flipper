@@ -9,78 +9,75 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Warning banner */}
       {!dismissed && (
-        <div style={{
-          background: '#c0392b',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-          padding: '10px 16px',
-          fontSize: '0.82rem',
-          fontWeight: 600,
-          letterSpacing: '0.02em',
-          flexShrink: 0,
-          position: 'relative',
-        }}>
-          <span>⚠️</span>
-          <span>ALWAYS DOUBLE CHECK THE INGAME PRICES FOR PRICE MANIPULATION AND IF THEY ARE UP TO DATE</span>
+        <div className="warning-banner">
+          <span style={{ fontSize: 14 }}>⚠</span>
+          <span>Always verify prices in-game — watch for manipulation</span>
           <button
             onClick={() => setDismissed(true)}
             style={{
-              position: 'absolute', right: 12,
-              background: 'rgba(255,255,255,0.2)', border: 'none',
-              color: '#fff', borderRadius: 4, cursor: 'pointer',
-              padding: '2px 8px', fontSize: '0.85rem',
+              position: 'absolute', right: 14,
+              background: 'rgba(248,113,113,0.15)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              color: '#fca5a5', borderRadius: 6, cursor: 'pointer',
+              padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700,
+              letterSpacing: '0.04em',
             }}
-          >✕</button>
+          >DISMISS</button>
         </div>
       )}
 
-      {/* App shell: sidebar + main */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Sidebar */}
-        <aside style={{
-          width: 220,
-          background: 'var(--sidebar)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '20px 12px',
-          gap: 4,
-          flexShrink: 0,
-        }}>
+        <aside className="sidebar">
           {/* Logo */}
-          <div style={{ padding: '4px 8px 20px', borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 22 }}>💎</span>
+          <div style={{ padding: '6px 8px 20px', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: 'linear-gradient(135deg, #63b3ed22, #a78bfa22)',
+                border: '1px solid rgba(99,179,237,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16,
+              }}>💎</div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#8ab4e8' }}>Flip Finder</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 1 }}>HYPIXEL SKYBLOCK</div>
+                <div className="logo-text">Hypixel Flipper</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 1, letterSpacing: '0.1em', fontWeight: 600 }}>SKYBLOCK BAZAAR</div>
               </div>
             </div>
           </div>
 
+          <div style={{ fontSize: '0.6rem', color: 'var(--muted)', letterSpacing: '0.12em', fontWeight: 700, padding: '0 14px', marginBottom: 6, textTransform: 'uppercase' }}>Markets</div>
+
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Link href="/" className="nav-item active" style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: 16 }}>📈</span>
-              Flips
+              <span style={{ fontSize: 15 }}>📈</span>
+              Order Flips
             </Link>
             <Link href="/craft" className="nav-item" style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: 16 }}>🪓</span>
-              Craft flips
+              <span style={{ fontSize: 15 }}>🪓</span>
+              Craft Flips
             </Link>
             <Link href="/fusion" className="nav-item" style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: 16 }}>🧬</span>
-              Fusion flips
+              <span style={{ fontSize: 15 }}>🧬</span>
+              Fusion Flips
             </Link>
           </nav>
+
+          {/* Bottom info */}
+          <div style={{ marginTop: 'auto', padding: '0 8px' }}>
+            <div style={{
+              background: 'rgba(16,245,160,0.05)',
+              border: '1px solid rgba(16,245,160,0.12)',
+              borderRadius: 10, padding: '10px 12px',
+            }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--green)', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 4 }}>LIVE DATA</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Refreshes every 60s from Hypixel API</div>
+            </div>
+          </div>
         </aside>
 
-        {/* Main content */}
-        <main style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
+        <main className="main-scroll">
           <FlipFinder />
         </main>
       </div>

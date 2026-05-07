@@ -25,50 +25,86 @@ export default function RefreshTimer({
     return () => clearInterval(id)
   }, [lastUpdated, intervalMs])
 
-  const pct = Math.max(0, Math.min(100, (secondsLeft / (intervalMs / 1000)) * 100))
-  const color = secondsLeft <= 5 ? '#ef4444' : secondsLeft <= 15 ? '#f59e0b' : 'var(--green)'
+  const total = intervalMs / 1000
+  const pct = Math.max(0, Math.min(100, (secondsLeft / total) * 100))
+  const r = 11
+  const circ = 2 * Math.PI * r
+  const dash = circ * (pct / 100)
+
+  const isUrgent = secondsLeft <= 5
+  const isMid    = secondsLeft <= 15 && !isUrgent
+  const color    = isUrgent ? 'var(--red)' : isMid ? 'var(--gold)' : 'var(--green)'
+
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
+  const ss = String(secondsLeft % 60).padStart(2, '0')
 
   return (
     <div style={{
       position: 'fixed',
-      bottom: 16,
-      left: 16,
+      bottom: 20,
+      left: 20,
       zIndex: 50,
-      background: 'var(--surface)',
-      border: '1px solid var(--border2)',
-      borderRadius: 10,
-      padding: '8px 12px',
+      background: 'rgba(7,9,15,0.85)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+      padding: '10px 14px',
       display: 'flex',
       alignItems: 'center',
       gap: 10,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-      minWidth: 160,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+      minWidth: 150,
+      userSelect: 'none',
     }}>
-      {/* Circular progress */}
-      <svg width="28" height="28" viewBox="0 0 28 28">
-        <circle cx="14" cy="14" r="11" fill="none" stroke="var(--border2)" strokeWidth="2.5" />
+      {/* Ring */}
+      <svg width="30" height="30" viewBox="0 0 30 30">
+        {/* Track */}
+        <circle cx="15" cy="15" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+        {/* Progress */}
         <circle
-          cx="14" cy="14" r="11"
+          cx="15" cy="15" r={r}
           fill="none"
           stroke={color}
           strokeWidth="2.5"
-          strokeDasharray={`${2 * Math.PI * 11}`}
-          strokeDashoffset={`${2 * Math.PI * 11 * (1 - pct / 100)}`}
+          strokeDasharray={`${dash} ${circ}`}
           strokeLinecap="round"
-          transform="rotate(-90 14 14)"
-          style={{ transition: 'stroke-dashoffset 0.5s linear, stroke 0.3s' }}
+          transform="rotate(-90 15 15)"
+          style={{ transition: 'stroke-dasharray 0.5s linear, stroke 0.4s ease', filter: `drop-shadow(0 0 4px ${color})` }}
         />
-        <text x="14" y="18" textAnchor="middle" fill={color} fontSize="8" fontWeight="800" fontFamily="monospace">
+        {/* Number */}
+        <text
+          x="15" y="19.5"
+          textAnchor="middle"
+          fill={color}
+          fontSize="7.5"
+          fontWeight="800"
+          fontFamily="monospace"
+          style={{ transition: 'fill 0.4s ease' }}
+        >
           {secondsLeft}
         </text>
       </svg>
 
       <div>
-        <div style={{ fontSize: '0.68rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-          Next refresh
-        </div>
-        <div style={{ fontSize: '0.85rem', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
-          {String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:{String(secondsLeft % 60).padStart(2, '0')}
+        <div style={{
+          fontSize: '0.6rem',
+          color: 'var(--muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          fontWeight: 700,
+          marginBottom: 3,
+        }}>Next Refresh</div>
+        <div style={{
+          fontSize: '0.9rem',
+          fontWeight: 800,
+          color,
+          fontFamily: 'monospace',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '0.05em',
+          transition: 'color 0.4s ease',
+        }}>
+          {mm}:{ss}
         </div>
       </div>
     </div>
