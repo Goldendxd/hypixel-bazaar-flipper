@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { fetchBazaarFlips, FlipRow } from '@/lib/api'
+import { fetchBazaarFlips, FlipRow, iconFallbacks } from '@/lib/api'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,9 +73,11 @@ function FlipCard({
               style={{ objectFit: 'contain' }}
               onError={(e) => {
                 const img = e.target as HTMLImageElement
-                if (!img.dataset.fallback) {
-                  img.dataset.fallback = '1'
-                  img.src = `https://sky.lea.moe/item/${row.id}`
+                const fallbacks = iconFallbacks(row.id)
+                const idx = parseInt(img.dataset.fallbackIdx ?? '0', 10)
+                if (idx < fallbacks.length - 1) {
+                  img.dataset.fallbackIdx = String(idx + 1)
+                  img.src = fallbacks[idx + 1]
                 } else {
                   img.style.display = 'none'
                 }
@@ -206,9 +208,9 @@ export default function FlipFinder() {
 
   const load = useCallback(async () => {
     try {
-      const data = await fetchBazaarFlips()
+      const { rows: data, totalProducts } = await fetchBazaarFlips()
       setRows(data)
-      setProductCount(data.length)
+      setProductCount(totalProducts)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {

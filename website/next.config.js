@@ -5,6 +5,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'sky.shiiyu.moe' },
       { protocol: 'https', hostname: 'sky.lea.moe' },
+      { protocol: 'https', hostname: 'mc.nether.pro' },
     ],
   },
 }

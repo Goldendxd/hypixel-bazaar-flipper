@@ -62,17 +62,30 @@ export function iconUrl(id: string): string {
   return `https://sky.shiiyu.moe/item/${id}`
 }
 
+// Ordered fallback chain for item icons
+export const iconFallbacks = (id: string): string[] => [
+  `https://sky.shiiyu.moe/item/${id}`,
+  `https://sky.lea.moe/item/${id}`,
+  `https://mc.nether.pro/item/${id}`,
+]
+
 function fmt(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-export async function fetchBazaarFlips(): Promise<FlipRow[]> {
+export interface BazaarFlipsResult {
+  rows: FlipRow[]
+  totalProducts: number
+}
+
+export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
   const res = await fetch('/api/bazaar', { cache: 'no-store' })
   if (!res.ok) throw new Error(`API error ${res.status}`)
   const data: BazaarResponse = await res.json()
 
   const products = Object.values(data.products)
-  const maxVol = Math.max(...products.map((p) => p.quick_status.buyMovingWeek))
+  const totalProducts = products.length
+  const maxVol = Math.max(...products.map((p) => p.quick_status.buyMovingWeek), 1)
 
   const rows: FlipRow[] = []
 
@@ -80,16 +93,12 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
     const { quick_status: q } = product
     const id = product.product_id
 
-    // Need real prices and activity
-    if (!q.buyPrice || !q.sellPrice || q.buyMovingWeek === 0) continue
-
-    // buyPrice = ask, sellPrice = bid. Normal: ask > bid.
+    // Need real prices and a positive spread
+    if (!q.buyPrice || !q.sellPrice) continue
     const spread = q.buyPrice - q.sellPrice
     if (spread <= 0) continue
 
     // Order flip: undercut both sides by 0.1 to jump the queue
-    // Buy order at (sellPrice + 0.1) — just above the top bid
-    // Sell order at (buyPrice - 0.1) — just below the lowest ask
     const buyOrder = fmt(q.sellPrice + 0.1)
     const sellOrder = fmt(q.buyPrice - 0.1)
     const orderProfit = fmt(sellOrder * (1 - TAX) - buyOrder)
@@ -124,5 +133,5 @@ export async function fetchBazaarFlips(): Promise<FlipRow[]> {
     })
   }
 
-  return rows
+  return { rows, totalProducts }
 }

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchStrategyRows, FlipStrategy, StrategyRow } from '@/lib/flipStrategies'
+import { iconFallbacks } from '@/lib/api'
 
 type StrategyConfig = {
   title: string
@@ -47,7 +48,13 @@ function FlipCard({ row, accent }: { row: StrategyRow; accent: string }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={row.iconUrl} alt={row.name} width={40} height={40} style={{ objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <img src={row.iconUrl} alt={row.name} width={40} height={40} style={{ objectFit: 'contain' }} onError={(e) => {
+              const img = e.target as HTMLImageElement
+              const fallbacks = iconFallbacks(row.id)
+              const idx = parseInt(img.dataset.fallbackIdx ?? '0', 10)
+              if (idx < fallbacks.length - 1) { img.dataset.fallbackIdx = String(idx + 1); img.src = fallbacks[idx + 1] }
+              else { img.style.display = 'none' }
+            }} />
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: '0.96rem', color: '#d1d9e6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</div>

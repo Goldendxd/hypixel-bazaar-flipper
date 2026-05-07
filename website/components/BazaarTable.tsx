@@ -74,7 +74,7 @@ export default function BazaarTable() {
 
   const load = useCallback(async () => {
     try {
-      const data = await fetchBazaarFlips()
+      const { rows: data } = await fetchBazaarFlips()
       setRows(data)
       setLastUpdated(new Date())
       setCountdown(60)

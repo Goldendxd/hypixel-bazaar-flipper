@@ -1,23 +1,11 @@
 import type { Metadata } from 'next'
-import StrategyPage from '@/components/StrategyPage'
+import FusionFlipPage from '@/components/FusionFlipPage'
 
 export const metadata: Metadata = {
   title: 'Fusion Flips',
-  description: 'Hypixel fusion flip rankings built from live bazaar data',
+  description: 'Multi-step compound crafts — chain recipes to minimize ingredient cost on Hypixel SkyBlock',
 }
 
 export default function FusionPage() {
-  return (
-    <StrategyPage
-      config={{
-        title: 'Fusion Flips',
-        subtitle: 'Fusion-flip rankings prioritize higher margins and efficient capital use while keeping liquidity in view.',
-        accent: '#7c5cbf',
-        navLabel: 'Fusion page',
-        navEmoji: '🧬',
-        activePath: '/fusion',
-        strategy: 'fusion',
-      }}
-    />
-  )
+  return <FusionFlipPage />
 }
