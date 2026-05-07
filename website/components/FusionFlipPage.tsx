@@ -137,18 +137,34 @@ function FusionCard({ row }: { row: FusionFlipRow }) {
         </div>
       </div>
 
-      {/* Fusion arrow — the two inputs */}
+      {/* Fusion recipe — the two inputs with quantities */}
       <div style={{ margin: '0 12px 10px', background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 10, padding: '10px 12px' }}>
-        <div style={{ fontSize: '0.6rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Fuse together</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ fontSize: '0.6rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Fuse together</div>
+          {row.outputQty > 1 && (
+            <div style={{ fontSize: '0.6rem', color: 'var(--green)', fontWeight: 700, background: 'var(--green-dim)', border: '1px solid var(--green-border)', borderRadius: 99, padding: '1px 7px' }}>
+              → {row.outputQty}x output
+            </div>
+          )}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Input 1 */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: 'rgba(255,255,255,0.04)', border: `1px solid ${rarityColor(row.input1.rarity)}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <ShardIcon id={row.input1.id} name={row.input1.name} size={28} />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.04)', border: `1px solid ${rarityColor(row.input1.rarity)}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <ShardIcon id={row.input1.id} name={row.input1.name} size={28} />
+              </div>
+              {row.input1.qty > 1 && (
+                <div style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: 'var(--purple)', borderRadius: 99, padding: '0px 4px', lineHeight: '14px', border: '1px solid rgba(0,0,0,0.4)' }}>
+                  ×{row.input1.qty}
+                </div>
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.input1.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>{coins(row.input1.unitPrice)}</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>
+                {row.input1.qty > 1 ? `${row.input1.qty}× ` : ''}{coins(row.input1.unitPrice)} ea
+              </div>
             </div>
           </div>
 
@@ -157,12 +173,21 @@ function FusionCard({ row }: { row: FusionFlipRow }) {
 
           {/* Input 2 */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0, background: 'rgba(255,255,255,0.04)', border: `1px solid ${rarityColor(row.input2.rarity)}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              <ShardIcon id={row.input2.id} name={row.input2.name} size={28} />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.04)', border: `1px solid ${rarityColor(row.input2.rarity)}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <ShardIcon id={row.input2.id} name={row.input2.name} size={28} />
+              </div>
+              {row.input2.qty > 1 && (
+                <div style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: 'var(--purple)', borderRadius: 99, padding: '0px 4px', lineHeight: '14px', border: '1px solid rgba(0,0,0,0.4)' }}>
+                  ×{row.input2.qty}
+                </div>
+              )}
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.input2.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>{coins(row.input2.unitPrice)}</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>
+                {row.input2.qty > 1 ? `${row.input2.qty}× ` : ''}{coins(row.input2.unitPrice)} ea
+              </div>
             </div>
           </div>
         </div>
@@ -173,12 +198,12 @@ function FusionCard({ row }: { row: FusionFlipRow }) {
       {/* Stats */}
       <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
         <div>
-          <div className="stat-label">Total Input</div>
+          <div className="stat-label">Input Cost</div>
           <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.inputCost)}</div>
         </div>
         <div>
-          <div className="stat-label">Sell Price</div>
-          <div className="stat-value" style={{ color: 'var(--purple)' }}>{coins(row.sellPrice)}</div>
+          <div className="stat-label">Sell ({row.outputQty}x)</div>
+          <div className="stat-value" style={{ color: 'var(--purple)' }}>{coins(row.sellPrice * row.outputQty)}</div>
         </div>
         <div>
           <div className="stat-label">Profit / Fuse</div>

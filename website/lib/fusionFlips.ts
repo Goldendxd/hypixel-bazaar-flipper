@@ -12,7 +12,7 @@ export interface FusionFlipRow {
   profitPerFusion: number
   margin: number
   totalProfit: number
-  fuseAmount: number
+  outputQty: number
   fusesIn10M: number
   weeklyVolume: number
   fillScore: number

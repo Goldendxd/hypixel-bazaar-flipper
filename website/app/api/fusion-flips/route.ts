@@ -30,7 +30,7 @@ export interface FusionFlipRow {
   profitPerFusion: number
   margin: number
   totalProfit: number
-  fuseAmount: number
+  outputQty: number      // shards produced per fusion
   fusesIn10M: number
   weeklyVolume: number
   fillScore: number
@@ -98,12 +98,12 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
     if (!out || out.sell <= 0) continue
 
     const sellOrder = Math.round((out.sell - 0.1) * 100) / 100
-    const revenue = sellOrder * (1 - TAX)
 
     // Try every combo in every slot, pick the one with best profit
     let bestFlip: FusionFlipRow | null = null
 
-    for (const combos of Object.values(recipeSlots)) {
+    for (const [slotKey, combos] of Object.entries(recipeSlots)) {
+      const outputQty = parseInt(slotKey, 10) || 1 // slot key = how many output shards produced
       for (const combo of combos) {
         if (combo.length !== 2) continue
         const [in1Id, in2Id] = combo
@@ -111,8 +111,12 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
         const in2 = shardMap[in2Id]
         if (!in1 || !in2 || in1.buy <= 0 || in2.buy <= 0) continue
 
-        // 1 of each input shard needed per fusion
-        const inputCost = Math.round((in1.buy + in2.buy) * 100) / 100
+        // fuse_amount on each input shard = qty of that shard needed per fusion
+        const in1Qty = in1.fuse_amount
+        const in2Qty = in2.fuse_amount
+        const inputCost = Math.round((in1.buy * in1Qty + in2.buy * in2Qty) * 100) / 100
+        // revenue = sell all outputQty shards after tax
+        const revenue = Math.round(sellOrder * outputQty * (1 - TAX) * 100) / 100
         const profitPerFusion = Math.round((revenue - inputCost) * 100) / 100
         if (profitPerFusion <= 0) continue
 
@@ -137,7 +141,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
           profitPerFusion,
           margin,
           totalProfit,
-          fuseAmount: out.fuse_amount,
+          outputQty,
           fusesIn10M,
           weeklyVolume: wVol,
           fillScore,
@@ -145,7 +149,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
             id: in1.internal_id,
             name: in1.name,
             rarity: in1.rarity,
-            qty: 1,
+            qty: in1Qty,
             unitPrice: Math.round(in1.buy * 100) / 100,
             iconUrl: shardIconUrl(in1.internal_id),
           },
@@ -153,7 +157,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
             id: in2.internal_id,
             name: in2.name,
             rarity: in2.rarity,
-            qty: 1,
+            qty: in2Qty,
             unitPrice: Math.round(in2.buy * 100) / 100,
             iconUrl: shardIconUrl(in2.internal_id),
           },
