@@ -2,198 +2,177 @@ import { NextResponse } from 'next/server'
 
 let cachedResult: object | null = null
 let cacheTime = 0
-const CACHE_TTL = 5 * 60 * 1000
+const CACHE_TTL = 60_000 // 1 minute — shard prices move fast
 
 const TAX = 0.0125
-const NEU_BASE = 'https://raw.githubusercontent.com/NotEnoughUpdates/NotEnoughUpdates-REPO/master/items'
-const MAX_DEPTH = 4
 
-function parseIngredients(recipe: Record<string, string>): { id: string; count: number }[] {
-  const counts: Record<string, number> = {}
-  for (const [key, val] of Object.entries(recipe)) {
-    if (key === 'count') continue
-    if (!val || val === '') continue
-    const parts = val.split(':')
-    const id = parts[0].trim().toUpperCase()
-    const cnt = parseInt(parts[1] ?? '1', 10) || 1
-    counts[id] = (counts[id] ?? 0) + cnt
-  }
-  return Object.entries(counts).map(([id, count]) => ({ id, count }))
+interface ShardEntry {
+  name: string
+  family: string
+  type: string
+  rarity: string
+  fuse_amount: number
+  internal_id: string
 }
 
-async function fetchNEURecipe(id: string): Promise<Record<string, string> | null> {
-  try {
-    const res = await fetch(`${NEU_BASE}/${id}.json`, { signal: AbortSignal.timeout(8000) })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.recipe ?? null
-  } catch {
-    return null
-  }
+interface FusionData {
+  shards: Record<string, ShardEntry>
+  recipes: Record<string, Record<string, [string, string][]>>
 }
 
-// Recursively compute cheapest cost for `qty` of `id`
-// Returns cheapest cost and whether any crafting was used (steps > 0)
-function cheapestCost(
-  id: string,
-  qty: number,
-  buyPrices: Record<string, number>,
-  recipeMap: Record<string, { ings: { id: string; count: number }[]; outputCount: number }>,
-  depth: number,
-  visiting: Set<string>,
-): { cost: number; steps: number; chain: string[] } {
-  const bazaarCost = (buyPrices[id] ?? Infinity) * qty
-  if (depth >= MAX_DEPTH || visiting.has(id)) return { cost: bazaarCost, steps: 0, chain: [] }
-
-  const entry = recipeMap[id]
-  if (!entry) return { cost: bazaarCost, steps: 0, chain: [] }
-
-  visiting.add(id)
-  let craftCost = 0
-  let totalSteps = 1
-  const chainParts: string[] = []
-  let feasible = true
-
-  for (const { id: ingId, count } of entry.ings) {
-    const needed = Math.ceil((count * qty) / entry.outputCount)
-    const sub = cheapestCost(ingId, needed, buyPrices, recipeMap, depth + 1, new Set(visiting))
-    if (sub.cost === Infinity) { feasible = false; break }
-    craftCost += sub.cost
-    totalSteps += sub.steps
-    chainParts.push(...sub.chain)
-  }
-  visiting.delete(id)
-
-  if (!feasible || craftCost >= bazaarCost) return { cost: bazaarCost, steps: 0, chain: [] }
-
-  // Format name from ID
-  const name = id.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ')
-  chainParts.push(name)
-  return { cost: craftCost, steps: totalSteps, chain: chainParts }
+export interface FusionFlipRow {
+  id: string
+  name: string
+  rarity: string
+  iconUrl: string
+  sellPrice: number
+  inputCost: number
+  profitPerFusion: number
+  margin: number
+  totalProfit: number
+  fuseAmount: number
+  fusesIn10M: number
+  weeklyVolume: number
+  fillScore: number
+  input1: { id: string; name: string; rarity: string; qty: number; unitPrice: number; iconUrl: string }
+  input2: { id: string; name: string; rarity: string; qty: number; unitPrice: number; iconUrl: string }
 }
 
-async function computeFlips() {
-  const bazRes = await fetch('https://api.hypixel.net/skyblock/bazaar', { signal: AbortSignal.timeout(15000) })
+function shardIconUrl(internalId: string): string {
+  return `https://sky.shiiyu.moe/api/item/${internalId}`
+}
+
+async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: number }> {
+  const [fusionRes, bazRes] = await Promise.all([
+    fetch('https://raw.githubusercontent.com/Campionnn/SkyShards/master/public/fusion-data.json', {
+      signal: AbortSignal.timeout(15000),
+    }),
+    fetch('https://api.hypixel.net/skyblock/bazaar', {
+      signal: AbortSignal.timeout(15000),
+    }),
+  ])
+
+  if (!fusionRes.ok) throw new Error('Fusion data fetch failed')
   if (!bazRes.ok) throw new Error('Bazaar fetch failed')
-  const baz = await bazRes.json()
 
-  const products: Record<string, { quick_status: { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number; buyOrders: number; sellOrders: number } }> = baz.products
-  const allIds = Object.keys(products)
+  const fusionData: FusionData = await fusionRes.json()
+  const bazData = await bazRes.json()
+
+  const products = bazData.products as Record<string, { quick_status: { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number; buyOrders: number; sellOrders: number } }>
 
   const buyPrices: Record<string, number> = {}
+  const sellBids: Record<string, number> = {}
   const weeklyVols: Record<string, number> = {}
-  const sellVols: Record<string, number> = {}
   const buyOrders: Record<string, number> = {}
   const sellOrders: Record<string, number> = {}
 
   for (const [id, p] of Object.entries(products)) {
     const q = p.quick_status
     buyPrices[id] = q.buyPrice
+    sellBids[id] = q.sellPrice
     weeklyVols[id] = q.buyMovingWeek
-    sellVols[id] = q.sellMovingWeek
     buyOrders[id] = q.buyOrders
     sellOrders[id] = q.sellOrders
   }
 
   const maxVol = Math.max(...Object.values(weeklyVols), 1)
 
-  // Fetch all recipes
-  const BATCH = 50
-  const rawRecipes: Record<string, Record<string, string>> = {}
+  const { shards, recipes } = fusionData
 
-  for (let i = 0; i < allIds.length; i += BATCH) {
-    const batch = allIds.slice(i, i + BATCH)
-    const results = await Promise.allSettled(
-      batch.map(async (id) => ({ id, recipe: await fetchNEURecipe(id) }))
-    )
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.recipe) {
-        rawRecipes[r.value.id] = r.value.recipe
+  // Build short_id -> shard info + prices map
+  const shardMap: Record<string, ShardEntry & { buy: number; sell: number }> = {}
+  for (const [shortId, shard] of Object.entries(shards)) {
+    const iid = shard.internal_id
+    shardMap[shortId] = {
+      ...shard,
+      buy: buyPrices[iid] ?? 0,
+      sell: sellBids[iid] ?? 0,
+    }
+  }
+
+  const rows: FusionFlipRow[] = []
+  const seen = new Set<string>() // track best combo per output
+
+  for (const [outputShortId, recipeSlots] of Object.entries(recipes)) {
+    const out = shardMap[outputShortId]
+    if (!out || out.sell <= 0) continue
+
+    const sellOrder = Math.round((out.sell - 0.1) * 100) / 100
+    const revenue = sellOrder * (1 - TAX)
+
+    // Try every combo in every slot, pick the one with best profit
+    let bestFlip: FusionFlipRow | null = null
+
+    for (const combos of Object.values(recipeSlots)) {
+      for (const combo of combos) {
+        if (combo.length !== 2) continue
+        const [in1Id, in2Id] = combo
+        const in1 = shardMap[in1Id]
+        const in2 = shardMap[in2Id]
+        if (!in1 || !in2 || in1.buy <= 0 || in2.buy <= 0) continue
+
+        // 1 of each input shard needed per fusion
+        const inputCost = Math.round((in1.buy + in2.buy) * 100) / 100
+        const profitPerFusion = Math.round((revenue - inputCost) * 100) / 100
+        if (profitPerFusion <= 0) continue
+
+        const margin = Math.round((profitPerFusion / inputCost) * 10000) / 100
+
+        const wVol = weeklyVols[out.internal_id] ?? 0
+        const volScore = Math.min(100, (wVol / maxVol) * 100)
+        const depth = (buyOrders[out.internal_id] ?? 0) + (sellOrders[out.internal_id] ?? 0)
+        const depthPenalty = Math.min(100, (depth / 200) * 100)
+        const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
+
+        const fusesIn10M = Math.max(1, Math.floor(10_000_000 / inputCost))
+        const totalProfit = Math.round(profitPerFusion * fusesIn10M * 100) / 100
+
+        const candidate: FusionFlipRow = {
+          id: out.internal_id,
+          name: out.name,
+          rarity: out.rarity,
+          iconUrl: shardIconUrl(out.internal_id),
+          sellPrice: sellOrder,
+          inputCost,
+          profitPerFusion,
+          margin,
+          totalProfit,
+          fuseAmount: out.fuse_amount,
+          fusesIn10M,
+          weeklyVolume: wVol,
+          fillScore,
+          input1: {
+            id: in1.internal_id,
+            name: in1.name,
+            rarity: in1.rarity,
+            qty: 1,
+            unitPrice: Math.round(in1.buy * 100) / 100,
+            iconUrl: shardIconUrl(in1.internal_id),
+          },
+          input2: {
+            id: in2.internal_id,
+            name: in2.name,
+            rarity: in2.rarity,
+            qty: 1,
+            unitPrice: Math.round(in2.buy * 100) / 100,
+            iconUrl: shardIconUrl(in2.internal_id),
+          },
+        }
+
+        if (!bestFlip || candidate.totalProfit > bestFlip.totalProfit) {
+          bestFlip = candidate
+        }
       }
     }
-  }
 
-  // Build normalized recipe map
-  const recipeMap: Record<string, { ings: { id: string; count: number }[]; outputCount: number }> = {}
-  for (const [id, recipe] of Object.entries(rawRecipes)) {
-    const ings = parseIngredients(recipe)
-    const outputCount = parseInt(recipe['count'] ?? '1', 10) || 1
-    if (ings.length > 0) recipeMap[id] = { ings, outputCount }
-  }
-
-  const rows = []
-
-  for (const [itemId, entry] of Object.entries(recipeMap)) {
-    const { ings: topIngs, outputCount } = entry
-
-    const sellAsk = buyPrices[itemId]
-    if (!sellAsk || sellAsk <= 0) continue
-
-    // Raw cost: buy all top-level ingredients at bazaar price
-    let rawCost = 0
-    let rawFeasible = true
-    for (const { id: ingId, count } of topIngs) {
-      const p = buyPrices[ingId]
-      if (!p || p <= 0) { rawFeasible = false; break }
-      rawCost += p * count
+    if (bestFlip && !seen.has(bestFlip.id)) {
+      seen.add(bestFlip.id)
+      rows.push(bestFlip)
     }
-    if (!rawFeasible || rawCost <= 0) continue
-
-    // Fusion cost: recursively substitute cheaper crafted intermediates
-    let fusionCost = 0
-    let totalSteps = 1
-    const chainParts: string[] = []
-    let fusionFeasible = true
-
-    for (const { id: ingId, count } of topIngs) {
-      const sub = cheapestCost(ingId, count, buyPrices, recipeMap, 0, new Set([itemId]))
-      if (sub.cost === Infinity) { fusionFeasible = false; break }
-      fusionCost += sub.cost
-      totalSteps += sub.steps
-      chainParts.push(...sub.chain)
-    }
-
-    if (!fusionFeasible || fusionCost <= 0) continue
-    // Must be at least 2 steps deep AND fusion must be cheaper than raw
-    if (totalSteps < 2 || fusionCost >= rawCost) continue
-
-    const sellOrder = Math.round((sellAsk - 0.1) * 100) / 100
-    const revenue = sellOrder * (1 - TAX) * outputCount
-    const profitPerFusion = Math.round((revenue - fusionCost) * 100) / 100
-    if (profitPerFusion <= 0) continue
-
-    const margin = Math.round((profitPerFusion / fusionCost) * 10000) / 100
-
-    const wVol = weeklyVols[itemId] ?? 0
-    const volScore = Math.min(100, (wVol / maxVol) * 100)
-    const depthPenalty = Math.min(100, (((buyOrders[itemId] ?? 0) + (sellOrders[itemId] ?? 0)) / 200) * 100)
-    const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
-
-    const craftCount = Math.max(1, Math.floor(10_000_000 / fusionCost))
-    const totalProfit = Math.round(profitPerFusion * craftCount * 100) / 100
-
-    const name = itemId.split('_').map(w => w[0] + w.slice(1).toLowerCase()).join(' ')
-    chainParts.push(name)
-    const uniqueChain = [...new Set(chainParts)]
-
-    rows.push({
-      id: itemId,
-      rawCost: Math.round(rawCost * 100) / 100,
-      fusionCost: Math.round(fusionCost * 100) / 100,
-      sellPrice: sellOrder,
-      profitPerFusion,
-      margin,
-      weeklyVolume: wVol,
-      fillScore,
-      craftCount,
-      totalProfit,
-      steps: totalSteps,
-      chain: uniqueChain,
-    })
   }
 
   rows.sort((a, b) => b.totalProfit - a.totalProfit)
-  return { rows, totalProducts: allIds.length }
+  return { rows, totalShards: Object.keys(shards).length }
 }
 
 export async function GET() {

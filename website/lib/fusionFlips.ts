@@ -1,41 +1,27 @@
-// Fusion Flips: multi-step compound crafts where you craft intermediate items
-// to reduce total ingredient cost. Server-side computation via /api/fusion-flips.
+// Real Fusion Flips: buy 2 attribute shards from bazaar, fuse via Kysha in Galatea,
+// sell the output shard on bazaar for profit.
+// Recipe data sourced from SkyShards (Campionnn/SkyShards on GitHub).
 
 export interface FusionFlipRow {
   id: string
   name: string
+  rarity: string
   iconUrl: string
-  rawCost: number
-  fusionCost: number
   sellPrice: number
+  inputCost: number
   profitPerFusion: number
   margin: number
-  craftCount: number
   totalProfit: number
+  fuseAmount: number
+  fusesIn10M: number
   weeklyVolume: number
   fillScore: number
-  steps: number
-  chain: string[]
+  input1: { id: string; name: string; rarity: string; qty: number; unitPrice: number; iconUrl: string }
+  input2: { id: string; name: string; rarity: string; qty: number; unitPrice: number; iconUrl: string }
 }
 
-function formatName(id: string): string {
-  return id.split(/[_:]/).map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-}
-
-export async function fetchFusionFlips(): Promise<{ rows: FusionFlipRow[]; totalProducts: number }> {
+export async function fetchFusionFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: number }> {
   const res = await fetch('/api/fusion-flips', { cache: 'no-store' })
   if (!res.ok) throw new Error(`Fusion-flips API error ${res.status}`)
-
-  const data: {
-    rows: Omit<FusionFlipRow, 'name' | 'iconUrl'>[]
-    totalProducts: number
-  } = await res.json()
-
-  const rows: FusionFlipRow[] = data.rows.map(r => ({
-    ...r,
-    name: formatName(r.id),
-    iconUrl: `https://sky.shiiyu.moe/api/item/${r.id}`,
-  }))
-
-  return { rows, totalProducts: data.totalProducts }
+  return res.json()
 }
