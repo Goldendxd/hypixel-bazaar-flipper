@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { fetchBazaarFlips, FlipRow, iconFallbacks } from '@/lib/api'
+import RefreshTimer from '@/components/RefreshTimer'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -355,6 +356,8 @@ export default function FlipFinder() {
           )
         })}
       </div>
+
+      <RefreshTimer intervalMs={60_000} lastUpdated={lastUpdated} />
     </div>
   )
 }

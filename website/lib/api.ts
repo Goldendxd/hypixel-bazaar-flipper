@@ -59,14 +59,13 @@ export function formatName(id: string): string {
 }
 
 export function iconUrl(id: string): string {
-  return `https://sky.shiiyu.moe/item/${id}`
+  return `https://sky.shiiyu.moe/api/item/${id}`
 }
 
 // Ordered fallback chain for item icons
 export const iconFallbacks = (id: string): string[] => [
-  `https://sky.shiiyu.moe/item/${id}`,
-  `https://sky.lea.moe/item/${id}`,
-  `https://mc.nether.pro/item/${id}`,
+  `https://sky.shiiyu.moe/api/item/${id}`,
+  `https://sky.lea.moe/api/item/${id}`,
 ]
 
 function fmt(n: number): number {

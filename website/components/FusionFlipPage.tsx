@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchFusionFlips, FusionFlipRow } from '@/lib/fusionFlips'
 import { iconFallbacks } from '@/lib/api'
+import RefreshTimer from '@/components/RefreshTimer'
 
 function coins(n: number): string {
   if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
@@ -223,7 +224,7 @@ export default function FusionFlipPage() {
                 <span style={{ color: 'var(--green)' }}>✓ Data updated at {lastUpdated.toLocaleTimeString()} ({totalProducts} products)</span>
               </>
             ) : (
-              <span style={{ color: 'var(--muted)' }}>Loading…</span>
+              <span style={{ color: 'var(--muted)' }}>Fetching recipes from NEU repo… this takes ~30s on first load</span>
             )}
             {error && <span style={{ color: 'var(--red)', marginLeft: 8 }}>⚠ {error}</span>}
           </div>
@@ -250,6 +251,8 @@ export default function FusionFlipPage() {
           </div>
         </main>
       </div>
+
+      <RefreshTimer intervalMs={60_000} lastUpdated={lastUpdated} />
     </div>
   )
 }
