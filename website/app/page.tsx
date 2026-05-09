@@ -66,6 +66,18 @@ export default function Home() {
               <span style={{ fontSize: 15 }}>🔨</span>
               Forge Flips
             </Link>
+            <Link href="/pets" className="nav-item" style={{ textDecoration: 'none' }}>
+              <span style={{ fontSize: 15 }}>🐾</span>
+              Pet Flips
+            </Link>
+            <Link href="/books" className="nav-item" style={{ textDecoration: 'none' }}>
+              <span style={{ fontSize: 15 }}>📚</span>
+              Book Flips
+            </Link>
+            <Link href="/mayor" className="nav-item" style={{ textDecoration: 'none' }}>
+              <span style={{ fontSize: 15 }}>🏛️</span>
+              Mayor Flips
+            </Link>
           </nav>
 
           {/* Bottom info */}
