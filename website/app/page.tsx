@@ -62,6 +62,10 @@ export default function Home() {
               <span style={{ fontSize: 15 }}>🧬</span>
               Fusion Flips
             </Link>
+            <Link href="/forge" className="nav-item" style={{ textDecoration: 'none' }}>
+              <span style={{ fontSize: 15 }}>🔨</span>
+              Forge Flips
+            </Link>
           </nav>
 
           {/* Bottom info */}

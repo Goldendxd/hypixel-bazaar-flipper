@@ -5,6 +5,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'sky.shiiyu.moe', pathname: '/api/item/**' },
       { protocol: 'https', hostname: 'sky.lea.moe', pathname: '/api/item/**' },
+      { protocol: 'https', hostname: 'skyshards.com', pathname: '/shardIcons/**' },
     ],
   },
 }

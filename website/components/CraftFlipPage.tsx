@@ -65,6 +65,9 @@ function Sidebar({ active }: { active: string }) {
         <Link href="/fusion" className={`nav-item${active === '/fusion' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>
           <span style={{ fontSize: 15 }}>🧬</span>Fusion Flips
         </Link>
+        <Link href="/forge" className={`nav-item${active === '/forge' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>
+          <span style={{ fontSize: 15 }}>🔨</span>Forge Flips
+        </Link>
       </nav>
       <div style={{ marginTop: 'auto', padding: '0 8px' }}>
         <div style={{

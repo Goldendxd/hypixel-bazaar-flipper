@@ -38,7 +38,19 @@ export interface FusionFlipRow {
   input2: { id: string; name: string; rarity: string; qty: number; unitPrice: number; iconUrl: string }
 }
 
-function shardIconUrl(internalId: string): string {
+// Build reverse map: internal_id -> shortId for skyshards.com icon CDN
+// skyshards.com/shardIcons/{shortId}.png is the only working icon source for Galatea shards
+function buildReverseShardMap(shards: Record<string, ShardEntry>): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const [shortId, shard] of Object.entries(shards)) {
+    map[shard.internal_id] = shortId
+  }
+  return map
+}
+
+function shardIconUrl(internalId: string, reverseMap: Record<string, string>): string {
+  const shortId = reverseMap[internalId]
+  if (shortId) return `https://skyshards.com/shardIcons/${shortId}.png`
   return `https://sky.shiiyu.moe/api/item/${internalId}`
 }
 
@@ -78,6 +90,9 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
   const maxVol = Math.max(...Object.values(weeklyVols), 1)
 
   const { shards, recipes } = fusionData
+
+  // Build reverse map for correct shard icon URLs
+  const reverseShardMap = buildReverseShardMap(shards)
 
   // Build short_id -> shard info + prices map
   const shardMap: Record<string, ShardEntry & { buy: number; sell: number }> = {}
@@ -135,7 +150,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
           id: out.internal_id,
           name: out.name,
           rarity: out.rarity,
-          iconUrl: shardIconUrl(out.internal_id),
+          iconUrl: shardIconUrl(out.internal_id, reverseShardMap),
           sellPrice: sellOrder,
           inputCost,
           profitPerFusion,
@@ -151,7 +166,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
             rarity: in1.rarity,
             qty: in1Qty,
             unitPrice: Math.round(in1.buy * 100) / 100,
-            iconUrl: shardIconUrl(in1.internal_id),
+            iconUrl: shardIconUrl(in1.internal_id, reverseShardMap),
           },
           input2: {
             id: in2.internal_id,
@@ -159,7 +174,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
             rarity: in2.rarity,
             qty: in2Qty,
             unitPrice: Math.round(in2.buy * 100) / 100,
-            iconUrl: shardIconUrl(in2.internal_id),
+            iconUrl: shardIconUrl(in2.internal_id, reverseShardMap),
           },
         }
 

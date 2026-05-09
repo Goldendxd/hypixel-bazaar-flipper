@@ -1,0 +1,2675 @@
+{
+  "sha": "5dbbaaa52e5e7b43e2ce88ea5e39e51486c11726",
+  "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/5dbbaaa52e5e7b43e2ce88ea5e39e51486c11726",
+  "tree": [
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e7e3b12ef9226d2bd3b57a03fa6f3ec42242dc54",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/e7e3b12ef9226d2bd3b57a03fa6f3ec42242dc54"
+    },
+    {
+      "path": ".github/workflows",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "15adaea32883168b4a29b3b71431aee5bd32dd4f",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/15adaea32883168b4a29b3b71431aee5bd32dd4f"
+    },
+    {
+      "path": ".github/workflows/update-fusions.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f12f256ca18968fc33d09094fcd81dfd95c06893",
+      "size": 1739,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f12f256ca18968fc33d09094fcd81dfd95c06893"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fc5ae9f0ccc2567c22c9ab57cc835f5067cca390",
+      "size": 261,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fc5ae9f0ccc2567c22c9ab57cc835f5067cca390"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d6db7eeb3b21189a6c29c383846d7ef48baded2",
+      "size": 478,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5d6db7eeb3b21189a6c29c383846d7ef48baded2"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d94e7deb72c90f03254225baf04f31b621b4877c",
+      "size": 610,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d94e7deb72c90f03254225baf04f31b621b4877c"
+    },
+    {
+      "path": "index.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e2275e92fdc7410b13c098f3edac52fbee944e00",
+      "size": 8008,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e2275e92fdc7410b13c098f3edac52fbee944e00"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c92898ebed84937d17e0924b31a973084f5fb2b1",
+      "size": 128437,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c92898ebed84937d17e0924b31a973084f5fb2b1"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3e1852a0241b2d3cb76d5ce6dc605302a701d085",
+      "size": 1801,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3e1852a0241b2d3cb76d5ce6dc605302a701d085"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9f3398688f92553e04900d104474e0eb91237678",
+      "size": 140099,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9f3398688f92553e04900d104474e0eb91237678"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "efc037aa8467135a1f3578711c4bf2240aff1cb3",
+      "size": 35,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/efc037aa8467135a1f3578711c4bf2240aff1cb3"
+    },
+    {
+      "path": "public",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6719809d5388c23df291109941de11c7419633b4",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/6719809d5388c23df291109941de11c7419633b4"
+    },
+    {
+      "path": "public/404.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "06a497eb90ee885afd6adb8aa063d4beb6076c9d",
+      "size": 953,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/06a497eb90ee885afd6adb8aa063d4beb6076c9d"
+    },
+    {
+      "path": "public/CNAME",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b5d04cc15592c7688f5994ecedb0d04feadc89ec",
+      "size": 14,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b5d04cc15592c7688f5994ecedb0d04feadc89ec"
+    },
+    {
+      "path": "public/ads.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "79cf9977e3f481b1a9a9947f0877ee9555606307",
+      "size": 3673,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/79cf9977e3f481b1a9a9947f0877ee9555606307"
+    },
+    {
+      "path": "public/client-privacy-policy.html",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f45dabc066aa908a054fb1b2f18304a94f67fcd3",
+      "size": 7312,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f45dabc066aa908a054fb1b2f18304a94f67fcd3"
+    },
+    {
+      "path": "public/favicon",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "402a57cf153fa3de3e8653e56d6e0fe96703795d",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/402a57cf153fa3de3e8653e56d6e0fe96703795d"
+    },
+    {
+      "path": "public/favicon/favicon.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0f5a37afe158d278138b9612529e3dad0711bb8c",
+      "size": 1277,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/0f5a37afe158d278138b9612529e3dad0711bb8c"
+    },
+    {
+      "path": "public/favicon/favicon.svg",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e401a41942f3a2b76d6064873f7e19a6b532a64",
+      "size": 6828,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2e401a41942f3a2b76d6064873f7e19a6b532a64"
+    },
+    {
+      "path": "public/fonts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "060e0de666bbcc1b9906aab686b05b5c398962b0",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/060e0de666bbcc1b9906aab686b05b5c398962b0"
+    },
+    {
+      "path": "public/fonts/unifont-17.0.03.otf",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "914005397523135470fd4d5be99855c0d467c01d",
+      "size": 5321400,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/914005397523135470fd4d5be99855c0d467c01d"
+    },
+    {
+      "path": "public/fusion-data.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d258749e5fa0eb3794653b7e09345e3dda3f339",
+      "size": 1989104,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5d258749e5fa0eb3794653b7e09345e3dda3f339"
+    },
+    {
+      "path": "public/fusion-properties.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ad1826a04ec402af1c05b53cf3d9a769717a6060",
+      "size": 43893,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ad1826a04ec402af1c05b53cf3d9a769717a6060"
+    },
+    {
+      "path": "public/guide.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fb467c5a66fa0eb444e7ad928158fcaf6677b1e2",
+      "size": 2879,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fb467c5a66fa0eb444e7ad928158fcaf6677b1e2"
+    },
+    {
+      "path": "public/rates.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "514e8e1a10c348691775c92f7b67df14cf4074c9",
+      "size": 2334,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/514e8e1a10c348691775c92f7b67df14cf4074c9"
+    },
+    {
+      "path": "public/robots.txt",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32aa42751f707885c929d65577a6022eabf2627e",
+      "size": 412,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/32aa42751f707885c929d65577a6022eabf2627e"
+    },
+    {
+      "path": "public/shardIcons",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "4b2a92d280a1011fc60a01ea268bd06ffd37cf4e",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/4b2a92d280a1011fc60a01ea268bd06ffd37cf4e"
+    },
+    {
+      "path": "public/shardIcons/C1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "328ef9eecb924ea1d68d6b92180e4bd047a4ef90",
+      "size": 17672,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/328ef9eecb924ea1d68d6b92180e4bd047a4ef90"
+    },
+    {
+      "path": "public/shardIcons/C10.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "62f51392f9b7b5774f24bb212443c790a8faece6",
+      "size": 13938,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/62f51392f9b7b5774f24bb212443c790a8faece6"
+    },
+    {
+      "path": "public/shardIcons/C11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7f1a715d6537dab4f89fef4915e0973d99243204",
+      "size": 14188,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7f1a715d6537dab4f89fef4915e0973d99243204"
+    },
+    {
+      "path": "public/shardIcons/C12.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2665b4692e2bc0916f4d5bcc4bafb4d51c4abd33",
+      "size": 10858,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2665b4692e2bc0916f4d5bcc4bafb4d51c4abd33"
+    },
+    {
+      "path": "public/shardIcons/C14.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b3316ca69e6514d42b478f36427995a979397ac5",
+      "size": 15192,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b3316ca69e6514d42b478f36427995a979397ac5"
+    },
+    {
+      "path": "public/shardIcons/C15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5fa357587aab1fb31b98bd0a003ced3e32f0a986",
+      "size": 11608,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5fa357587aab1fb31b98bd0a003ced3e32f0a986"
+    },
+    {
+      "path": "public/shardIcons/C16.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f1bdde67782777981c4e48d6dc661ba2e0dfa257",
+      "size": 13373,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f1bdde67782777981c4e48d6dc661ba2e0dfa257"
+    },
+    {
+      "path": "public/shardIcons/C17.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "895d6013665b8e5a071232a02572f615af9b77d8",
+      "size": 7847,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/895d6013665b8e5a071232a02572f615af9b77d8"
+    },
+    {
+      "path": "public/shardIcons/C18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e96487e808f3968aa78d37216bbefae56aaed60c",
+      "size": 11456,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e96487e808f3968aa78d37216bbefae56aaed60c"
+    },
+    {
+      "path": "public/shardIcons/C19.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "729c94833eeac11ac33c249613110df81c3d87bb",
+      "size": 11882,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/729c94833eeac11ac33c249613110df81c3d87bb"
+    },
+    {
+      "path": "public/shardIcons/C2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd2ca4a324857370b53cf61bee91c40388a91c61",
+      "size": 18490,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fd2ca4a324857370b53cf61bee91c40388a91c61"
+    },
+    {
+      "path": "public/shardIcons/C20.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9e7d83c452f92ecb7434d3c0709458c16ee53f7",
+      "size": 10882,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b9e7d83c452f92ecb7434d3c0709458c16ee53f7"
+    },
+    {
+      "path": "public/shardIcons/C21.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "43666e41d1a341c571f8c66b43b608c1dd49530d",
+      "size": 6828,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/43666e41d1a341c571f8c66b43b608c1dd49530d"
+    },
+    {
+      "path": "public/shardIcons/C23.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e3c128ef31fcbe88b711286169b483e9b726d426",
+      "size": 10816,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e3c128ef31fcbe88b711286169b483e9b726d426"
+    },
+    {
+      "path": "public/shardIcons/C24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "683c33754dbf36f68c210a56a254da3896269378",
+      "size": 12293,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/683c33754dbf36f68c210a56a254da3896269378"
+    },
+    {
+      "path": "public/shardIcons/C25.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36ebc370c4469c1dc0210877515c0f464dc0aab4",
+      "size": 14134,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/36ebc370c4469c1dc0210877515c0f464dc0aab4"
+    },
+    {
+      "path": "public/shardIcons/C27.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d7feaa1f51b40b1d6fc5bb48a7b8373aec672c0",
+      "size": 13285,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9d7feaa1f51b40b1d6fc5bb48a7b8373aec672c0"
+    },
+    {
+      "path": "public/shardIcons/C29.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "154b9e15a3f06da13f201ce0187e646dcdaf6954",
+      "size": 12539,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/154b9e15a3f06da13f201ce0187e646dcdaf6954"
+    },
+    {
+      "path": "public/shardIcons/C3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3bbce62f9b1ca2ab48f833d5c95bc534584a1a76",
+      "size": 11259,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3bbce62f9b1ca2ab48f833d5c95bc534584a1a76"
+    },
+    {
+      "path": "public/shardIcons/C30.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f6f34b18fdccfdac8b7659d08c2e68ac0b2c9a2b",
+      "size": 11567,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f6f34b18fdccfdac8b7659d08c2e68ac0b2c9a2b"
+    },
+    {
+      "path": "public/shardIcons/C33.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1cf465d3febee5d1bfc7bd759ce0d1f165ef69c9",
+      "size": 9715,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1cf465d3febee5d1bfc7bd759ce0d1f165ef69c9"
+    },
+    {
+      "path": "public/shardIcons/C34.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec64ada2d925304c5bf7085121969004803a55f7",
+      "size": 9718,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ec64ada2d925304c5bf7085121969004803a55f7"
+    },
+    {
+      "path": "public/shardIcons/C35.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c26cc328eb2cb41fa4cbb8800f78760a9f377585",
+      "size": 9544,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c26cc328eb2cb41fa4cbb8800f78760a9f377585"
+    },
+    {
+      "path": "public/shardIcons/C36.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "71edf759a289ca828224a92141fc2f10a4089894",
+      "size": 22524,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/71edf759a289ca828224a92141fc2f10a4089894"
+    },
+    {
+      "path": "public/shardIcons/C39.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "82365665782b29cf8ea66f63340b42d6a1ed56fc",
+      "size": 12544,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/82365665782b29cf8ea66f63340b42d6a1ed56fc"
+    },
+    {
+      "path": "public/shardIcons/C4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dfc665156485b5109c9e37f5fa915f4e9b84a95c",
+      "size": 11257,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/dfc665156485b5109c9e37f5fa915f4e9b84a95c"
+    },
+    {
+      "path": "public/shardIcons/C5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fe5a7eb29101e0c75372bbc414edbd939db74c17",
+      "size": 13799,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fe5a7eb29101e0c75372bbc414edbd939db74c17"
+    },
+    {
+      "path": "public/shardIcons/C7.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "11527603aef25c77fe2d785d96ee36aa2d6c146c",
+      "size": 13180,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/11527603aef25c77fe2d785d96ee36aa2d6c146c"
+    },
+    {
+      "path": "public/shardIcons/C8.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4fce79500f5cfd692f366a0d302a9b29d6074313",
+      "size": 14087,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4fce79500f5cfd692f366a0d302a9b29d6074313"
+    },
+    {
+      "path": "public/shardIcons/C9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6eec8ee86e2d91e20f90acaa042df02fdaeea24d",
+      "size": 10901,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6eec8ee86e2d91e20f90acaa042df02fdaeea24d"
+    },
+    {
+      "path": "public/shardIcons/E1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "479a83ca0e2bceaaa94693716f2c17a10b079bbc",
+      "size": 16919,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/479a83ca0e2bceaaa94693716f2c17a10b079bbc"
+    },
+    {
+      "path": "public/shardIcons/E10.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "70223206311265a0066de0c87b7403140bac30f8",
+      "size": 12430,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/70223206311265a0066de0c87b7403140bac30f8"
+    },
+    {
+      "path": "public/shardIcons/E11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9ae340978772a50dcf001a564217f585fa92a3d5",
+      "size": 14076,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9ae340978772a50dcf001a564217f585fa92a3d5"
+    },
+    {
+      "path": "public/shardIcons/E13.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a94b70d60079293070240d6abd0df4226de9a8e4",
+      "size": 17973,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a94b70d60079293070240d6abd0df4226de9a8e4"
+    },
+    {
+      "path": "public/shardIcons/E14.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eb5a5ce914dc06b2c537d6390a29024c3f6628fd",
+      "size": 15700,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/eb5a5ce914dc06b2c537d6390a29024c3f6628fd"
+    },
+    {
+      "path": "public/shardIcons/E15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "510fb41268d92c0944608da079a019461519f8af",
+      "size": 8611,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/510fb41268d92c0944608da079a019461519f8af"
+    },
+    {
+      "path": "public/shardIcons/E16.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1de8578652255eca4631f053751438d09bf4530d",
+      "size": 13870,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1de8578652255eca4631f053751438d09bf4530d"
+    },
+    {
+      "path": "public/shardIcons/E17.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e77cb3835168b59018dce7e4512db5660aa3814f",
+      "size": 13517,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e77cb3835168b59018dce7e4512db5660aa3814f"
+    },
+    {
+      "path": "public/shardIcons/E18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "087c54acdfb7a5598e0c517798e984d8dc17037b",
+      "size": 13047,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/087c54acdfb7a5598e0c517798e984d8dc17037b"
+    },
+    {
+      "path": "public/shardIcons/E2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2a2b2fc64882bcf88f7e73509ca1e442289d0a2b",
+      "size": 12002,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2a2b2fc64882bcf88f7e73509ca1e442289d0a2b"
+    },
+    {
+      "path": "public/shardIcons/E20.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "585ff436d60345472fa8680f30b16c0ac8531dd3",
+      "size": 17798,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/585ff436d60345472fa8680f30b16c0ac8531dd3"
+    },
+    {
+      "path": "public/shardIcons/E21.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7509e038e2c02a899f06a392fed7a85378b33a2c",
+      "size": 10910,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7509e038e2c02a899f06a392fed7a85378b33a2c"
+    },
+    {
+      "path": "public/shardIcons/E22.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e81b86da8fc73f6dc4af6e19d44f6eb0d30d172",
+      "size": 12787,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2e81b86da8fc73f6dc4af6e19d44f6eb0d30d172"
+    },
+    {
+      "path": "public/shardIcons/E24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4622559d82bfb67570adea4b4d0146fa7d66887d",
+      "size": 15549,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4622559d82bfb67570adea4b4d0146fa7d66887d"
+    },
+    {
+      "path": "public/shardIcons/E26.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3ad5a23b11d538b0a663f2276426b4caf282f4aa",
+      "size": 9287,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3ad5a23b11d538b0a663f2276426b4caf282f4aa"
+    },
+    {
+      "path": "public/shardIcons/E27.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e14ba05651007feae29b1ac90a08a9ac04dc76c0",
+      "size": 12820,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e14ba05651007feae29b1ac90a08a9ac04dc76c0"
+    },
+    {
+      "path": "public/shardIcons/E28.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c08ec897a5f8468cabaa6d156bc396550e9c07b8",
+      "size": 11339,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c08ec897a5f8468cabaa6d156bc396550e9c07b8"
+    },
+    {
+      "path": "public/shardIcons/E29.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3f6a4dc896de405592ddec6415fab342291f9060",
+      "size": 13388,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3f6a4dc896de405592ddec6415fab342291f9060"
+    },
+    {
+      "path": "public/shardIcons/E3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "185e4c3e85be8a110892c55a94dc6a9b55a9eb2b",
+      "size": 17274,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/185e4c3e85be8a110892c55a94dc6a9b55a9eb2b"
+    },
+    {
+      "path": "public/shardIcons/E30.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1d3e39eedcced9189032be577f1f9adebccaf413",
+      "size": 12557,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1d3e39eedcced9189032be577f1f9adebccaf413"
+    },
+    {
+      "path": "public/shardIcons/E31.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6cc46317950cf27cdea2a844131ecbb44a6a739a",
+      "size": 14858,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6cc46317950cf27cdea2a844131ecbb44a6a739a"
+    },
+    {
+      "path": "public/shardIcons/E32.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2944674634c9bebf8a9d71376a7c076f1544d630",
+      "size": 10752,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2944674634c9bebf8a9d71376a7c076f1544d630"
+    },
+    {
+      "path": "public/shardIcons/E33.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "875f1ff0f59ca18b98050df149aed2e0708c72c1",
+      "size": 11848,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/875f1ff0f59ca18b98050df149aed2e0708c72c1"
+    },
+    {
+      "path": "public/shardIcons/E34.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d9c3f8eee0cc55bd4588cb72838eafc59dae1a2",
+      "size": 13502,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9d9c3f8eee0cc55bd4588cb72838eafc59dae1a2"
+    },
+    {
+      "path": "public/shardIcons/E35.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "99fdd072111597eb602923cf2bae394110dc3e99",
+      "size": 16615,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/99fdd072111597eb602923cf2bae394110dc3e99"
+    },
+    {
+      "path": "public/shardIcons/E36.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3264f09770f97450c2d5c552b17a851a55de841e",
+      "size": 9688,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3264f09770f97450c2d5c552b17a851a55de841e"
+    },
+    {
+      "path": "public/shardIcons/E37.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f2a1dd2b12885df78fbf6faccb05730a67096d3",
+      "size": 14074,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2f2a1dd2b12885df78fbf6faccb05730a67096d3"
+    },
+    {
+      "path": "public/shardIcons/E39.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f1c9e98e345bed2887ca1c748a81c9fbcd3f0380",
+      "size": 11077,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f1c9e98e345bed2887ca1c748a81c9fbcd3f0380"
+    },
+    {
+      "path": "public/shardIcons/E4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d801bb5b615db2297ef01b6e3f0c8682801f6d6",
+      "size": 11565,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5d801bb5b615db2297ef01b6e3f0c8682801f6d6"
+    },
+    {
+      "path": "public/shardIcons/E42.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "23d7c41d1e284881e3801bc7089827a56f9f91f7",
+      "size": 13091,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/23d7c41d1e284881e3801bc7089827a56f9f91f7"
+    },
+    {
+      "path": "public/shardIcons/E45.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "990ca46b72886ba9bca2c5ad218387755b6b054e",
+      "size": 11538,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/990ca46b72886ba9bca2c5ad218387755b6b054e"
+    },
+    {
+      "path": "public/shardIcons/E5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "17c2b1ba293eca79895aaf7553eb37bc017ab60e",
+      "size": 15316,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/17c2b1ba293eca79895aaf7553eb37bc017ab60e"
+    },
+    {
+      "path": "public/shardIcons/E6.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "34505acdab62c80272258064a2aec28ad169a5e1",
+      "size": 11328,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/34505acdab62c80272258064a2aec28ad169a5e1"
+    },
+    {
+      "path": "public/shardIcons/E7.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5990d6c32126aa5540b4ce33ab9a07f38defc6dd",
+      "size": 12847,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5990d6c32126aa5540b4ce33ab9a07f38defc6dd"
+    },
+    {
+      "path": "public/shardIcons/E9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "647d426dd6deec44054f5bd0170f4e2289a67545",
+      "size": 15297,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/647d426dd6deec44054f5bd0170f4e2289a67545"
+    },
+    {
+      "path": "public/shardIcons/L1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36f48977450b91ba732855a37d946d9a027dce77",
+      "size": 16370,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/36f48977450b91ba732855a37d946d9a027dce77"
+    },
+    {
+      "path": "public/shardIcons/L11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "43baafea52dd1f7db9e58accbc188f6de3eed7b4",
+      "size": 13008,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/43baafea52dd1f7db9e58accbc188f6de3eed7b4"
+    },
+    {
+      "path": "public/shardIcons/L12.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e4c53351d3dfcf1537d4c5bfbae90a4a0b44ea74",
+      "size": 12056,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e4c53351d3dfcf1537d4c5bfbae90a4a0b44ea74"
+    },
+    {
+      "path": "public/shardIcons/L13.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44d10c08ae5f74c7671b00a173bcfebca23d73a1",
+      "size": 16161,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/44d10c08ae5f74c7671b00a173bcfebca23d73a1"
+    },
+    {
+      "path": "public/shardIcons/L14.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b96804891d86a93178b6deb2a8aacbecd59ec200",
+      "size": 13336,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b96804891d86a93178b6deb2a8aacbecd59ec200"
+    },
+    {
+      "path": "public/shardIcons/L15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4cad0e618294e17432fb9a176b163ae95905273d",
+      "size": 16356,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4cad0e618294e17432fb9a176b163ae95905273d"
+    },
+    {
+      "path": "public/shardIcons/L17.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "147c6c0388f3521c3fc1c5106b598d8c6b7c417a",
+      "size": 13120,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/147c6c0388f3521c3fc1c5106b598d8c6b7c417a"
+    },
+    {
+      "path": "public/shardIcons/L18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8af6ca2c2889a451b307c02f273acd2fd25360bd",
+      "size": 14362,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/8af6ca2c2889a451b307c02f273acd2fd25360bd"
+    },
+    {
+      "path": "public/shardIcons/L2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b4d09de9e52c3bbe193a817f1732905812bb2628",
+      "size": 15898,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b4d09de9e52c3bbe193a817f1732905812bb2628"
+    },
+    {
+      "path": "public/shardIcons/L20.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d5f322749563c90e8c4e40e5bebe56b75f6edb9e",
+      "size": 13470,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d5f322749563c90e8c4e40e5bebe56b75f6edb9e"
+    },
+    {
+      "path": "public/shardIcons/L23.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bbd087648d5ac4bd4a3f7a02ee26e157bf87d184",
+      "size": 12172,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/bbd087648d5ac4bd4a3f7a02ee26e157bf87d184"
+    },
+    {
+      "path": "public/shardIcons/L24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ea2d5cad722b9d917f46996c0e473a172ba4c4cb",
+      "size": 11767,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ea2d5cad722b9d917f46996c0e473a172ba4c4cb"
+    },
+    {
+      "path": "public/shardIcons/L25.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "be34dccebdf55b6cec0af203ba79f6400b4c731e",
+      "size": 14494,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/be34dccebdf55b6cec0af203ba79f6400b4c731e"
+    },
+    {
+      "path": "public/shardIcons/L26.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e6c7d2ce4fedcb10d5d605e86fa007918d5d449",
+      "size": 14215,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2e6c7d2ce4fedcb10d5d605e86fa007918d5d449"
+    },
+    {
+      "path": "public/shardIcons/L27.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0f4c5e5e21e10cfcb74a6c5508799f501aca9536",
+      "size": 9562,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/0f4c5e5e21e10cfcb74a6c5508799f501aca9536"
+    },
+    {
+      "path": "public/shardIcons/L28.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c09cb9ce049cab35dff138f7a7e558b095422f9",
+      "size": 12486,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2c09cb9ce049cab35dff138f7a7e558b095422f9"
+    },
+    {
+      "path": "public/shardIcons/L29.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a21691216b7349afa56018ef64fd0b41edbe2df0",
+      "size": 13578,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a21691216b7349afa56018ef64fd0b41edbe2df0"
+    },
+    {
+      "path": "public/shardIcons/L3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de8f226792a14b5e3ac1faafc07b7297d1c0c27a",
+      "size": 17427,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/de8f226792a14b5e3ac1faafc07b7297d1c0c27a"
+    },
+    {
+      "path": "public/shardIcons/L30.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c3bbe14759c7087f016bb5e98fa514fb52430464",
+      "size": 15306,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c3bbe14759c7087f016bb5e98fa514fb52430464"
+    },
+    {
+      "path": "public/shardIcons/L31.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ba4dc598d7d8731ff5c51e1d09829c19d9247562",
+      "size": 13909,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ba4dc598d7d8731ff5c51e1d09829c19d9247562"
+    },
+    {
+      "path": "public/shardIcons/L32.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "719579858b8ee516687bac732584abbf91808706",
+      "size": 10293,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/719579858b8ee516687bac732584abbf91808706"
+    },
+    {
+      "path": "public/shardIcons/L33.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "52fe829c63319276ba1f6db6911f49c2f1390478",
+      "size": 14020,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/52fe829c63319276ba1f6db6911f49c2f1390478"
+    },
+    {
+      "path": "public/shardIcons/L34.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7458abb2d957b713153811897f100144666eec2d",
+      "size": 12952,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7458abb2d957b713153811897f100144666eec2d"
+    },
+    {
+      "path": "public/shardIcons/L36.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1f8bf527d089fc2e6751fb465a8c8b2abc860776",
+      "size": 13482,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1f8bf527d089fc2e6751fb465a8c8b2abc860776"
+    },
+    {
+      "path": "public/shardIcons/L39.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3e87b524b6612b3f0878a604b7becc0cd73aa53a",
+      "size": 14012,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3e87b524b6612b3f0878a604b7becc0cd73aa53a"
+    },
+    {
+      "path": "public/shardIcons/L4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9fd85e2acd4cd1836a05293dc774aa266cdc951a",
+      "size": 14383,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9fd85e2acd4cd1836a05293dc774aa266cdc951a"
+    },
+    {
+      "path": "public/shardIcons/L41.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8cb20d367dabec27579190cd8d99d672d900e100",
+      "size": 14743,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/8cb20d367dabec27579190cd8d99d672d900e100"
+    },
+    {
+      "path": "public/shardIcons/L42.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f92fb03cbb9946215e1cabbb8a6ce823f8d7da6a",
+      "size": 14245,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f92fb03cbb9946215e1cabbb8a6ce823f8d7da6a"
+    },
+    {
+      "path": "public/shardIcons/L44.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33633ffea89c46df62bffc1210b09f01bc2c9b7e",
+      "size": 18821,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/33633ffea89c46df62bffc1210b09f01bc2c9b7e"
+    },
+    {
+      "path": "public/shardIcons/L46.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "59731fd92631721e4ddbc67bd2fccbf88aa770e4",
+      "size": 17293,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/59731fd92631721e4ddbc67bd2fccbf88aa770e4"
+    },
+    {
+      "path": "public/shardIcons/L47.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d127d7855af35cd78457173864522583f9f70d79",
+      "size": 13154,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d127d7855af35cd78457173864522583f9f70d79"
+    },
+    {
+      "path": "public/shardIcons/L48.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cca068f70f3085febf8719a66c52599591686af8",
+      "size": 7942,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cca068f70f3085febf8719a66c52599591686af8"
+    },
+    {
+      "path": "public/shardIcons/L5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "558b596142145aef33336ecc37f090b3db4de36b",
+      "size": 12269,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/558b596142145aef33336ecc37f090b3db4de36b"
+    },
+    {
+      "path": "public/shardIcons/L51.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f9796c89210f834d7cdfa7d3c1fe6c1e757815ad",
+      "size": 9015,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f9796c89210f834d7cdfa7d3c1fe6c1e757815ad"
+    },
+    {
+      "path": "public/shardIcons/L6.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c607fb2fff190216b1d633a1fb3ddd22c5789e22",
+      "size": 13818,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c607fb2fff190216b1d633a1fb3ddd22c5789e22"
+    },
+    {
+      "path": "public/shardIcons/L7.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf09ad7b374561f51ecbc1d3252b32154ec9b9fa",
+      "size": 14338,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/bf09ad7b374561f51ecbc1d3252b32154ec9b9fa"
+    },
+    {
+      "path": "public/shardIcons/L8.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "177f9f5669a09856b2f5fbca1a39164a84bec843",
+      "size": 13016,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/177f9f5669a09856b2f5fbca1a39164a84bec843"
+    },
+    {
+      "path": "public/shardIcons/L9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ea27bcea4056c3c1c4ff9444241738b6dddb920",
+      "size": 15054,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4ea27bcea4056c3c1c4ff9444241738b6dddb920"
+    },
+    {
+      "path": "public/shardIcons/R1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b59849f9868031f38845427a0200374966fdea30",
+      "size": 17826,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b59849f9868031f38845427a0200374966fdea30"
+    },
+    {
+      "path": "public/shardIcons/R10.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "191d11a2669bb62d2cf520c93103dc8ae2a9fd23",
+      "size": 11566,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/191d11a2669bb62d2cf520c93103dc8ae2a9fd23"
+    },
+    {
+      "path": "public/shardIcons/R11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b596a4411db48c8a22d6c4d8ca7445ad5cd0f680",
+      "size": 16397,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b596a4411db48c8a22d6c4d8ca7445ad5cd0f680"
+    },
+    {
+      "path": "public/shardIcons/R13.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "295cbde278e961d00ce2be63c444af83dead2f96",
+      "size": 11948,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/295cbde278e961d00ce2be63c444af83dead2f96"
+    },
+    {
+      "path": "public/shardIcons/R15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6947736e92476b5b8d2056d3f3c30782f9c52a8a",
+      "size": 16250,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6947736e92476b5b8d2056d3f3c30782f9c52a8a"
+    },
+    {
+      "path": "public/shardIcons/R16.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9afea985212af9506253210f08e85ae1c3e94ad",
+      "size": 14132,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c9afea985212af9506253210f08e85ae1c3e94ad"
+    },
+    {
+      "path": "public/shardIcons/R18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a41401f6bc6aab9a3d79c1acf9a871d56e2d3de5",
+      "size": 12550,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a41401f6bc6aab9a3d79c1acf9a871d56e2d3de5"
+    },
+    {
+      "path": "public/shardIcons/R2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a64e0e11ac9b187da9deb361e7694fc06a08541",
+      "size": 15410,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1a64e0e11ac9b187da9deb361e7694fc06a08541"
+    },
+    {
+      "path": "public/shardIcons/R21.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6df20a046948612bc228da6ecc69bab995c6723b",
+      "size": 16230,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6df20a046948612bc228da6ecc69bab995c6723b"
+    },
+    {
+      "path": "public/shardIcons/R22.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77ce65cf8f59db41b5e38a7446f1c4f9859b536d",
+      "size": 14231,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/77ce65cf8f59db41b5e38a7446f1c4f9859b536d"
+    },
+    {
+      "path": "public/shardIcons/R23.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bcbe43e130c62916d66e19b9ab84e30f2c8862ea",
+      "size": 15948,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/bcbe43e130c62916d66e19b9ab84e30f2c8862ea"
+    },
+    {
+      "path": "public/shardIcons/R24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dcdff710f2089c3b987f7c35b050992160ea2044",
+      "size": 11244,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/dcdff710f2089c3b987f7c35b050992160ea2044"
+    },
+    {
+      "path": "public/shardIcons/R25.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9434f69b892832be5bbbf0fce5fc591846d1d3be",
+      "size": 13735,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9434f69b892832be5bbbf0fce5fc591846d1d3be"
+    },
+    {
+      "path": "public/shardIcons/R27.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b35a1ecef8b2d10486f5c7e5952b0c11dc62fee7",
+      "size": 15573,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b35a1ecef8b2d10486f5c7e5952b0c11dc62fee7"
+    },
+    {
+      "path": "public/shardIcons/R29.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "02a808bbcd67d94b5b438a302cb982bf158a9ca3",
+      "size": 15672,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/02a808bbcd67d94b5b438a302cb982bf158a9ca3"
+    },
+    {
+      "path": "public/shardIcons/R3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d5fdce06f0aa9929839970142e11f857ff43594b",
+      "size": 16963,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d5fdce06f0aa9929839970142e11f857ff43594b"
+    },
+    {
+      "path": "public/shardIcons/R30.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fac9c7787bb2754d4903f845a94b762b7994aa62",
+      "size": 12167,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fac9c7787bb2754d4903f845a94b762b7994aa62"
+    },
+    {
+      "path": "public/shardIcons/R31.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aa0a92654de56eebd9b23ab16b63099d5243b566",
+      "size": 13570,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/aa0a92654de56eebd9b23ab16b63099d5243b566"
+    },
+    {
+      "path": "public/shardIcons/R33.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c78282154110837683139dc70bca1c2d3170b867",
+      "size": 14749,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c78282154110837683139dc70bca1c2d3170b867"
+    },
+    {
+      "path": "public/shardIcons/R34.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "14b035eb695dfc7498761a1916fa85bda292f543",
+      "size": 14657,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/14b035eb695dfc7498761a1916fa85bda292f543"
+    },
+    {
+      "path": "public/shardIcons/R35.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e1f481bf192e990d8e4c9b780414802df85d1665",
+      "size": 11418,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e1f481bf192e990d8e4c9b780414802df85d1665"
+    },
+    {
+      "path": "public/shardIcons/R36.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "442e3f6ff37ef9a73cefd5e6f72b8150c6cd7b5c",
+      "size": 14641,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/442e3f6ff37ef9a73cefd5e6f72b8150c6cd7b5c"
+    },
+    {
+      "path": "public/shardIcons/R38.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f475a96dd0fdf7f777afa1eda3a48c9ca425845c",
+      "size": 6962,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f475a96dd0fdf7f777afa1eda3a48c9ca425845c"
+    },
+    {
+      "path": "public/shardIcons/R39.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ee6eb2c428486b34c709348b7b94aee736d45a41",
+      "size": 9766,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ee6eb2c428486b34c709348b7b94aee736d45a41"
+    },
+    {
+      "path": "public/shardIcons/R4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b92a8c1bec2f8c46bfa9281775ccd0a02a819e79",
+      "size": 12997,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b92a8c1bec2f8c46bfa9281775ccd0a02a819e79"
+    },
+    {
+      "path": "public/shardIcons/R42.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "97f577c3f698dd24113f06cb4013c11a4b53156b",
+      "size": 11579,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/97f577c3f698dd24113f06cb4013c11a4b53156b"
+    },
+    {
+      "path": "public/shardIcons/R43.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dd2c1760612ccef9c86515c9ac8e4ce0deb5677e",
+      "size": 16935,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/dd2c1760612ccef9c86515c9ac8e4ce0deb5677e"
+    },
+    {
+      "path": "public/shardIcons/R44.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "49b72b4054fb2aa9c843548312c03a3e0b49107b",
+      "size": 15483,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/49b72b4054fb2aa9c843548312c03a3e0b49107b"
+    },
+    {
+      "path": "public/shardIcons/R45.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f0aa7a1ce1e9eaca84d194ab4559f627009d484",
+      "size": 12912,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2f0aa7a1ce1e9eaca84d194ab4559f627009d484"
+    },
+    {
+      "path": "public/shardIcons/R46.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "06f340bb87c521f6923574d1a5797c77ef67806e",
+      "size": 12850,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/06f340bb87c521f6923574d1a5797c77ef67806e"
+    },
+    {
+      "path": "public/shardIcons/R49.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a2e25db154dca2234a9f8c73409ef67647aad19c",
+      "size": 14880,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a2e25db154dca2234a9f8c73409ef67647aad19c"
+    },
+    {
+      "path": "public/shardIcons/R5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1d2ae9e5ee3a1c457dca1464a7dce5446edd03a2",
+      "size": 11358,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1d2ae9e5ee3a1c457dca1464a7dce5446edd03a2"
+    },
+    {
+      "path": "public/shardIcons/R50.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1b722897a10f98f614211f7cc57b79a0e5349bc4",
+      "size": 10417,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1b722897a10f98f614211f7cc57b79a0e5349bc4"
+    },
+    {
+      "path": "public/shardIcons/R51.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "99a2123127d9ff5baad998c48b47bc745ca3ce16",
+      "size": 13069,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/99a2123127d9ff5baad998c48b47bc745ca3ce16"
+    },
+    {
+      "path": "public/shardIcons/R52.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a588a0ca98d4ae5479f6b8c351d14f9080da0718",
+      "size": 15849,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a588a0ca98d4ae5479f6b8c351d14f9080da0718"
+    },
+    {
+      "path": "public/shardIcons/R53.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a07bc36fe612c0001072058decaf146a5207b839",
+      "size": 14535,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a07bc36fe612c0001072058decaf146a5207b839"
+    },
+    {
+      "path": "public/shardIcons/R54.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ef0074f6d6d8874b04459c1ef4c2435487d2f1c",
+      "size": 14653,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4ef0074f6d6d8874b04459c1ef4c2435487d2f1c"
+    },
+    {
+      "path": "public/shardIcons/R56.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec9292dae4b095409fd5bfa240367f64d7025c5e",
+      "size": 13062,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ec9292dae4b095409fd5bfa240367f64d7025c5e"
+    },
+    {
+      "path": "public/shardIcons/R57.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1490c7dd218bfc81f5d4035ecba39614703a0a1e",
+      "size": 12651,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1490c7dd218bfc81f5d4035ecba39614703a0a1e"
+    },
+    {
+      "path": "public/shardIcons/R58.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6f01da1a3b7efbd52f92fd70ddc2a5d4c0351969",
+      "size": 13856,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6f01da1a3b7efbd52f92fd70ddc2a5d4c0351969"
+    },
+    {
+      "path": "public/shardIcons/R59.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f64509d5d26e724b47949352632956c02b00cdff",
+      "size": 13510,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f64509d5d26e724b47949352632956c02b00cdff"
+    },
+    {
+      "path": "public/shardIcons/R6.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b76c797cdfde62ccd22a14c4867ec1ee8c27e5ed",
+      "size": 18660,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b76c797cdfde62ccd22a14c4867ec1ee8c27e5ed"
+    },
+    {
+      "path": "public/shardIcons/R60.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5cd4d4543c00ec58be8240db1eee24bc4a1e03a5",
+      "size": 10105,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5cd4d4543c00ec58be8240db1eee24bc4a1e03a5"
+    },
+    {
+      "path": "public/shardIcons/R61.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d39b113c433eab030b8eeebb07ebb8afb5f2e22",
+      "size": 14833,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5d39b113c433eab030b8eeebb07ebb8afb5f2e22"
+    },
+    {
+      "path": "public/shardIcons/R63.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e0515417e80decb8f11cf81e3a88b7310c97841",
+      "size": 11290,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2e0515417e80decb8f11cf81e3a88b7310c97841"
+    },
+    {
+      "path": "public/shardIcons/R64.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9fdd58b9c68531d8b5a43d3b7f6e9b2f85edc7a2",
+      "size": 11939,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9fdd58b9c68531d8b5a43d3b7f6e9b2f85edc7a2"
+    },
+    {
+      "path": "public/shardIcons/R7.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7dc9189c42a663ea3bf06eb968192e2226519f46",
+      "size": 18912,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7dc9189c42a663ea3bf06eb968192e2226519f46"
+    },
+    {
+      "path": "public/shardIcons/R8.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cb321f5b1eb7f5b04c690ad87786b54d73590097",
+      "size": 13815,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cb321f5b1eb7f5b04c690ad87786b54d73590097"
+    },
+    {
+      "path": "public/shardIcons/R9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "df1e406598ec517008e704c13e95064d028f3aa4",
+      "size": 14238,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/df1e406598ec517008e704c13e95064d028f3aa4"
+    },
+    {
+      "path": "public/shardIcons/U1.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc3877fd523a9907db47cd48aa5eea802d5c9864",
+      "size": 16200,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cc3877fd523a9907db47cd48aa5eea802d5c9864"
+    },
+    {
+      "path": "public/shardIcons/U10.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f3965b05fdcb7fab06732c769337e6ba579d8bf4",
+      "size": 18214,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f3965b05fdcb7fab06732c769337e6ba579d8bf4"
+    },
+    {
+      "path": "public/shardIcons/U11.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2af5a331ddd60dfa85b08b53a20503d8ea704bd",
+      "size": 12525,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c2af5a331ddd60dfa85b08b53a20503d8ea704bd"
+    },
+    {
+      "path": "public/shardIcons/U12.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8fe97b78f2ec96cd6566dc5156593619b77b6e98",
+      "size": 9497,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/8fe97b78f2ec96cd6566dc5156593619b77b6e98"
+    },
+    {
+      "path": "public/shardIcons/U15.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0b09bdb104e3b5d81c346852887efc2e2aade3e2",
+      "size": 11939,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/0b09bdb104e3b5d81c346852887efc2e2aade3e2"
+    },
+    {
+      "path": "public/shardIcons/U16.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "665f4b419d0a8bd35fdfb3370e5f731a9ae26759",
+      "size": 15137,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/665f4b419d0a8bd35fdfb3370e5f731a9ae26759"
+    },
+    {
+      "path": "public/shardIcons/U18.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebb93dcd9c67b8af34c57165fcffc729a528a7c5",
+      "size": 24044,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ebb93dcd9c67b8af34c57165fcffc729a528a7c5"
+    },
+    {
+      "path": "public/shardIcons/U2.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c97cbc95e8b39f82f0d1a29d679dbe68520ddb4",
+      "size": 13725,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2c97cbc95e8b39f82f0d1a29d679dbe68520ddb4"
+    },
+    {
+      "path": "public/shardIcons/U20.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de14806110880c4776caa54ea50e1a2da197c16b",
+      "size": 13636,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/de14806110880c4776caa54ea50e1a2da197c16b"
+    },
+    {
+      "path": "public/shardIcons/U21.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "57be30a749fadb1d4a9ba3205252031bec307a45",
+      "size": 14331,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/57be30a749fadb1d4a9ba3205252031bec307a45"
+    },
+    {
+      "path": "public/shardIcons/U22.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff3137e4b71ef4c2187b36553d168acf65c1a624",
+      "size": 14154,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ff3137e4b71ef4c2187b36553d168acf65c1a624"
+    },
+    {
+      "path": "public/shardIcons/U24.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c3f2c140378de6e961f225d244b1d196e6b9ea96",
+      "size": 11132,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c3f2c140378de6e961f225d244b1d196e6b9ea96"
+    },
+    {
+      "path": "public/shardIcons/U25.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3352244a4bde7456582cd8ade1c6743e0b50233d",
+      "size": 10211,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3352244a4bde7456582cd8ade1c6743e0b50233d"
+    },
+    {
+      "path": "public/shardIcons/U27.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "199d88b70b9db593263464404af5bd6ec638700d",
+      "size": 11514,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/199d88b70b9db593263464404af5bd6ec638700d"
+    },
+    {
+      "path": "public/shardIcons/U28.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a6b7335a4e5ada780b73632f49e27c72055971f",
+      "size": 13718,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7a6b7335a4e5ada780b73632f49e27c72055971f"
+    },
+    {
+      "path": "public/shardIcons/U29.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "06296f84b415effd2197e0d6386583dcb9f13d20",
+      "size": 14502,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/06296f84b415effd2197e0d6386583dcb9f13d20"
+    },
+    {
+      "path": "public/shardIcons/U3.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "47b07093074ea86dacf27ef9b64db8cb18ba3751",
+      "size": 13756,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/47b07093074ea86dacf27ef9b64db8cb18ba3751"
+    },
+    {
+      "path": "public/shardIcons/U30.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e44fe49f2b1118aa6d5fb48eb0db987f5d33334",
+      "size": 12354,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5e44fe49f2b1118aa6d5fb48eb0db987f5d33334"
+    },
+    {
+      "path": "public/shardIcons/U31.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "639bafd7c3b3556556954dbcd07b8be32f3881e8",
+      "size": 10359,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/639bafd7c3b3556556954dbcd07b8be32f3881e8"
+    },
+    {
+      "path": "public/shardIcons/U32.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1cf465d3febee5d1bfc7bd759ce0d1f165ef69c9",
+      "size": 9715,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1cf465d3febee5d1bfc7bd759ce0d1f165ef69c9"
+    },
+    {
+      "path": "public/shardIcons/U33.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2c15087703d0a4df665c453bf83961589d31ce8f",
+      "size": 13551,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2c15087703d0a4df665c453bf83961589d31ce8f"
+    },
+    {
+      "path": "public/shardIcons/U34.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "036f6d0f899168440d5917cdca6e691f959d7d5e",
+      "size": 12159,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/036f6d0f899168440d5917cdca6e691f959d7d5e"
+    },
+    {
+      "path": "public/shardIcons/U36.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a9f63e685ce9c01b40d7305f82bf80efa88e9f1d",
+      "size": 7201,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a9f63e685ce9c01b40d7305f82bf80efa88e9f1d"
+    },
+    {
+      "path": "public/shardIcons/U38.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5d69343d25feb5d26664cf39f36c98dada24150e",
+      "size": 14658,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5d69343d25feb5d26664cf39f36c98dada24150e"
+    },
+    {
+      "path": "public/shardIcons/U39.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "eb5a108375a2e6cc93840b61a45345cca96438fb",
+      "size": 11823,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/eb5a108375a2e6cc93840b61a45345cca96438fb"
+    },
+    {
+      "path": "public/shardIcons/U4.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cbe692fe9051f40f23b1f888281999c94147c707",
+      "size": 16118,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cbe692fe9051f40f23b1f888281999c94147c707"
+    },
+    {
+      "path": "public/shardIcons/U40.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "658bf9e512b094803f0a6decb6ec11d70667b1bd",
+      "size": 12350,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/658bf9e512b094803f0a6decb6ec11d70667b1bd"
+    },
+    {
+      "path": "public/shardIcons/U5.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "01be68f18722a465e1913614c6dbe403493e6ebe",
+      "size": 12176,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/01be68f18722a465e1913614c6dbe403493e6ebe"
+    },
+    {
+      "path": "public/shardIcons/U6.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c65a5dcb156c878362c86c90468a5590888ec6d6",
+      "size": 12163,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c65a5dcb156c878362c86c90468a5590888ec6d6"
+    },
+    {
+      "path": "public/shardIcons/U7.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "76d58540f410a372555ad7facdf1eeaf08a7a4dc",
+      "size": 12554,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/76d58540f410a372555ad7facdf1eeaf08a7a4dc"
+    },
+    {
+      "path": "public/shardIcons/U8.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a2c40ca4d314723cb6aeae20d5ac192f5f512cfc",
+      "size": 8244,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a2c40ca4d314723cb6aeae20d5ac192f5f512cfc"
+    },
+    {
+      "path": "public/shardIcons/U9.png",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24a301fe3c77c14c927af13e527fc95e209f4246",
+      "size": 14726,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/24a301fe3c77c14c927af13e527fc95e209f4246"
+    },
+    {
+      "path": "public/sitemap.xml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3e111e4e1f696f5008b7cf6d4bba1e9a217cf1d",
+      "size": 1458,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a3e111e4e1f696f5008b7cf6d4bba1e9a217cf1d"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b6302267c24d081c1c47b67b85d6ca7fc29270be",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/b6302267c24d081c1c47b67b85d6ca7fc29270be"
+    },
+    {
+      "path": "src/App.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7deaeaaa56d9665d38e3d02856d6bb14cdf716dd",
+      "size": 3716,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7deaeaaa56d9665d38e3d02856d6bb14cdf716dd"
+    },
+    {
+      "path": "src/components",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "0bc51b2e4e8add8db225a16b6dfcec95abf7be6f",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/0bc51b2e4e8add8db225a16b6dfcec95abf7be6f"
+    },
+    {
+      "path": "src/components/AppWithRedirect.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e6e7d5fba8e18cca6dd677f8cabd197f9fbd280b",
+      "size": 743,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/e6e7d5fba8e18cca6dd677f8cabd197f9fbd280b"
+    },
+    {
+      "path": "src/components/PnPageAutoScale.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d0b3ee8bdc71e4218a9f04f3fdc846fdd2d3bd33",
+      "size": 1124,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d0b3ee8bdc71e4218a9f04f3fdc846fdd2d3bd33"
+    },
+    {
+      "path": "src/components/calculator",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "5c0b4a53c81b77df43935b14f369a2a88e267a03",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/5c0b4a53c81b77df43935b14f369a2a88e267a03"
+    },
+    {
+      "path": "src/components/calculator/KuudraDropdown.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b51d22ed082cb92bfe2defa6d4e773bfc016cb70",
+      "size": 2632,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b51d22ed082cb92bfe2defa6d4e773bfc016cb70"
+    },
+    {
+      "path": "src/components/calculator/LevelDropdown.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1c8fb76cbcdfbfba16f3a9d727b88addd974391e",
+      "size": 3258,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1c8fb76cbcdfbfba16f3a9d727b88addd974391e"
+    },
+    {
+      "path": "src/components/calculator/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d1e88f500f03cc66133fba2898b459d941ac500e",
+      "size": 100,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d1e88f500f03cc66133fba2898b459d941ac500e"
+    },
+    {
+      "path": "src/components/common",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8d6a8e583b71b723dc049c541020971d6230eae2",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/8d6a8e583b71b723dc049c541020971d6230eae2"
+    },
+    {
+      "path": "src/components/common/DropdownButton.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7366dae348ac4c146094f28841dc0461983f8015",
+      "size": 942,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7366dae348ac4c146094f28841dc0461983f8015"
+    },
+    {
+      "path": "src/components/common/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3dbcbeececb4d6298ea4b2c863e4283571327e66",
+      "size": 51,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3dbcbeececb4d6298ea4b2c863e4283571327e66"
+    },
+    {
+      "path": "src/components/forms",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1a7dbb276d4382d88c8e4fee9e314ec4e3429b92",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/1a7dbb276d4382d88c8e4fee9e314ec4e3429b92"
+    },
+    {
+      "path": "src/components/forms/CalculatorForm.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b39d3fd244d0a567f98eed88770449b2748031d7",
+      "size": 37881,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b39d3fd244d0a567f98eed88770449b2748031d7"
+    },
+    {
+      "path": "src/components/forms/FormActions.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b024f02cba3ee5e9d1a91ac79789e2b574b497f6",
+      "size": 1311,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b024f02cba3ee5e9d1a91ac79789e2b574b497f6"
+    },
+    {
+      "path": "src/components/forms/RecipeOverrideManager.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf87eb3486184e8cf1a30ddf354ddd956c778f01",
+      "size": 3726,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cf87eb3486184e8cf1a30ddf354ddd956c778f01"
+    },
+    {
+      "path": "src/components/forms/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "31c094923f574b7ff4aaa8fbaf52fb40b86270a3",
+      "size": 324,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/31c094923f574b7ff4aaa8fbaf52fb40b86270a3"
+    },
+    {
+      "path": "src/components/forms/inputs",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f5a5e4d2430a8cf83b808be98a636ba22eb82dcc",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/f5a5e4d2430a8cf83b808be98a636ba22eb82dcc"
+    },
+    {
+      "path": "src/components/forms/inputs/MoneyInput.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbb38f3b7c586eaf74e1746cc179d95645b372b6",
+      "size": 1155,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/dbb38f3b7c586eaf74e1746cc179d95645b372b6"
+    },
+    {
+      "path": "src/components/forms/inputs/ShardAutocomplete.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd69d4ed14ba00bacac8b1f1d0ae4b2b3098de7f",
+      "size": 8209,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fd69d4ed14ba00bacac8b1f1d0ae4b2b3098de7f"
+    },
+    {
+      "path": "src/components/forms/inputs/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "701199404c7a25bd91020675411aa414b1c219b3",
+      "size": 100,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/701199404c7a25bd91020675411aa414b1c219b3"
+    },
+    {
+      "path": "src/components/forms/search",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "178453697a841694aed69e1c4832a7c577d6a3d6",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/178453697a841694aed69e1c4832a7c577d6a3d6"
+    },
+    {
+      "path": "src/components/forms/search/SearchFilterInput.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3439e1a2b3d60de59fcdd5c236d8b542fe36328a",
+      "size": 1214,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3439e1a2b3d60de59fcdd5c236d8b542fe36328a"
+    },
+    {
+      "path": "src/components/forms/search/SuggestionItem.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7dfbb7b282ed9aef7bc4597d3583d6d188db136f",
+      "size": 1880,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7dfbb7b282ed9aef7bc4597d3583d6d188db136f"
+    },
+    {
+      "path": "src/components/forms/search/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4f82204eacc5275114ac487372449d1e39f5cde1",
+      "size": 108,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4f82204eacc5275114ac487372449d1e39f5cde1"
+    },
+    {
+      "path": "src/components/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ee2a771a0614327e2479ea3855f8cf1c2a79a16d",
+      "size": 234,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ee2a771a0614327e2479ea3855f8cf1c2a79a16d"
+    },
+    {
+      "path": "src/components/layout",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "86c9d4540493cee17c064c2b1dbb24eae5f2f8da",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/86c9d4540493cee17c064c2b1dbb24eae5f2f8da"
+    },
+    {
+      "path": "src/components/layout/ErrorBoundary.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "96eb6410ded8d6dbf833ea71ca29dadfb056140f",
+      "size": 562,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/96eb6410ded8d6dbf833ea71ca29dadfb056140f"
+    },
+    {
+      "path": "src/components/layout/Layout.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44a631ed94a2066e20393d964c4d1cfd72a4bf88",
+      "size": 3485,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/44a631ed94a2066e20393d964c4d1cfd72a4bf88"
+    },
+    {
+      "path": "src/components/layout/Navigation.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "408a78e3e1b617d327267416a29e5f67d11af465",
+      "size": 12867,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/408a78e3e1b617d327267416a29e5f67d11af465"
+    },
+    {
+      "path": "src/components/layout/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f5a716398e6baafaf456a98102ea7889c8ac14c",
+      "size": 78,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2f5a716398e6baafaf456a98102ea7889c8ac14c"
+    },
+    {
+      "path": "src/components/modals",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "888af638ab3cfc2612e2f45076f266d0a542c941",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/888af638ab3cfc2612e2f45076f266d0a542c941"
+    },
+    {
+      "path": "src/components/modals/AlternativeRecipeModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85a9d59ace65142342ad30f2b6e0a1aed62c59d2",
+      "size": 32857,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/85a9d59ace65142342ad30f2b6e0a1aed62c59d2"
+    },
+    {
+      "path": "src/components/modals/BrowseAllShardsModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c8183c4b1aecb54d818a139c2d229b51a337a45",
+      "size": 8820,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9c8183c4b1aecb54d818a139c2d229b51a337a45"
+    },
+    {
+      "path": "src/components/modals/CopyTreeModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aff44f30162696bdf7a5aa070faa4348fb2e6512",
+      "size": 6825,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/aff44f30162696bdf7a5aa070faa4348fb2e6512"
+    },
+    {
+      "path": "src/components/modals/GreenhouseModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f0499ef66132a1a86a0eb97caea06276f2041cd",
+      "size": 2887,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/8f0499ef66132a1a86a0eb97caea06276f2041cd"
+    },
+    {
+      "path": "src/components/modals/InventoryManagementModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b255f0357720144edf2e2c2ea983329750491e4e",
+      "size": 42907,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b255f0357720144edf2e2c2ea983329750491e4e"
+    },
+    {
+      "path": "src/components/modals/MaterialBreakdownModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de2d0359130f08db7e301d9511e113b2f2f17181",
+      "size": 5000,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/de2d0359130f08db7e301d9511e113b2f2f17181"
+    },
+    {
+      "path": "src/components/modals/MultiSelectShardModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63a3f64ce685102cd279e918279c0ed22f1f4baa",
+      "size": 16696,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/63a3f64ce685102cd279e918279c0ed22f1f4baa"
+    },
+    {
+      "path": "src/components/modals/WelcomeProfileModal.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f9a26c6b046d81b562c92cdfc072081135b7fd3",
+      "size": 4180,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/8f9a26c6b046d81b562c92cdfc072081135b7fd3"
+    },
+    {
+      "path": "src/components/modals/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3887a550362417c6d9fbb2cadd94dddd9b196cf2",
+      "size": 496,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3887a550362417c6d9fbb2cadd94dddd9b196cf2"
+    },
+    {
+      "path": "src/components/results",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ce3206ed9752349d0d617a1e031f9e34715a911c",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/ce3206ed9752349d0d617a1e031f9e34715a911c"
+    },
+    {
+      "path": "src/components/results/CalculationResults.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "002b3da37a044cd5491c2fac9443f3605f209370",
+      "size": 20784,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/002b3da37a044cd5491c2fac9443f3605f209370"
+    },
+    {
+      "path": "src/components/results/InventoryCalculationResults.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "df2b083a8c78f1ea6f828d964bd1914233334912",
+      "size": 10424,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/df2b083a8c78f1ea6f828d964bd1914233334912"
+    },
+    {
+      "path": "src/components/results/ShardsUsed.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e88b02804e770bb1f95603590408476a80c8c73",
+      "size": 4594,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6e88b02804e770bb1f95603590408476a80c8c73"
+    },
+    {
+      "path": "src/components/results/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "08060bbba8afee1888d562cbab1e29c1cc243b9d",
+      "size": 179,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/08060bbba8afee1888d562cbab1e29c1cc243b9d"
+    },
+    {
+      "path": "src/components/settings",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cb1d29e30a6f0777ea10285efd892d898de40eb8",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/cb1d29e30a6f0777ea10285efd892d898de40eb8"
+    },
+    {
+      "path": "src/components/settings/RarityDropdown.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66b085e0c9c6a6f9f04b78c1379071108cf3d3ac",
+      "size": 4266,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/66b085e0c9c6a6f9f04b78c1379071108cf3d3ac"
+    },
+    {
+      "path": "src/components/settings/ShardItem.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "201c583b19f8c0a089d32fffa7a6835939c6217d",
+      "size": 5559,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/201c583b19f8c0a089d32fffa7a6835939c6217d"
+    },
+    {
+      "path": "src/components/settings/TypeDropdown.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3f14904d599d9709e3acdb9c5f97fb969af5b259",
+      "size": 4014,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/3f14904d599d9709e3acdb9c5f97fb969af5b259"
+    },
+    {
+      "path": "src/components/settings/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "40de853ab81844fa5d18321430789368b7666279",
+      "size": 139,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/40de853ab81844fa5d18321430789368b7666279"
+    },
+    {
+      "path": "src/components/tree",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c6966ed7f73493c2ec860d63ed52887ff5eb0c9f",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/c6966ed7f73493c2ec860d63ed52887ff5eb0c9f"
+    },
+    {
+      "path": "src/components/tree/InventoryRecipeTreeNode.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "333a537c9cee8a9c83dced68636bc1ea8ca488e6",
+      "size": 36158,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/333a537c9cee8a9c83dced68636bc1ea8ca488e6"
+    },
+    {
+      "path": "src/components/tree/RecipeTreeNode.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "59dc953a4f67dfa9f510c7be7582118f75861df5",
+      "size": 30144,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/59dc953a4f67dfa9f510c7be7582118f75861df5"
+    },
+    {
+      "path": "src/components/tree/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ccc29d0a25dd0997697e94ba03ec0c14ab004430",
+      "size": 120,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/ccc29d0a25dd0997697e94ba03ec0c14ab004430"
+    },
+    {
+      "path": "src/components/ui",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "90d874972210fadfb90e0e2a1a86cbd1ff023d86",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/90d874972210fadfb90e0e2a1a86cbd1ff023d86"
+    },
+    {
+      "path": "src/components/ui/DiscordIcon.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d1449224a06a8b8958e415bf94c05e42108ccb48",
+      "size": 2025,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d1449224a06a8b8958e415bf94c05e42108ccb48"
+    },
+    {
+      "path": "src/components/ui/MaterialItem.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f29aed3940370ea1efc7e265809491cbb77ec166",
+      "size": 4213,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f29aed3940370ea1efc7e265809491cbb77ec166"
+    },
+    {
+      "path": "src/components/ui/RecipeCountBadge.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a0aaff3a2186f16557598162c7cb85965fa39481",
+      "size": 916,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/a0aaff3a2186f16557598162c7cb85965fa39481"
+    },
+    {
+      "path": "src/components/ui/ShardDisplay.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "262087965c7852619861667166f3d8e63c6d5a19",
+      "size": 1854,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/262087965c7852619861667166f3d8e63c6d5a19"
+    },
+    {
+      "path": "src/components/ui/SummaryCard.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "13af89d4036424ba2327404d442a9e796b8e0a70",
+      "size": 1009,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/13af89d4036424ba2327404d442a9e796b8e0a70"
+    },
+    {
+      "path": "src/components/ui/Toast.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d5e824dbac1fa2a67365aa2887e32d13db73f710",
+      "size": 4684,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d5e824dbac1fa2a67365aa2887e32d13db73f710"
+    },
+    {
+      "path": "src/components/ui/ToggleSwitch.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "50ba9531ef1f641579b4ca2cccdd23e533ac6a04",
+      "size": 1434,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/50ba9531ef1f641579b4ca2cccdd23e533ac6a04"
+    },
+    {
+      "path": "src/components/ui/Tooltip.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f2d8cdc2870d806ca15a1966c9230a1fcf320f74",
+      "size": 5621,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f2d8cdc2870d806ca15a1966c9230a1fcf320f74"
+    },
+    {
+      "path": "src/components/ui/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "55f64af6e8a3692f06e9ae312a3b6471072e0376",
+      "size": 362,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/55f64af6e8a3692f06e9ae312a3b6471072e0376"
+    },
+    {
+      "path": "src/components/ui/toastContext.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5b3a52cfd2c667138eb1f2351493acfebb421a89",
+      "size": 544,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/5b3a52cfd2c667138eb1f2351493acfebb421a89"
+    },
+    {
+      "path": "src/constants",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "28d9b5ec7cf80ac66458a9ed49aeef0b0985e191",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/28d9b5ec7cf80ac66458a9ed49aeef0b0985e191"
+    },
+    {
+      "path": "src/constants/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2dc986b00b400afe6102ddade4a610bc8dc8aebe",
+      "size": 2581,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2dc986b00b400afe6102ddade4a610bc8dc8aebe"
+    },
+    {
+      "path": "src/context",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "b55710e75f9caff5597c4f00a5e134f7b3f4b0c7",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/b55710e75f9caff5597c4f00a5e134f7b3f4b0c7"
+    },
+    {
+      "path": "src/context/CalculatorStateContext.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d8139b45a44f0c60b770cc016ea7185cb1fe1b0b",
+      "size": 3421,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d8139b45a44f0c60b770cc016ea7185cb1fe1b0b"
+    },
+    {
+      "path": "src/context/ImagePreloadContext.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "32bad2b2d9801d4ba0262bcfd152af1ac4b4bb6c",
+      "size": 1151,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/32bad2b2d9801d4ba0262bcfd152af1ac4b4bb6c"
+    },
+    {
+      "path": "src/context/RecipeStateContext.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f65c94d3e16310edcf3ef105511f067eccfdeda5",
+      "size": 988,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f65c94d3e16310edcf3ef105511f067eccfdeda5"
+    },
+    {
+      "path": "src/context/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "39c4738e940d42ed428447b0fb8fcadb06fb43c5",
+      "size": 207,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/39c4738e940d42ed428447b0fb8fcadb06fb43c5"
+    },
+    {
+      "path": "src/desc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f02c314dbbc45b3fcdd5cb09ac1b753703ff5f4d",
+      "size": 25674,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f02c314dbbc45b3fcdd5cb09ac1b753703ff5f4d"
+    },
+    {
+      "path": "src/hooks",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d59924efc1bc56967177876f2f10ffb2f018d56e",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/d59924efc1bc56967177876f2f10ffb2f018d56e"
+    },
+    {
+      "path": "src/hooks/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c916e9603480a0c9792a07832aeaa052b5d68c96",
+      "size": 424,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c916e9603480a0c9792a07832aeaa052b5d68c96"
+    },
+    {
+      "path": "src/hooks/useCalculatorState.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "872a5fdf73c1da4e60eee7b22f5f4a4f32977d98",
+      "size": 317,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/872a5fdf73c1da4e60eee7b22f5f4a4f32977d98"
+    },
+    {
+      "path": "src/hooks/useCustomRates.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0518f42e45afeb2c5cdfb80bbc4fde342f20f128",
+      "size": 1862,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/0518f42e45afeb2c5cdfb80bbc4fde342f20f128"
+    },
+    {
+      "path": "src/hooks/useDropdownManager.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29e836b7df43bda3c4fe5974a1fc6d5077bd8cb4",
+      "size": 1279,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/29e836b7df43bda3c4fe5974a1fc6d5077bd8cb4"
+    },
+    {
+      "path": "src/hooks/useFusionData.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fccad3a7689aa9a449baa666a19116a3ef77877a",
+      "size": 871,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/fccad3a7689aa9a449baa666a19116a3ef77877a"
+    },
+    {
+      "path": "src/hooks/usePageTitle.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "583f00a4bb970943ff9764a19022eeda79ff05f4",
+      "size": 597,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/583f00a4bb970943ff9764a19022eeda79ff05f4"
+    },
+    {
+      "path": "src/hooks/useRecipeState.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "35e18465cbab1e0b4cf68ab1d223e2d0e22352a8",
+      "size": 330,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/35e18465cbab1e0b4cf68ab1d223e2d0e22352a8"
+    },
+    {
+      "path": "src/hooks/useShards.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "52b3e71a849ede606b0c3e65927194dc3ddd3d1a",
+      "size": 859,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/52b3e71a849ede606b0c3e65927194dc3ddd3d1a"
+    },
+    {
+      "path": "src/hooks/useShardsWithRecipes.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44692035b98e1137538819b60b0d5d2f833f5b06",
+      "size": 1243,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/44692035b98e1137538819b60b0d5d2f833f5b06"
+    },
+    {
+      "path": "src/index.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f83857b064b50bfcd5059ccfb242a7261414f9dd",
+      "size": 1483,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f83857b064b50bfcd5059ccfb242a7261414f9dd"
+    },
+    {
+      "path": "src/main.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1e29e38e87151bf7f7497acb9ba895492aed6473",
+      "size": 774,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1e29e38e87151bf7f7497acb9ba895492aed6473"
+    },
+    {
+      "path": "src/pages",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1f1144e733b09feaf9e929bf3c3d1b7ff360e574",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/1f1144e733b09feaf9e929bf3c3d1b7ff360e574"
+    },
+    {
+      "path": "src/pages/AboutPage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6d943e6082b87e024db95e449294b21a62737199",
+      "size": 3900,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6d943e6082b87e024db95e449294b21a62737199"
+    },
+    {
+      "path": "src/pages/CalculatorPage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80083363193e684fdc0d7576949ee1e30ef2a5cc",
+      "size": 32833,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/80083363193e684fdc0d7576949ee1e30ef2a5cc"
+    },
+    {
+      "path": "src/pages/ContactPage.css",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0ce2f7b0f9a7106520e6f6fe85fcd7beb5a1f5b1",
+      "size": 272,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/0ce2f7b0f9a7106520e6f6fe85fcd7beb5a1f5b1"
+    },
+    {
+      "path": "src/pages/ContactPage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7aea3e9cac52dc6e711ffe070f0ef1d850699d94",
+      "size": 3817,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/7aea3e9cac52dc6e711ffe070f0ef1d850699d94"
+    },
+    {
+      "path": "src/pages/GuidePage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b7617e90e0add499cfd794bdbacf78c732459f63",
+      "size": 4575,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b7617e90e0add499cfd794bdbacf78c732459f63"
+    },
+    {
+      "path": "src/pages/PrivacyPolicy.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "446518f945e80d8f83f8cbd3e278f6d3c44257d1",
+      "size": 7870,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/446518f945e80d8f83f8cbd3e278f6d3c44257d1"
+    },
+    {
+      "path": "src/pages/RecipePage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9cac4c7c957b931bd495e1cd605ec7a6098e4e0c",
+      "size": 24463,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/9cac4c7c957b931bd495e1cd605ec7a6098e4e0c"
+    },
+    {
+      "path": "src/pages/SettingsPage.tsx",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da075f210971f8dec1d839a8496f4c08c1b0427f",
+      "size": 10781,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/da075f210971f8dec1d839a8496f4c08c1b0427f"
+    },
+    {
+      "path": "src/pages/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9f4945db87363ac8812fd08af50ba2e664951e9",
+      "size": 142,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c9f4945db87363ac8812fd08af50ba2e664951e9"
+    },
+    {
+      "path": "src/schemas",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "97dac48cb896bb54d36d6a901de9ff5b5eb61cf2",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/97dac48cb896bb54d36d6a901de9ff5b5eb61cf2"
+    },
+    {
+      "path": "src/schemas/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "16a8e5a0cd0c83c53157da1a2eaf15d070d085ea",
+      "size": 107,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/16a8e5a0cd0c83c53157da1a2eaf15d070d085ea"
+    },
+    {
+      "path": "src/schemas/validation.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6932fa8acb438e9b10c7e42608b982df550bf89a",
+      "size": 1238,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6932fa8acb438e9b10c7e42608b982df550bf89a"
+    },
+    {
+      "path": "src/services",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "21ff9d8f1cd326e864f1d4ec9cd2701a21abc069",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/21ff9d8f1cd326e864f1d4ec9cd2701a21abc069"
+    },
+    {
+      "path": "src/services/calculationService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "12e6691e1797d9b3f1162d45441f7d43939d12ab",
+      "size": 38226,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/12e6691e1797d9b3f1162d45441f7d43939d12ab"
+    },
+    {
+      "path": "src/services/dataService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d475d534f8f7b9daf9775866ac03febfd51cbe46",
+      "size": 5247,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d475d534f8f7b9daf9775866ac03febfd51cbe46"
+    },
+    {
+      "path": "src/services/hypixelService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "21d0787f149cb0e88503f70e2503a13dfcea1561",
+      "size": 1819,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/21d0787f149cb0e88503f70e2503a13dfcea1561"
+    },
+    {
+      "path": "src/services/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c1df4744c3733d7ba1eab9bece3cb9aab2f1ba8c",
+      "size": 338,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/c1df4744c3733d7ba1eab9bece3cb9aab2f1ba8c"
+    },
+    {
+      "path": "src/services/invCalculationService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d0cdded7a92de690fedbb7036172db896e0081f4",
+      "size": 31875,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d0cdded7a92de690fedbb7036172db896e0081f4"
+    },
+    {
+      "path": "src/services/workerCalculationService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "329e05f19ed37af7b5c9a55987fbb6881785e082",
+      "size": 9678,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/329e05f19ed37af7b5c9a55987fbb6881785e082"
+    },
+    {
+      "path": "src/types",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "191928665e144022357b4c732c3572e1d04fcbb9",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/191928665e144022357b4c732c3572e1d04fcbb9"
+    },
+    {
+      "path": "src/types/hypixelApiTypes.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d67c9fcb65ee84460e6b79ac7ddfa5a2050714cd",
+      "size": 208,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/d67c9fcb65ee84460e6b79ac7ddfa5a2050714cd"
+    },
+    {
+      "path": "src/types/types.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6c6098d524883899b1b07871306779000803e513",
+      "size": 6659,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/6c6098d524883899b1b07871306779000803e513"
+    },
+    {
+      "path": "src/utilities",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "cba756997c57f8bfca0422bcd47cf89aa5ec0953",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/cba756997c57f8bfca0422bcd47cf89aa5ec0953"
+    },
+    {
+      "path": "src/utilities/getShardIconIds.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cb8dc113119c97335a87d19997e90f4765d293cf",
+      "size": 508,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cb8dc113119c97335a87d19997e90f4765d293cf"
+    },
+    {
+      "path": "src/utilities/imagePreloader.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "344f0e3b98b58da9cb5cb890fd77c547f9128565",
+      "size": 1676,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/344f0e3b98b58da9cb5cb890fd77c547f9128565"
+    },
+    {
+      "path": "src/utilities/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf4721232d097b9548a0777fcc87bc0f23561819",
+      "size": 322,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/cf4721232d097b9548a0777fcc87bc0f23561819"
+    },
+    {
+      "path": "src/utilities/isValidShardName.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b0097ed7b3b0689eaefa6de1b07baffa5b124fb9",
+      "size": 391,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b0097ed7b3b0689eaefa6de1b07baffa5b124fb9"
+    },
+    {
+      "path": "src/utilities/localStorage.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b452df79706c09c95f30d86ebe74d4cfcfc8c029",
+      "size": 5934,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/b452df79706c09c95f30d86ebe74d4cfcfc8c029"
+    },
+    {
+      "path": "src/utilities/recipeUtils.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2429f9c6dc7a77bc94d17f638a0ae9194773ada8",
+      "size": 11819,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/2429f9c6dc7a77bc94d17f638a0ae9194773ada8"
+    },
+    {
+      "path": "src/utilities/shardFilters.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "38cacdcf152454d5ed4d4a419ae7436d9e9b1004",
+      "size": 2891,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/38cacdcf152454d5ed4d4a419ae7436d9e9b1004"
+    },
+    {
+      "path": "src/utilities/utilityFunctions.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a99f263985dad3c7d2574e0ac715df2f9e7e436",
+      "size": 8564,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/4a99f263985dad3c7d2574e0ac715df2f9e7e436"
+    },
+    {
+      "path": "src/vite-env.d.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "11f02fe2a0061d6e6e1f271b21da95423b448b32",
+      "size": 38,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/11f02fe2a0061d6e6e1f271b21da95423b448b32"
+    },
+    {
+      "path": "src/workers",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "37ffd4c3759133573350a2906060fd9b1d9ecb46",
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/trees/37ffd4c3759133573350a2906060fd9b1d9ecb46"
+    },
+    {
+      "path": "src/workers/calculationWorker.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66175dfe52ffdf1994dcd86b7172f3a504678b04",
+      "size": 8347,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/66175dfe52ffdf1994dcd86b7172f3a504678b04"
+    },
+    {
+      "path": "tsconfig.app.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "227a6c6723b6136d17cdcd42288a01a5e5abcd25",
+      "size": 702,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/227a6c6723b6136d17cdcd42288a01a5e5abcd25"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1ffef600d959ec9e396d5a260bd3f5b927b2cef8",
+      "size": 119,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/1ffef600d959ec9e396d5a260bd3f5b927b2cef8"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f85a39906e5571aa351e61e43fff98bc0bedaa27",
+      "size": 630,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/f85a39906e5571aa351e61e43fff98bc0bedaa27"
+    },
+    {
+      "path": "vite.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "402ffff4808e2b2d6cf7408d373d23ca418edee4",
+      "size": 1213,
+      "url": "https://api.github.com/repos/Campionnn/SkyShards/git/blobs/402ffff4808e2b2d6cf7408d373d23ca418edee4"
+    }
+  ],
+  "truncated": false
+}
