@@ -2,26 +2,17 @@ import { NextResponse } from 'next/server'
 
 let cachedResult: object | null = null
 let cacheTime = 0
-const CACHE_TTL = 60_000 // 1 min — AH prices shift fast
+const CACHE_TTL = 60_000
 
-const AH_TAX = 0.02 // 2% AH tax
+const AH_TAX = 0.02
+
+// Coflnet API for AH sold data
 const COFLNET = 'https://sky.coflnet.com/api'
 
-// XP needed to reach level 100 per rarity (from Hypixel SkyBlock wiki)
-const XP_TO_MAX: Record<string, number> = {
-  COMMON:    5_625_325,
-  UNCOMMON:  10_624_800,
-  RARE:      25_624_785,
-  EPIC:      60_624_700,
-  LEGENDARY: 210_255_385,
-}
+// Tier Boost item bazaar ID — applies to pets only, upgrades rarity by 1 tier
+const TIER_BOOST_ID = 'PET_ITEM_TIER_BOOST'
 
-// Pet max levels per rarity
-const MAX_LEVEL: Record<string, number> = {
-  COMMON: 100, UNCOMMON: 100, RARE: 100, EPIC: 100, LEGENDARY: 100,
-}
-
-// All known pet tags (actual pets, not skins/items)
+// All known pet tags
 const PET_TAGS = [
   'PET_WOLF','PET_TIGER','PET_LION','PET_CHEETAH','PET_LYNX',
   'PET_ELEPHANT','PET_GIRAFFE','PET_HORSE','PET_DONKEY','PET_MULE',
@@ -39,22 +30,33 @@ const PET_TAGS = [
   'PET_HEDGEHOG','PET_AMMONITE','PET_SNAIL','PET_SPINOSAURUS',
 ]
 
-const RARITIES = ['LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON']
+// Rarity order — Tier Boost upgrades to the next tier
+const RARITIES = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']
+const NEXT_RARITY: Record<string, string> = {
+  COMMON:    'UNCOMMON',
+  UNCOMMON:  'RARE',
+  RARE:      'EPIC',
+  EPIC:      'LEGENDARY',
+  LEGENDARY: 'MYTHIC',
+}
+
+export type FlipType = 'TIER_BOOST' | 'RARITY_ARBITRAGE'
 
 export interface PetFlipRow {
   tag: string
   name: string
-  rarity: string
+  flipType: FlipType
+  buyRarity: string       // rarity of the pet you buy
+  sellRarity: string      // rarity of the pet you sell
   iconUrl: string
-  lvl1Price: number      // median BIN price for lvl 1
-  lvl100Price: number    // median BIN price for lvl 100
-  levelingCost: number   // cost of EXP_BOTTLEs to level 1→100
-  totalCost: number      // lvl1 + leveling
-  sellPrice: number      // lvl100 after 2% AH tax
+  buyPrice: number        // lowest BIN at buyRarity
+  tierBoostCost: number   // 0 if rarity arbitrage, else bazaar insta-buy price
+  totalCost: number       // buyPrice + tierBoostCost
+  sellPrice: number       // median BIN at sellRarity after 2% tax
   profit: number
-  roi: number            // profit / totalCost * 100
-  lvl1Volume: number     // # recent lvl1 sales
-  lvl100Volume: number
+  roi: number
+  buyVolume: number       // recent sales at buyRarity
+  sellVolume: number      // recent sales at sellRarity
 }
 
 function petName(tag: string): string {
@@ -64,7 +66,25 @@ function petName(tag: string): string {
     .join(' ')
 }
 
-async function fetchSold(tag: string): Promise<Array<{ itemName: string; tier: string; highestBidAmount: number; bin: boolean }>> {
+function median(arr: number[]): number {
+  if (!arr.length) return 0
+  const s = [...arr].sort((a, b) => a - b)
+  const mid = Math.floor(s.length / 2)
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+
+function petIconUrl(tag: string, rarity: string): string {
+  // sky.shiiyu.moe returns the actual Hypixel Skyblock pet texture
+  const rarityParam = rarity.toLowerCase()
+  return `https://sky.shiiyu.moe/item/${tag}?rarity=${rarityParam}`
+}
+
+async function fetchSold(tag: string): Promise<Array<{
+  itemName: string
+  tier: string
+  highestBidAmount: number
+  bin: boolean
+}>> {
   try {
     const r = await fetch(`${COFLNET}/auctions/tag/${tag}/sold?limit=200`, {
       signal: AbortSignal.timeout(10000),
@@ -74,90 +94,144 @@ async function fetchSold(tag: string): Promise<Array<{ itemName: string; tier: s
   } catch { return [] }
 }
 
-function median(arr: number[]): number {
-  if (!arr.length) return 0
-  const s = [...arr].sort((a, b) => a - b)
-  const mid = Math.floor(s.length / 2)
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
-}
-
-async function computeFlips(expBottlePrice: number): Promise<PetFlipRow[]> {
-  const BATCH = 8
-  const rows: PetFlipRow[] = []
-
-  for (let i = 0; i < PET_TAGS.length; i += BATCH) {
-    const batch = PET_TAGS.slice(i, i + BATCH)
-    const results = await Promise.allSettled(
-      batch.map(async (tag) => {
-        const sold = await fetchSold(tag)
-        if (!sold.length) return null
-
-        const rows: PetFlipRow[] = []
-
-        for (const rarity of RARITIES) {
-          const bins = sold.filter(x => x.bin && x.tier === rarity)
-          if (bins.length < 3) continue
-
-          const lvl1sales = bins.filter(x => x.itemName.includes('[Lvl 1]'))
-          const lvl100sales = bins.filter(x => x.itemName.includes('[Lvl 100]'))
-
-          if (lvl1sales.length < 2 || lvl100sales.length < 1) continue
-
-          const lvl1Price = median(lvl1sales.map(x => x.highestBidAmount))
-          const lvl100Price = median(lvl100sales.map(x => x.highestBidAmount))
-          if (lvl1Price <= 0 || lvl100Price <= 0) continue
-
-          const xp = XP_TO_MAX[rarity] ?? XP_TO_MAX.LEGENDARY
-          // Use EXP_BOTTLE (cheapest per XP): 160 XP each
-          const bottlesNeeded = Math.ceil(xp / 160)
-          const levelingCost = Math.round(bottlesNeeded * expBottlePrice)
-          const totalCost = lvl1Price + levelingCost
-          const sellPrice = Math.round(lvl100Price * (1 - AH_TAX))
-          const profit = sellPrice - totalCost
-          if (profit <= 0) continue
-
-          const roi = Math.round((profit / totalCost) * 10000) / 100
-
-          rows.push({
-            tag,
-            name: petName(tag),
-            rarity,
-            iconUrl: `https://sky.coflnet.com/static/icon/${tag}`,
-            lvl1Price,
-            lvl100Price,
-            levelingCost,
-            totalCost,
-            sellPrice,
-            profit,
-            roi,
-            lvl1Volume: lvl1sales.length,
-            lvl100Volume: lvl100sales.length,
-          })
-        }
-
-        return rows
-      })
-    )
-
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value) rows.push(...r.value)
-    }
-  }
-
-  rows.sort((a, b) => b.profit - a.profit)
-  return rows
-}
-
-async function compute(): Promise<{ rows: PetFlipRow[]; expBottlePrice: number }> {
+async function compute(): Promise<{ rows: PetFlipRow[]; tierBoostCost: number }> {
+  // Fetch bazaar for Tier Boost price
   const bazRes = await fetch('https://api.hypixel.net/skyblock/bazaar', {
     signal: AbortSignal.timeout(15000),
   })
   if (!bazRes.ok) throw new Error('Bazaar fetch failed')
   const baz = await bazRes.json()
-  const expBottlePrice: number = baz.products?.EXP_BOTTLE?.quick_status?.buyPrice ?? 76
 
-  const rows = await computeFlips(expBottlePrice)
-  return { rows, expBottlePrice }
+  const tierBoostProduct = baz.products?.[TIER_BOOST_ID]
+  // Use insta-buy price (buyPrice = lowest sell order you can fill immediately)
+  const tierBoostCost: number = tierBoostProduct?.quick_status?.buyPrice ?? 0
+
+  const rows: PetFlipRow[] = []
+  const BATCH = 8
+
+  for (let i = 0; i < PET_TAGS.length; i += BATCH) {
+    const batch = PET_TAGS.slice(i, i + BATCH)
+    const results = await Promise.allSettled(
+      batch.map(async (tag): Promise<PetFlipRow[]> => {
+        const sold = await fetchSold(tag)
+        if (!sold.length) return []
+
+        // Group BIN sales by rarity, split into lvl 1 vs lvl 100
+        const byRarity: Record<string, { lvl1: number[]; lvlMax: number[] }> = {}
+        for (const sale of sold) {
+          if (!sale.bin) continue
+          const tier = sale.tier
+          if (!RARITIES.includes(tier)) continue
+          if (!byRarity[tier]) byRarity[tier] = { lvl1: [], lvlMax: [] }
+          if (sale.itemName.includes('[Lvl 1]')) {
+            byRarity[tier].lvl1.push(sale.highestBidAmount)
+          } else if (sale.itemName.match(/\[Lvl 10[0-9]\]/)) {
+            byRarity[tier].lvlMax.push(sale.highestBidAmount)
+          }
+        }
+
+        const petRows: PetFlipRow[] = []
+
+        // Build price map: rarity → {buy: lowest lvl1 BIN, sell: median lvlMax BIN, vols}
+        const priceMap: Record<string, { buy: number; sell: number; buyVol: number; sellVol: number }> = {}
+        for (const [tier, data] of Object.entries(byRarity)) {
+          if (data.lvl1.length < 2) continue
+          const buy = Math.min(...data.lvl1)
+          const sell = median(data.lvlMax)
+          priceMap[tier] = {
+            buy,
+            sell: sell > 0 ? sell * (1 - AH_TAX) : 0,
+            buyVol: data.lvl1.length,
+            sellVol: data.lvlMax.length,
+          }
+        }
+
+        // Strategy 1: TIER BOOST FLIP
+        // Buy pet at rarity R, apply Tier Boost → sells as rarity R+1
+        // The boosted pet sells at the price of a natural R+1 pet
+        if (tierBoostCost > 0) {
+          for (const rarity of RARITIES) {
+            const nextRarity = NEXT_RARITY[rarity]
+            if (!nextRarity) continue
+            const buyData = priceMap[rarity]
+            const sellData = priceMap[nextRarity]
+            if (!buyData || !sellData || buyData.buy <= 0 || sellData.sell <= 0) continue
+            if (sellData.sellVol < 1) continue
+
+            const totalCost = buyData.buy + tierBoostCost
+            const profit = sellData.sell - totalCost
+            if (profit <= 0) continue
+
+            const roi = Math.round((profit / totalCost) * 10000) / 100
+
+            petRows.push({
+              tag,
+              name: petName(tag),
+              flipType: 'TIER_BOOST',
+              buyRarity: rarity,
+              sellRarity: nextRarity,
+              iconUrl: petIconUrl(tag, rarity),
+              buyPrice: Math.round(buyData.buy),
+              tierBoostCost: Math.round(tierBoostCost),
+              totalCost: Math.round(totalCost),
+              sellPrice: Math.round(sellData.sell),
+              profit: Math.round(profit),
+              roi,
+              buyVolume: buyData.buyVol,
+              sellVolume: sellData.sellVol,
+            })
+          }
+        }
+
+        // Strategy 2: RARITY ARBITRAGE
+        // If the gap between rarity prices is large enough to profit without Tier Boost
+        // This catches cases where e.g. a RARE pet's lvl 1 BIN is far cheaper than
+        // buying a natural RARE and immediately selling at EPIC price is not the play —
+        // instead this is for pets where there's a lvl 1 → lvl max price gap within
+        // the SAME rarity that is profitable just by buying cheap and relisting.
+        // True rarity arbitrage: same rarity, different levels
+        for (const rarity of RARITIES) {
+          const data = priceMap[rarity]
+          if (!data || data.buy <= 0 || data.sell <= 0) continue
+          if (data.sellVol < 1) continue
+
+          const profit = data.sell - data.buy
+          if (profit <= 0) continue
+
+          // Only show as arbitrage if NOT already covered by tier boost for same rarity pair
+          // and profit margin is at least 5%
+          const roi = Math.round((profit / data.buy) * 10000) / 100
+          if (roi < 5) continue
+
+          petRows.push({
+            tag,
+            name: petName(tag),
+            flipType: 'RARITY_ARBITRAGE',
+            buyRarity: rarity,
+            sellRarity: rarity,
+            iconUrl: petIconUrl(tag, rarity),
+            buyPrice: Math.round(data.buy),
+            tierBoostCost: 0,
+            totalCost: Math.round(data.buy),
+            sellPrice: Math.round(data.sell),
+            profit: Math.round(profit),
+            roi,
+            buyVolume: data.buyVol,
+            sellVolume: data.sellVol,
+          })
+        }
+
+        return petRows
+      })
+    )
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') rows.push(...r.value)
+    }
+  }
+
+  rows.sort((a, b) => b.profit - a.profit)
+  return { rows, tierBoostCost }
 }
 
 export async function GET() {

@@ -29,15 +29,20 @@ const ACTION_STYLE: Record<string, { color: string; bg: string; border: string; 
 }
 
 function ItemIcon({ src, name, size = 38 }: { src: string; name: string; size?: number }) {
+  const [failed, setFailed] = useState(false)
+  const fallback = src.replace('sky.shiiyu.moe/item/', 'sky.lea.moe/item/')
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={failed ? fallback : src}
       alt={name}
       width={size}
       height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated', display: 'block' }}
-      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }}
+      onError={(e) => {
+        if (!failed) { setFailed(true) }
+        else { (e.target as HTMLImageElement).style.opacity = '0.3' }
+      }}
     />
   )
 }

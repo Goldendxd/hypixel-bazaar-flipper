@@ -89,6 +89,9 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalBooks: number }> {
       const fromLvl = levelNums[i]
       const toLvl = levelNums[i + 1]
       if (toLvl !== fromLvl + 1) continue  // only sequential combines
+      // Hard rule: can only combine books up to tier V (5) using the anvil.
+      // Books above V cannot be crafted — they come from mob drops/dungeons only.
+      if (toLvl > 5) continue
 
       const lower = levels[fromLvl]
       const upper = levels[toLvl]
@@ -121,7 +124,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalBooks: number }> {
         margin,
         sellVolume: upper.sellVol,
         buyVolume: upper.buyVol,
-        iconUrl: `https://sky.coflnet.com/static/icon/${outputId}`,
+        iconUrl: `https://sky.shiiyu.moe/item/${outputId}`,
       })
     }
   }

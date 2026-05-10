@@ -14,6 +14,7 @@ function coins(n: number): string {
 
 const RARITY_COLORS: Record<string, string> = {
   LEGENDARY: '#f59e0b',
+  MYTHIC:    '#ff45ff',
   EPIC:      '#a855f7',
   RARE:      '#3b82f6',
   UNCOMMON:  '#22c55e',
@@ -22,6 +23,7 @@ const RARITY_COLORS: Record<string, string> = {
 
 const RARITY_DIM: Record<string, string> = {
   LEGENDARY: 'rgba(245,158,11,0.07)',
+  MYTHIC:    'rgba(255,69,255,0.07)',
   EPIC:      'rgba(168,85,247,0.07)',
   RARE:      'rgba(59,130,246,0.07)',
   UNCOMMON:  'rgba(34,197,94,0.07)',
@@ -29,15 +31,20 @@ const RARITY_DIM: Record<string, string> = {
 }
 
 function ItemIcon({ src, name, size = 38 }: { src: string; name: string; size?: number }) {
+  const [failed, setFailed] = useState(false)
+  const fallback = `https://sky.shiiyu.moe/item/${name.replace(/ /g, '_').toUpperCase()}`
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={failed ? fallback : src}
       alt={name}
       width={size}
       height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated', display: 'block' }}
-      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }}
+      onError={(e) => {
+        if (!failed) { setFailed(true) }
+        else { (e.target as HTMLImageElement).style.opacity = '0.3' }
+      }}
     />
   )
 }
@@ -72,7 +79,7 @@ function Sidebar() {
       <div style={{ marginTop: 'auto', padding: '0 8px' }}>
         <div style={{ background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.15)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: '0.65rem', color: '#a855f7', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 4 }}>PET FLIPS</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Buy Lvl 1 pets, level to 100, sell for profit</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Tier Boost flips &amp; rarity arbitrage on the AH</div>
         </div>
       </div>
     </aside>
@@ -103,16 +110,38 @@ function SkeletonCard() {
   )
 }
 
+function RarityBadge({ rarity, small }: { rarity: string; small?: boolean }) {
+  const color = RARITY_COLORS[rarity] ?? '#94a3b8'
+  const dim   = RARITY_DIM[rarity]   ?? 'rgba(148,163,184,0.05)'
+  return (
+    <span style={{
+      fontSize: small ? '0.58rem' : '0.6rem',
+      fontWeight: 700,
+      padding: small ? '1px 5px' : '1px 6px',
+      borderRadius: 4,
+      background: dim,
+      border: `1px solid ${color}44`,
+      color,
+      letterSpacing: '0.06em',
+      whiteSpace: 'nowrap',
+    }}>{rarity}</span>
+  )
+}
+
 function PetCard({ row }: { row: PetFlipRow }) {
-  const color  = RARITY_COLORS[row.rarity] ?? '#94a3b8'
-  const dimBg  = RARITY_DIM[row.rarity]   ?? 'rgba(148,163,184,0.05)'
-  const border = `${color}30`
+  const sellColor = RARITY_COLORS[row.sellRarity] ?? '#94a3b8'
+  const buyColor  = RARITY_COLORS[row.buyRarity]  ?? '#94a3b8'
+  const dimBg     = RARITY_DIM[row.sellRarity]    ?? 'rgba(148,163,184,0.05)'
+  const border    = `${sellColor}30`
+
+  const isTierBoost = row.flipType === 'TIER_BOOST'
 
   return (
     <div className="flip-card" style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Rarity accent */}
-      <div style={{ height: 2, background: `linear-gradient(90deg, ${color}, ${color}88)`, opacity: 0.9 }} />
+      {/* Rarity accent bar */}
+      <div style={{ height: 2, background: `linear-gradient(90deg, ${sellColor}, ${sellColor}88)`, opacity: 0.9 }} />
 
+      {/* Header */}
       <div style={{ padding: '12px 14px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 38, height: 38, borderRadius: 8, flexShrink: 0,
@@ -125,13 +154,28 @@ function PetCard({ row }: { row: PetFlipRow }) {
           <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {row.name}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
-            <span style={{
-              fontSize: '0.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: 4,
-              background: dimBg, border: `1px solid ${border}`, color,
-              letterSpacing: '0.06em',
-            }}>{row.rarity}</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>Lvl 1 → 100</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, flexWrap: 'wrap' }}>
+            {isTierBoost ? (
+              <>
+                <RarityBadge rarity={row.buyRarity} small />
+                <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>+⬆</span>
+                <RarityBadge rarity={row.sellRarity} small />
+                <span style={{
+                  fontSize: '0.58rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                  background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)',
+                  letterSpacing: '0.05em',
+                }}>TIER BOOST</span>
+              </>
+            ) : (
+              <>
+                <RarityBadge rarity={row.buyRarity} small />
+                <span style={{
+                  fontSize: '0.58rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                  background: 'rgba(99,179,237,0.1)', border: '1px solid rgba(99,179,237,0.25)', color: 'var(--blue)',
+                  letterSpacing: '0.05em',
+                }}>ARBITRAGE</span>
+              </>
+            )}
           </div>
         </div>
         <span style={{
@@ -141,30 +185,39 @@ function PetCard({ row }: { row: PetFlipRow }) {
         }}>{row.roi.toFixed(1)}%</span>
       </div>
 
+      {/* Stats grid */}
       <div style={{ padding: '4px 14px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
         <div>
-          <div className="stat-label">Buy (Lvl 1)</div>
-          <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.lvl1Price)}</div>
+          <div className="stat-label">Buy Price ({row.buyRarity.charAt(0) + row.buyRarity.slice(1).toLowerCase()})</div>
+          <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.buyPrice)}</div>
+        </div>
+        {isTierBoost ? (
+          <div>
+            <div className="stat-label">Tier Boost Cost</div>
+            <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.tierBoostCost)}</div>
+          </div>
+        ) : (
+          <div>
+            <div className="stat-label">Buy AH Vol</div>
+            <div className="stat-value">{row.buyVolume}</div>
+          </div>
+        )}
+        <div>
+          <div className="stat-label">Sell Price ({row.sellRarity.charAt(0) + row.sellRarity.slice(1).toLowerCase()})</div>
+          <div className="stat-value" style={{ color: sellColor }}>{coins(row.sellPrice)}</div>
         </div>
         <div>
-          <div className="stat-label">Leveling Cost</div>
-          <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.levelingCost)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Sell (Lvl 100)</div>
-          <div className="stat-value" style={{ color }}>{coins(row.sellPrice)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Lvl 100 Sales</div>
-          <div className="stat-value">{row.lvl100Volume}</div>
+          <div className="stat-label">Sell AH Vol</div>
+          <div className="stat-value">{row.sellVolume}</div>
         </div>
       </div>
 
+      {/* Profit bar */}
       <div style={{ padding: '0 12px 12px', marginTop: 'auto' }}>
         <div className="profit-bar" style={{ background: dimBg, border: `1px solid ${border}` }}>
           <div>
-            <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', color, textTransform: 'uppercase', opacity: 0.8 }}>Profit</div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 900, color, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', color: sellColor, textTransform: 'uppercase', opacity: 0.8 }}>Profit</div>
+            <div style={{ fontSize: '1.05rem', fontWeight: 900, color: sellColor, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
               +{coins(row.profit)}
             </div>
           </div>
@@ -178,26 +231,29 @@ function PetCard({ row }: { row: PetFlipRow }) {
   )
 }
 
-const ALL_RARITIES = ['LEGENDARY', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON']
+const ALL_RARITIES = ['LEGENDARY', 'MYTHIC', 'EPIC', 'RARE', 'UNCOMMON', 'COMMON']
+const FLIP_TYPES   = ['ALL', 'TIER_BOOST', 'RARITY_ARBITRAGE'] as const
+type FlipTypeFilter = typeof FLIP_TYPES[number]
 
 export default function PetsFlipPage() {
-  const [rows, setRows]               = useState<PetFlipRow[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [expBottlePrice, setExpPrice] = useState(0)
+  const [rows, setRows]                 = useState<PetFlipRow[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated]   = useState<Date | null>(null)
+  const [tierBoostCost, setTierBoost]   = useState(0)
 
-  const [minProfit, setMinProfit]   = useState('')
-  const [maxBudget, setMaxBudget]   = useState('')
-  const [minVolume, setMinVolume]   = useState('')
-  const [rarityFilter, setRarity]   = useState<string[]>([])
-  const [search, setSearch]         = useState('')
+  const [minProfit, setMinProfit]       = useState('')
+  const [maxBudget, setMaxBudget]       = useState('')
+  const [minVolume, setMinVolume]       = useState('')
+  const [rarityFilter, setRarity]       = useState<string[]>([])
+  const [flipTypeFilter, setFlipType]   = useState<FlipTypeFilter>('ALL')
+  const [search, setSearch]             = useState('')
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, expBottlePrice: ep } = await fetchPetsFlips()
+      const { rows: data, tierBoostCost: tb } = await fetchPetsFlips()
       setRows(data)
-      setExpPrice(ep)
+      setTierBoost(tb)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {
@@ -221,11 +277,12 @@ export default function PetsFlipPage() {
     return rows.filter(r =>
       r.profit >= mp &&
       r.totalCost <= mb &&
-      r.lvl100Volume >= mv &&
-      (rarityFilter.length === 0 || rarityFilter.includes(r.rarity)) &&
+      r.sellVolume >= mv &&
+      (rarityFilter.length === 0 || rarityFilter.includes(r.sellRarity)) &&
+      (flipTypeFilter === 'ALL' || r.flipType === flipTypeFilter) &&
       (q === '' || r.name.toLowerCase().includes(q))
     )
-  }, [rows, minProfit, maxBudget, minVolume, rarityFilter, search])
+  }, [rows, minProfit, maxBudget, minVolume, rarityFilter, flipTypeFilter, search])
 
   function toggleRarity(r: string) {
     setRarity(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
@@ -240,10 +297,10 @@ export default function PetsFlipPage() {
           <div>
             <h1 className="page-title">Pet Flips</h1>
             <p className="page-subtitle">
-              Buy low-level pets, level to 100 using EXP bottles, sell for profit
-              {expBottlePrice > 0 && (
+              Tier Boost flips &amp; rarity arbitrage — buy cheap, sell upgraded for profit
+              {tierBoostCost > 0 && (
                 <span style={{ color: 'var(--gold)', marginLeft: 8 }}>
-                  · EXP Bottle: {coins(expBottlePrice)} ea
+                  · Tier Boost: {coins(tierBoostCost)} ea
                 </span>
               )}
             </p>
@@ -254,7 +311,7 @@ export default function PetsFlipPage() {
         </div>
 
         {/* Filters */}
-        <div className="filters-row" style={{ marginBottom: 16 }}>
+        <div className="filters-row" style={{ marginBottom: 12 }}>
           <input
             className="filter-input"
             placeholder="Search pet..."
@@ -277,11 +334,33 @@ export default function PetsFlipPage() {
           />
           <input
             className="filter-input"
-            placeholder="Min Lvl100 sales"
+            placeholder="Min sell vol"
             value={minVolume}
             onChange={e => setMinVolume(e.target.value)}
             type="number"
           />
+        </div>
+
+        {/* Flip type toggle */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+          {FLIP_TYPES.map(ft => {
+            const active = flipTypeFilter === ft
+            const label  = ft === 'RARITY_ARBITRAGE' ? 'ARBITRAGE' : ft
+            return (
+              <button
+                key={ft}
+                onClick={() => setFlipType(ft)}
+                style={{
+                  fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.06em',
+                  padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
+                  border: `1px solid ${active ? 'var(--purple)' : 'var(--border)'}`,
+                  background: active ? 'rgba(168,85,247,0.12)' : 'transparent',
+                  color: active ? '#a855f7' : 'var(--muted)',
+                  transition: 'all 0.15s',
+                }}
+              >{label}</button>
+            )
+          })}
         </div>
 
         {/* Rarity toggles */}
@@ -324,7 +403,7 @@ export default function PetsFlipPage() {
                 <div style={{ fontSize: '0.75rem', marginTop: 6 }}>Try adjusting your filters or check back later</div>
               </div>
             )
-            : filtered.map(r => <PetCard key={`${r.tag}-${r.rarity}`} row={r} />)
+            : filtered.map(r => <PetCard key={`${r.tag}-${r.buyRarity}-${r.flipType}`} row={r} />)
           }
         </div>
 

@@ -22,15 +22,20 @@ function levelColor(level: number): string {
 }
 
 function ItemIcon({ src, name, size = 38 }: { src: string; name: string; size?: number }) {
+  const [failed, setFailed] = useState(false)
+  const fallback = src.replace('sky.shiiyu.moe/item/', 'sky.lea.moe/item/')
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={failed ? fallback : src}
       alt={name}
       width={size}
       height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated', display: 'block' }}
-      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }}
+      onError={(e) => {
+        if (!failed) { setFailed(true) }
+        else { (e.target as HTMLImageElement).style.opacity = '0.3' }
+      }}
     />
   )
 }
@@ -144,7 +149,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <ItemIcon src={row.iconUrl.replace(`_${row.outputLevel}`, `_${row.inputLevel}`)} name={`${row.enchantName} ${ROMAN[row.inputLevel]}`} size={24} />
+          <ItemIcon src={row.iconUrl.replace(new RegExp(`_${row.outputLevel}$`), `_${row.inputLevel}`)} name={`${row.enchantName} ${ROMAN[row.inputLevel]}`} size={24} />
           <span style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>{ROMAN[row.inputLevel] ?? row.inputLevel}</span>
         </div>
         <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>×2</span>
