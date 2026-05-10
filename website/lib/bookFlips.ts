@@ -2,14 +2,11 @@ export interface BookFlipRow {
   outputId: string
   outputName: string
   enchantName: string
-  outputLevel: number
   inputId: string
-  inputLevel: number
-  inputQty: number
+  inputQty: number        // always 16 (2^4 to reach tier 5 from tier 1)
   inputUnitPrice: number
   inputTotalCost: number
   outputSellPrice: number
-  outputBuyPrice: number
   revenue: number
   profit: number
   margin: number
@@ -18,7 +15,7 @@ export interface BookFlipRow {
   iconUrl: string
 }
 
-export async function fetchBookFlips(): Promise<{ rows: BookFlipRow[]; totalBooks: number }> {
+export async function fetchBookFlips(): Promise<{ rows: BookFlipRow[]; totalCandidates: number }> {
   const res = await fetch('/api/book-flips', { cache: 'no-store' })
   if (!res.ok) throw new Error(`Book-flips API error ${res.status}`)
   return res.json()

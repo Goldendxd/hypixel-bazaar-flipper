@@ -12,8 +12,6 @@ function coins(n: number): string {
   return n.toFixed(1)
 }
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V']
-
 function BookIcon({ id, size = 36 }: { id: string; size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -98,9 +96,6 @@ function SkeletonCard() {
 }
 
 function BookCard({ row }: { row: BookFlipRow }) {
-  const inLvl  = ROMAN[row.inputLevel]  ?? String(row.inputLevel)
-  const outLvl = ROMAN[row.outputLevel] ?? String(row.outputLevel)
-
   return (
     <div className="flip-card">
       {/* Blue accent */}
@@ -121,7 +116,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               <span style={{ fontSize: '0.62rem', color: 'var(--muted)', letterSpacing: '0.04em' }}>
-                Combine 2× {row.enchantName} {inLvl} → {outLvl}
+                Combine 16× {row.enchantName} I → V
               </span>
             </div>
           </div>
@@ -144,12 +139,12 @@ function BookCard({ row }: { row: BookFlipRow }) {
                 <BookIcon id={row.inputId} size={28} />
               </div>
               <div style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 99, padding: '0px 4px', lineHeight: '14px', border: '1px solid rgba(0,0,0,0.4)' }}>
-                ×2
+                ×16
               </div>
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} {inLvl}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>2× · {coins(row.inputUnitPrice)} ea</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} I</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>16× · {coins(row.inputUnitPrice)} ea</div>
             </div>
           </div>
 
@@ -161,7 +156,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
               <BookIcon id={row.outputId} size={28} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} {outLvl}</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} V</div>
               <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>sell order</div>
             </div>
           </div>
@@ -172,7 +167,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
 
       <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
         <div>
-          <div className="stat-label">Input cost (2×)</div>
+          <div className="stat-label">Input cost (16×)</div>
           <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.inputTotalCost)}</div>
         </div>
         <div>
@@ -212,7 +207,7 @@ export default function BookFlipPage() {
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [totalBooks, setTotalBooks]   = useState(0)
+  const [totalCandidates, setTotalCandidates] = useState(0)
 
   const [minProfit,  setMinProfit]  = useState('')
   const [maxBudget,  setMaxBudget]  = useState('')
@@ -221,9 +216,9 @@ export default function BookFlipPage() {
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, totalBooks: tb } = await fetchBookFlips()
+      const { rows: data, totalCandidates: tc } = await fetchBookFlips()
       setRows(data)
-      setTotalBooks(tb)
+      setTotalCandidates(tc)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {
@@ -275,8 +270,8 @@ export default function BookFlipPage() {
             </div>
             <h1 className="page-title">Book Flips</h1>
             <p style={{ marginTop: 6, fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-              Buy 2× lower-level enchantment books, combine on the anvil, sell the higher level for profit.
-              {totalBooks > 0 && <span> {totalBooks.toLocaleString()} enchantment types tracked.</span>}
+              Buy 16× Tier I enchantment books, combine up to Tier V on the anvil, sell for profit.
+              {totalCandidates > 0 && <span> {totalCandidates.toLocaleString()} enchantment types tracked.</span>}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -304,7 +299,7 @@ export default function BookFlipPage() {
         <div className="info-box" style={{ background: 'rgba(99,179,237,0.04)', border: '1px solid rgba(99,179,237,0.12)' }}>
           <div className="section-label" style={{ color: 'var(--blue)', marginBottom: 6 }}>How it works</div>
           <div style={{ fontSize: '0.82rem', color: 'var(--text2)', lineHeight: 1.7 }}>
-            Buy 2× of the input book from the bazaar at instant-buy price. Combine them on the <strong style={{ color: 'var(--text)' }}>vanilla anvil</strong> to produce 1× higher-level book. Place a sell order on the bazaar just below the lowest ask. Profit shown after 1.25% bazaar tax. Only enchants combinable to <strong style={{ color: 'var(--text)' }}>tier V or below</strong> are shown — higher tiers cannot be crafted.
+            Buy <strong style={{ color: 'var(--text)' }}>16× Tier I</strong> books from the bazaar at instant-buy price. Combine them on the <strong style={{ color: 'var(--text)' }}>vanilla anvil</strong> (2×TI→TII, 2×TII→TIII, 2×TIII→TIV, 2×TIV→TV) to produce 1× Tier V. Place a sell order just below the lowest ask. Profit shown after 1.25% bazaar tax.
           </div>
         </div>
 
