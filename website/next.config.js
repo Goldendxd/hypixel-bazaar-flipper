@@ -3,9 +3,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-      { protocol: 'https', hostname: 'sky.shiiyu.moe', pathname: '/api/item/**' },
-      { protocol: 'https', hostname: 'sky.lea.moe', pathname: '/api/item/**' },
-      { protocol: 'https', hostname: 'skyshards.com', pathname: '/shardIcons/**' },
+      { protocol: 'https', hostname: 'sky.shiiyu.moe' },
+      { protocol: 'https', hostname: 'sky.lea.moe' },
+      { protocol: 'https', hostname: 'skyshards.com' },
+      { protocol: 'https', hostname: 'crafatar.com' },
     ],
   },
 }

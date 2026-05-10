@@ -309,14 +309,16 @@ export default function ForgeFlipPage() {
   const [error, setError]             = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [totalForgeItems, setTotal]   = useState(0)
+  const [aiSummary, setAiSummary]     = useState<string | null>(null)
   const [tab, setTab]                 = useState<Tab>('short')
   const [search, setSearch]           = useState('')
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, totalForgeItems: t } = await fetchForgeFlips()
+      const { rows: data, totalForgeItems: t, aiSummary: ai } = await fetchForgeFlips()
       setRows(data)
       setTotal(t)
+      setAiSummary(ai)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {
@@ -397,6 +399,16 @@ export default function ForgeFlipPage() {
             <strong style={{ color: '#f87171' }}>N-STAGE</strong> = full multi-stage dependency chain — expand ingredients to see every item to buy. Short tab: total chain time &lt; 6h. Long tab: 6h+ or multi-stage.
           </div>
         </div>
+
+        {/* Gemini AI summary */}
+        {aiSummary && (
+          <div style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✨</span> AI Analysis — Top Forge Flips
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text2)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{aiSummary}</div>
+          </div>
+        )}
 
         {/* Tabs + search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>

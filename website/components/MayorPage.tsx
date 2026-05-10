@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchMayorData, MayorData, MayorFlipItem } from '@/lib/mayorData'
+import { fetchMayorData, MayorData, MayorFlipItem, NextMayorPrep } from '@/lib/mayorData'
 import RefreshTimer from '@/components/RefreshTimer'
 
 function coins(n: number): string {
@@ -28,6 +28,43 @@ const ACTION_STYLE: Record<string, { color: string; bg: string; border: string; 
   SELL: { color: '#f87171', bg: 'rgba(248,113,113,0.08)',  border: 'rgba(248,113,113,0.25)',  label: 'SELL' },
   HOLD: { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',   border: 'rgba(251,191,36,0.25)',   label: 'HOLD' },
   WARN: { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)',  border: 'rgba(148,163,184,0.25)',  label: 'WARN' },
+}
+
+const MAYOR_ICON_URL: Record<string, string> = {
+  diana:    'https://sky.shiiyu.moe/item/DIANA_MEDAL',
+  derp:     'https://sky.shiiyu.moe/item/DERPY_MEDAL',
+  marina:   'https://sky.shiiyu.moe/item/MARINA_MEDAL',
+  cole:     'https://sky.shiiyu.moe/item/COLE_MEDAL',
+  finnegan: 'https://sky.shiiyu.moe/item/FINNEGAN_MEDAL',
+  paul:     'https://sky.shiiyu.moe/item/PAUL_MEDAL',
+  foxy:     'https://sky.shiiyu.moe/item/FOXY_MEDAL',
+  aatrox:   'https://sky.shiiyu.moe/item/AATROX_MEDAL',
+  scorpius: 'https://sky.shiiyu.moe/item/SCORPIUS_MEDAL',
+  barry:    'https://sky.shiiyu.moe/item/BARRY_MEDAL',
+  jerry:    'https://sky.shiiyu.moe/item/JERRY_MEDAL',
+}
+
+function MayorAvatar({ mayorKey, name, size = 40 }: { mayorKey: string; name: string; size?: number }) {
+  const src = MAYOR_ICON_URL[mayorKey] ?? `https://sky.shiiyu.moe/item/${mayorKey.toUpperCase()}_MEDAL`
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      width={size}
+      height={size}
+      style={{ objectFit: 'contain', imageRendering: 'pixelated' }}
+      onError={(e) => {
+        const img = e.target as HTMLImageElement
+        if (!img.dataset.fb) {
+          img.dataset.fb = '1'
+          img.src = `https://sky.lea.moe/item/${mayorKey.toUpperCase()}_MEDAL`
+        } else {
+          img.style.display = 'none'
+        }
+      }}
+    />
+  )
 }
 
 function ItemIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }) {
@@ -126,7 +163,6 @@ function MayorItemCard({ item, isDerpy }: { item: MayorFlipItem; isDerpy: boolea
   return (
     <div className="flip-card">
       <div style={{ height: 2, background: accentGrad, opacity: 0.85 }} />
-
       <div style={{ padding: '12px 14px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
@@ -137,7 +173,7 @@ function MayorItemCard({ item, isDerpy }: { item: MayorFlipItem; isDerpy: boolea
             <ItemIcon id={item.id} name={item.name} size={36} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.01em' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {item.name}
             </div>
             <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginTop: 3, letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -145,23 +181,14 @@ function MayorItemCard({ item, isDerpy }: { item: MayorFlipItem; isDerpy: boolea
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-            <span style={{
-              fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6,
-              background: act.bg, border: `1px solid ${act.border}`, color: act.color,
-              letterSpacing: '0.08em',
-            }}>{act.label}</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: act.bg, border: `1px solid ${act.border}`, color: act.color, letterSpacing: '0.08em' }}>{act.label}</span>
             {item.isPotentiallyManipulated && (
-              <span style={{
-                fontSize: '0.55rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                background: 'var(--gold-dim)', border: '1px solid rgba(251,191,36,0.25)', color: 'var(--gold)',
-                letterSpacing: '0.05em',
-              }}>⚠ MANIP?</span>
+              <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: 'var(--gold-dim)', border: '1px solid rgba(251,191,36,0.25)', color: 'var(--gold)', letterSpacing: '0.05em' }}>⚠ MANIP?</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Why box */}
       <div style={{ margin: '0 12px 10px', background: act.bg, border: `1px solid ${act.border}`, borderRadius: 10, padding: '10px 12px' }}>
         <div style={{ fontSize: '0.6rem', color: act.color, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Why</div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text2)', lineHeight: 1.6, marginBottom: 4 }}>{item.perkReason}</div>
@@ -193,6 +220,95 @@ function MayorItemCard({ item, isDerpy }: { item: MayorFlipItem; isDerpy: boolea
           <div className="stat-value">{item.weeklySellVol.toLocaleString()}</div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function VotingPanel({ preps, totalVotes, countdown }: { preps: NextMayorPrep[]; totalVotes: number; countdown: number }) {
+  if (!preps.length) return null
+
+  const sorted = [...preps].sort((a, b) => b.voteShare - a.voteShare)
+  const leader = sorted[0]
+
+  return (
+    <div style={{ background: 'rgba(167,139,250,0.04)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 14, padding: '16px 18px', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+            Next Election · {fmtCountdown(countdown)} remaining
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)' }}>
+            Current Vote Leader: <span style={{ color: 'var(--purple)' }}>{leader.candidateName}</span>
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>
+            {totalVotes.toLocaleString()} total votes cast so far
+          </div>
+        </div>
+        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+          <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginBottom: 2 }}>Leading</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--purple)', fontFamily: 'Space Grotesk, sans-serif' }}>
+            {leader.voteShare.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Vote bars */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+        {sorted.map(prep => (
+          <div key={prep.candidateKey}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <MayorAvatar mayorKey={prep.candidateKey} name={prep.candidateName} size={24} />
+                </div>
+                <span style={{ fontSize: '0.8rem', fontWeight: prep.isLeading ? 700 : 500, color: prep.isLeading ? 'var(--text)' : 'var(--text2)' }}>
+                  {prep.candidateName}
+                  {prep.isLeading && <span style={{ marginLeft: 6, fontSize: '0.6rem', background: 'rgba(167,139,250,0.2)', color: 'var(--purple)', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 99, padding: '1px 6px', fontWeight: 700 }}>LEADING</span>}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: prep.isLeading ? 'var(--purple)' : 'var(--muted)' }}>{prep.voteShare.toFixed(1)}%</span>
+            </div>
+            <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 99,
+                width: `${prep.voteShare}%`,
+                background: prep.isLeading
+                  ? 'linear-gradient(90deg, var(--purple), #c084fc)'
+                  : 'rgba(255,255,255,0.15)',
+                transition: 'width 0.5s ease',
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Buy-now prep for leader */}
+      {leader.items.filter(i => i.action === 'BUY').length > 0 && (
+        <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 10, padding: '10px 12px' }}>
+          <div style={{ fontSize: '0.6rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+            If {leader.candidateName} wins — buy now to prep
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {leader.items.filter(i => i.action === 'BUY').slice(0, 4).map(item => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,245,160,0.06)', border: '1px solid rgba(16,245,160,0.15)', borderRadius: 8, padding: '5px 8px' }}>
+                <div style={{ width: 20, height: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ItemIcon id={item.id} name={item.name} size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>{coins(item.price)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {leader.aiRecommendation && (
+            <div style={{ marginTop: 10, display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 13, flexShrink: 0 }}>✨</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--purple)', lineHeight: 1.6 }}>{leader.aiRecommendation}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -250,7 +366,6 @@ export default function MayorPage() {
       <Sidebar />
 
       <main className="main-scroll">
-        {/* Derpy global warning banner */}
         {isDerpy && (
           <div className="warning-banner" style={{ marginBottom: 20, borderRadius: 12 }}>
             <span style={{ fontSize: '1rem' }}>⚠️</span>
@@ -274,24 +389,25 @@ export default function MayorPage() {
             </div>
             <h1 className="page-title">Mayor Flips</h1>
             <p style={{ marginTop: 6, fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-              Live market intelligence — which items to buy or sell based on the active mayor&apos;s perks.
+              Live market intelligence based on the active mayor&apos;s perks. Includes next-election voting and prep signals.
               {data && <span style={{ color: 'var(--gold)', marginLeft: 6 }}>Active: {data.mayorName} · Year {data.currentYear}</span>}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {/* Mayor info block */}
             {data && (
               <div className="stat-block" style={{ minWidth: 160 }}>
                 <div className="stat-label">Active Mayor</div>
-                <div style={{ marginTop: 6, fontSize: '1.1rem', fontWeight: 800, color: 'var(--gold)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
-                  {data.mayorName}
+                <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 28, height: 28, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MayorAvatar mayorKey={data.mayorKey} name={data.mayorName} size={28} />
+                  </div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--gold)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
+                    {data.mayorName}
+                  </div>
                 </div>
-                <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {data.perks.filter(p => !p.minister).slice(0, 2).map(p => (
-                    <span key={p.name} style={{
-                      fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 99,
-                      background: 'var(--gold-dim)', border: '1px solid rgba(251,191,36,0.2)', color: 'var(--gold)',
-                    }}>{p.name}</span>
+                    <span key={p.name} style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: 'var(--gold-dim)', border: '1px solid rgba(251,191,36,0.2)', color: 'var(--gold)' }}>{p.name}</span>
                   ))}
                 </div>
               </div>
@@ -312,10 +428,25 @@ export default function MayorPage() {
           </div>
         </div>
 
+        {/* AI Summary for current mayor */}
+        {data?.currentAiSummary && (
+          <div style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✨</span> AI Analysis — {data.mayorName} Market Moves
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text2)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{data.currentAiSummary}</div>
+          </div>
+        )}
+
+        {/* Voting panel */}
+        {data?.nextMayorPreps && data.nextMayorPreps.length > 0 && (
+          <VotingPanel preps={data.nextMayorPreps} totalVotes={data.totalVotes} countdown={countdown} />
+        )}
+
         <div className="info-box" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.12)' }}>
           <div className="section-label" style={{ color: 'var(--gold)', marginBottom: 6 }}>How it works</div>
           <div style={{ fontSize: '0.82rem', color: 'var(--text2)', lineHeight: 1.7 }}>
-            Each SkyBlock mayor has unique perks that shift supply and demand for specific bazaar items. <strong style={{ color: 'var(--text)' }}>BUY</strong> signals items that will spike in demand. <strong style={{ color: 'var(--text)' }}>SELL</strong> signals items that will flood with supply. <strong style={{ color: 'var(--text)' }}>HOLD</strong> signals high volatility — wait for a clear trend. Items flagged <strong style={{ color: 'var(--gold)' }}>MANIP?</strong> have abnormal price spreads.
+            Each SkyBlock mayor has unique perks that shift supply and demand for specific bazaar items. <strong style={{ color: 'var(--text)' }}>BUY</strong> = demand spike incoming. <strong style={{ color: 'var(--text)' }}>SELL</strong> = supply flood expected. <strong style={{ color: 'var(--text)' }}>HOLD</strong> = volatile, wait for signal. The voting panel above shows who&apos;s currently winning the next election so you can prep early.
           </div>
         </div>
 
@@ -340,11 +471,9 @@ export default function MayorPage() {
               })}
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 16px' }}>
-            <div>
-              <div className="stat-label" style={{ marginBottom: 6 }}>Search item or perk</div>
-              <input className="filter-input" placeholder="Wolf Tooth, EZPZ…" value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
+          <div>
+            <div className="stat-label" style={{ marginBottom: 6 }}>Search item or perk</div>
+            <input className="filter-input" placeholder="Wolf Tooth, EZPZ…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
 

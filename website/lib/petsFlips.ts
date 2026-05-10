@@ -8,19 +8,19 @@ export interface KatFlipRow {
   sellRarity: string
   iconUrl: string
   buyPrice: number
-  katCoins: number
-  itemCost: number
-  tierBoostCost: number
+  upgradeCost: number       // coins paid to Kat NPC
+  materialCost: number      // bazaar items cost
+  tierBoostCost: number     // 0 for Kat upgrade strategy
   totalCost: number
-  sellPrice: number
+  sellPrice: number         // after 2% AH tax
   profit: number
   roi: number
-  buyVolume: number
-  sellVolume: number
-  katIngredients: Array<{ id: string; name: string; qty: number; unitPrice: number }>
+  upgradeHours: number
+  materials: Array<{ name: string; qty: number; cost: number }>
+  aiTip: string | null
 }
 
-export async function fetchKatFlips(): Promise<{ rows: KatFlipRow[]; tierBoostCost: number }> {
+export async function fetchKatFlips(): Promise<{ rows: KatFlipRow[]; fetched: number; aiSummary: string | null }> {
   const res = await fetch('/api/pets-flips', { cache: 'no-store' })
   if (!res.ok) throw new Error(`Kat-flips API error ${res.status}`)
   return res.json()

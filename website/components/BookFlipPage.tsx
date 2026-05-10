@@ -12,6 +12,8 @@ function coins(n: number): string {
   return n.toFixed(1)
 }
 
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
+
 function BookIcon({ id, size = 36 }: { id: string; size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -64,7 +66,7 @@ function Sidebar() {
       <div style={{ marginTop: 'auto', padding: '0 8px' }}>
         <div style={{ background: 'rgba(99,179,237,0.05)', border: '1px solid rgba(99,179,237,0.12)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--blue)', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 4 }}>BOOK FLIPS</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Combine 2× lower-level books into a higher level for profit</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Combine enchantment books on the anvil for profit</div>
         </div>
       </div>
     </aside>
@@ -96,9 +98,11 @@ function SkeletonCard() {
 }
 
 function BookCard({ row }: { row: BookFlipRow }) {
+  const inRoman  = ROMAN[row.inputTier]  ?? `T${row.inputTier}`
+  const outRoman = ROMAN[row.outputTier] ?? `T${row.outputTier}`
+
   return (
     <div className="flip-card">
-      {/* Blue accent */}
       <div style={{ height: 2, background: 'linear-gradient(90deg, var(--blue), var(--purple))', opacity: 0.8 }} />
 
       <div style={{ padding: '12px 14px 10px' }}>
@@ -116,7 +120,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               <span style={{ fontSize: '0.62rem', color: 'var(--muted)', letterSpacing: '0.04em' }}>
-                Combine 16× {row.enchantName} I → V
+                {row.inputQty}× {inRoman} → {outRoman} · {row.inputQty === 2 ? '1 step' : `${Math.log2(row.inputQty)} steps`}
               </span>
             </div>
           </div>
@@ -132,42 +136,41 @@ function BookCard({ row }: { row: BookFlipRow }) {
       <div style={{ margin: '0 12px 10px', background: 'var(--blue-dim)', border: '1px solid rgba(99,179,237,0.15)', borderRadius: 10, padding: '10px 12px' }}>
         <div style={{ fontSize: '0.6rem', color: 'var(--blue)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Combine on anvil</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Input */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 <BookIcon id={row.inputId} size={28} />
               </div>
               <div style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '0.55rem', fontWeight: 800, color: '#fff', background: 'var(--blue)', borderRadius: 99, padding: '0px 4px', lineHeight: '14px', border: '1px solid rgba(0,0,0,0.4)' }}>
-                ×16
+                ×{row.inputQty}
               </div>
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} I</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>16× · {coins(row.inputUnitPrice)} ea</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} {inRoman}</div>
+              <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>{row.inputQty}× · {coins(row.inputUnitPrice)} ea</div>
             </div>
           </div>
 
           <div style={{ fontSize: '1rem', color: 'var(--blue)', fontWeight: 800, flexShrink: 0 }}>→</div>
 
-          {/* Output */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,179,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
               <BookIcon id={row.outputId} size={28} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} V</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.enchantName} {outRoman}</div>
               <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>sell order</div>
             </div>
           </div>
         </div>
       </div>
 
+
       <div className="divider" />
 
       <div style={{ padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
         <div>
-          <div className="stat-label">Input cost (16×)</div>
+          <div className="stat-label">Input cost ({row.inputQty}×)</div>
           <div className="stat-value" style={{ color: 'var(--red)' }}>{coins(row.inputTotalCost)}</div>
         </div>
         <div>
@@ -203,22 +206,25 @@ function BookCard({ row }: { row: BookFlipRow }) {
 }
 
 export default function BookFlipPage() {
-  const [rows, setRows]               = useState<BookFlipRow[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [rows, setRows]                   = useState<BookFlipRow[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null)
   const [totalCandidates, setTotalCandidates] = useState(0)
+  const [aiSummary, setAiSummary]         = useState<string | null>(null)
 
-  const [minProfit,  setMinProfit]  = useState('')
-  const [maxBudget,  setMaxBudget]  = useState('')
-  const [minVolume,  setMinVolume]  = useState('')
-  const [search,     setSearch]     = useState('')
+  const [minProfit, setMinProfit] = useState('')
+  const [maxBudget, setMaxBudget] = useState('')
+  const [minVolume, setMinVolume] = useState('')
+  const [search, setSearch]       = useState('')
+  const [maxQty, setMaxQty]       = useState('')  // filter by max input qty (2, 4, 8, 16)
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, totalCandidates: tc } = await fetchBookFlips()
+      const { rows: data, totalCandidates: tc, aiSummary: ai } = await fetchBookFlips()
       setRows(data)
       setTotalCandidates(tc)
+      setAiSummary(ai)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {
@@ -238,14 +244,16 @@ export default function BookFlipPage() {
     const mp = parseFloat(minProfit) || 0
     const mb = parseFloat(maxBudget) || Infinity
     const mv = parseFloat(minVolume) || 0
+    const mq = parseFloat(maxQty) || Infinity
     const q  = search.toLowerCase()
     return rows.filter(r =>
       r.profit >= mp &&
       r.inputTotalCost <= mb &&
       r.sellVolume >= mv &&
+      r.inputQty <= mq &&
       (q === '' || r.enchantName.toLowerCase().includes(q) || r.outputName.toLowerCase().includes(q))
     )
-  }, [rows, minProfit, maxBudget, minVolume, search])
+  }, [rows, minProfit, maxBudget, minVolume, maxQty, search])
 
   const top = filtered[0]
 
@@ -270,8 +278,8 @@ export default function BookFlipPage() {
             </div>
             <h1 className="page-title">Book Flips</h1>
             <p style={{ marginTop: 6, fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-              Buy 16× Tier I enchantment books, combine up to Tier V on the anvil, sell for profit.
-              {totalCandidates > 0 && <span> {totalCandidates.toLocaleString()} enchantment types tracked.</span>}
+              Buy lower-tier enchantment books, combine on the anvil, sell higher tiers for profit.
+              {totalCandidates > 0 && <span> {totalCandidates.toLocaleString()} combine routes checked.</span>}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -288,7 +296,7 @@ export default function BookFlipPage() {
               </div>
             </div>
             <div className="stat-block" style={{ minWidth: 120 }}>
-              <div className="stat-label">Combinable</div>
+              <div className="stat-label">Profitable</div>
               <div style={{ marginTop: 6, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'Space Grotesk, sans-serif' }}>
                 {rows.length}
               </div>
@@ -299,16 +307,26 @@ export default function BookFlipPage() {
         <div className="info-box" style={{ background: 'rgba(99,179,237,0.04)', border: '1px solid rgba(99,179,237,0.12)' }}>
           <div className="section-label" style={{ color: 'var(--blue)', marginBottom: 6 }}>How it works</div>
           <div style={{ fontSize: '0.82rem', color: 'var(--text2)', lineHeight: 1.7 }}>
-            Buy <strong style={{ color: 'var(--text)' }}>16× Tier I</strong> books from the bazaar at instant-buy price. Combine them on the <strong style={{ color: 'var(--text)' }}>vanilla anvil</strong> (2×TI→TII, 2×TII→TIII, 2×TIII→TIV, 2×TIV→TV) to produce 1× Tier V. Place a sell order just below the lowest ask. Profit shown after 1.25% bazaar tax.
+            Buy the input tier books at insta-buy price, combine on the <strong style={{ color: 'var(--text)' }}>vanilla anvil</strong> (2× Tier N → Tier N+1), sell the output via sell order. <strong style={{ color: 'var(--text)' }}>All routes checked</strong> — not just T1→T5. Sometimes T3→T4 or T2→T3 is the most profitable. Profit shown after 1.25% bazaar tax.
           </div>
         </div>
+
+        {/* Gemini AI Summary */}
+        {aiSummary && (
+          <div style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✨</span> AI Analysis — Top Flips
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text2)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{aiSummary}</div>
+          </div>
+        )}
 
         {/* Filter panel */}
         <div className="filter-panel">
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--blue)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>⚙ Filters</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px 16px' }}>
             <div>
               <div className="stat-label" style={{ marginBottom: 6 }}>Search enchant</div>
               <input className="filter-input" placeholder="Sharpness, Growth…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -323,7 +341,11 @@ export default function BookFlipPage() {
             </div>
             <div>
               <div className="stat-label" style={{ marginBottom: 6 }}>Min weekly sell vol</div>
-              <input className="filter-input" type="number" placeholder="5" value={minVolume} onChange={e => setMinVolume(e.target.value)} />
+              <input className="filter-input" type="number" placeholder="50" value={minVolume} onChange={e => setMinVolume(e.target.value)} />
+            </div>
+            <div>
+              <div className="stat-label" style={{ marginBottom: 6 }}>Max books needed</div>
+              <input className="filter-input" type="number" placeholder="∞ (2, 4, 8, 16…)" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
             </div>
           </div>
         </div>
@@ -343,7 +365,7 @@ export default function BookFlipPage() {
             </div>
           )}
 
-          {!loading && filtered.map(row => <BookCard key={row.outputId} row={row} />)}
+          {!loading && filtered.map(row => <BookCard key={`${row.outputId}-${row.inputTier}`} row={row} />)}
         </div>
       </main>
 

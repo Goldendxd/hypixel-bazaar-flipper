@@ -19,6 +19,15 @@ export interface MayorFlipItem {
   isPotentiallyManipulated: boolean
 }
 
+export interface NextMayorPrep {
+  candidateName: string
+  candidateKey: string
+  voteShare: number
+  isLeading: boolean
+  items: MayorFlipItem[]
+  aiRecommendation: string | null
+}
+
 export interface MayorData {
   mayorName: string
   mayorKey: string
@@ -28,7 +37,10 @@ export interface MayorData {
   nextElectionYear: number
   msUntilElection: number
   votingCandidates: Array<{ key: string; name: string; perks: MayorPerk[]; votes: number }>
+  totalVotes: number
   items: MayorFlipItem[]
+  nextMayorPreps: NextMayorPrep[]
+  currentAiSummary: string | null
 }
 
 export async function fetchMayorData(): Promise<MayorData> {

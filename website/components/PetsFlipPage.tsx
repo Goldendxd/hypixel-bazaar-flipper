@@ -23,11 +23,10 @@ const RARITY_COLOR: Record<string, string> = {
 function rc(rarity: string) { return RARITY_COLOR[rarity] ?? '#aaaaaa' }
 
 function PetIcon({ tag, rarity, size = 36 }: { tag: string; rarity: string; size?: number }) {
-  const src = `https://sky.shiiyu.moe/item/${tag}?rarity=${rarity.toLowerCase()}`
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={`https://sky.shiiyu.moe/item/${tag}?rarity=${rarity.toLowerCase()}`}
       alt={tag}
       width={size}
       height={size}
@@ -45,12 +44,13 @@ function PetIcon({ tag, rarity, size = 36 }: { tag: string; rarity: string; size
   )
 }
 
-function ItemIcon({ id, size = 22 }: { id: string; size?: number }) {
+function ItemIcon({ name, size = 22 }: { name: string; size?: number }) {
+  const id = name.toUpperCase().replace(/ /g, '_')
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={`https://sky.shiiyu.moe/item/${id}`}
-      alt={id}
+      alt={name}
       width={size}
       height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated' }}
@@ -89,7 +89,7 @@ function Sidebar() {
       <div style={{ marginTop: 'auto', padding: '0 8px' }}>
         <div style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.12)', borderRadius: 10, padding: '10px 12px' }}>
           <div style={{ fontSize: '0.65rem', color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.08em', marginBottom: 4 }}>KAT FLIPS</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Buy pets, upgrade via Kat or Tier Boost, sell upgraded rarity</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', lineHeight: 1.5 }}>Buy pets, upgrade via Kat NPC, sell upgraded rarity for profit</div>
         </div>
       </div>
     </aside>
@@ -122,13 +122,10 @@ function SkeletonCard() {
 
 function KatCard({ row }: { row: KatFlipRow }) {
   const [expanded, setExpanded] = useState(false)
-  const isKat = row.strategy === 'KAT_UPGRADE'
-  const accentColor = isKat ? 'var(--gold)' : 'var(--purple)'
-  const accentGrad  = isKat
-    ? 'linear-gradient(90deg, var(--gold), var(--amber))'
-    : 'linear-gradient(90deg, var(--purple), #c084fc)'
-  const accentDim   = isKat ? 'var(--gold-dim)' : 'var(--purple-dim)'
-  const accentBorder = isKat ? 'rgba(251,191,36,0.2)' : 'rgba(167,139,250,0.2)'
+  const accentColor  = 'var(--gold)'
+  const accentGrad   = 'linear-gradient(90deg, var(--gold), var(--amber))'
+  const accentDim    = 'var(--gold-dim)'
+  const accentBorder = 'rgba(251,191,36,0.2)'
 
   return (
     <div className="flip-card">
@@ -151,10 +148,12 @@ function KatCard({ row }: { row: KatFlipRow }) {
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: rc(row.buyRarity), textTransform: 'capitalize' }}>{row.buyRarity.toLowerCase()}</span>
               <span style={{ color: 'var(--muted)', fontSize: '0.65rem' }}>→</span>
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: rc(row.sellRarity), textTransform: 'capitalize' }}>{row.sellRarity.toLowerCase()}</span>
-              <span style={{ color: 'var(--muted)', fontSize: '0.65rem' }}>·</span>
-              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: accentColor, letterSpacing: '0.04em' }}>
-                {isKat ? 'Kat NPC' : 'Tier Boost'}
-              </span>
+              {row.upgradeHours > 0 && (
+                <>
+                  <span style={{ color: 'var(--muted)', fontSize: '0.65rem' }}>·</span>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>{row.upgradeHours}h</span>
+                </>
+              )}
             </div>
           </div>
           <span style={{
@@ -165,37 +164,40 @@ function KatCard({ row }: { row: KatFlipRow }) {
         </div>
       </div>
 
-      {/* Upgrade summary box */}
+      {/* Upgrade cost box */}
       <div style={{ margin: '0 12px 10px', background: accentDim, border: `1px solid ${accentBorder}`, borderRadius: 10, padding: '10px 12px' }}>
-        <div style={{ fontSize: '0.6rem', color: accentColor, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-          {isKat ? 'Kat Upgrade Cost' : 'Tier Boost Cost'}
-        </div>
+        <div style={{ fontSize: '0.6rem', color: accentColor, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Kat Upgrade Cost</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          {isKat && row.katCoins > 0 && (
+          {row.upgradeCost > 0 && (
             <div>
               <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>Kat fee</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold)' }}>{coins(row.katCoins)}</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold)' }}>{coins(row.upgradeCost)}</div>
             </div>
           )}
-          {isKat && row.katIngredients.length > 0 && row.katIngredients.map(ing => (
-            <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {row.materials.map((mat, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 20, height: 20, flexShrink: 0 }}>
-                <ItemIcon id={ing.id} size={20} />
+                <ItemIcon name={mat.name} size={20} />
               </div>
               <div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>{ing.qty}× {ing.name}</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold)' }}>{coins(ing.unitPrice * ing.qty)}</div>
+                <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>{mat.qty}× {mat.name}</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold)' }}>{coins(mat.cost)}</div>
               </div>
             </div>
           ))}
-          {!isKat && row.tierBoostCost > 0 && (
-            <div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>Tier Boost (bazaar)</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--purple)' }}>{coins(row.tierBoostCost)}</div>
-            </div>
+          {row.upgradeCost === 0 && row.materials.length === 0 && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>No extra cost data</div>
           )}
         </div>
       </div>
+
+      {/* AI tip */}
+      {row.aiTip && (
+        <div style={{ margin: '0 12px 10px', background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 8, padding: '7px 10px', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+          <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>✨</span>
+          <span style={{ fontSize: '0.73rem', color: 'var(--purple)', lineHeight: 1.5 }}>{row.aiTip}</span>
+        </div>
+      )}
 
       <div className="divider" />
 
@@ -209,12 +211,12 @@ function KatCard({ row }: { row: KatFlipRow }) {
           <div className="stat-value" style={{ color: accentColor }}>{coins(row.sellPrice)}</div>
         </div>
         <div>
-          <div className="stat-label">AH Buy Vol</div>
-          <div className="stat-value">{row.buyVolume}</div>
+          <div className="stat-label">Total Cost</div>
+          <div className="stat-value">{coins(row.totalCost)}</div>
         </div>
         <div>
-          <div className="stat-label">AH Sell Vol</div>
-          <div className="stat-value">{row.sellVolume}</div>
+          <div className="stat-label">Upgrade Time</div>
+          <div className="stat-value">{row.upgradeHours > 0 ? `${row.upgradeHours}h` : 'Instant'}</div>
         </div>
       </div>
 
@@ -227,56 +229,60 @@ function KatCard({ row }: { row: KatFlipRow }) {
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total Cost</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text2)' }}>{coins(row.totalCost)}</div>
+            <div style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>ROI</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--green)' }}>{row.roi.toFixed(1)}%</div>
           </div>
         </div>
       </div>
 
       {/* Breakdown toggle */}
-      {isKat && (
-        <div style={{ padding: '0 12px 12px' }}>
-          <button className="recipe-toggle" onClick={() => setExpanded(v => !v)}>
-            {expanded ? '▲ Hide cost breakdown' : '▼ Show cost breakdown'}
-          </button>
-          {expanded && (
-            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div style={{ padding: '0 12px 12px' }}>
+        <button className="recipe-toggle" onClick={() => setExpanded(v => !v)}>
+          {expanded ? '▲ Hide cost breakdown' : '▼ Show cost breakdown'}
+        </button>
+        {expanded && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div className="recipe-row">
+              <div style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PetIcon tag={row.tag} rarity={row.buyRarity} size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>{row.name} ({row.buyRarity.toLowerCase()})</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>AH lowest BIN</div>
+              </div>
+              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{coins(row.buyPrice)}</div>
+            </div>
+            {row.upgradeCost > 0 && (
               <div className="recipe-row">
+                <div style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🐱</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>Kat NPC fee</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Paid directly to Kat · {row.upgradeHours}h wait</div>
+                </div>
+                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>{coins(row.upgradeCost)}</div>
+              </div>
+            )}
+            {row.materials.map((mat, i) => (
+              <div key={i} className="recipe-row">
                 <div style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <PetIcon tag={row.tag} rarity={row.buyRarity} size={22} />
+                  <ItemIcon name={mat.name} size={22} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>{row.name} ({row.buyRarity.toLowerCase()})</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>AH lowest BIN</div>
+                  <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>{mat.name}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>{mat.qty}× (bazaar)</div>
                 </div>
-                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{coins(row.buyPrice)}</div>
+                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>{coins(mat.cost)}</div>
               </div>
-              {row.katCoins > 0 && (
-                <div className="recipe-row">
-                  <div style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🐱</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>Kat NPC fee</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Paid directly to Kat</div>
-                  </div>
-                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>{coins(row.katCoins)}</div>
-                </div>
-              )}
-              {row.katIngredients.map(ing => (
-                <div key={ing.id} className="recipe-row">
-                  <div style={{ width: 22, height: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ItemIcon id={ing.id} size={22} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)' }}>{ing.name}</div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>{ing.qty}× · {coins(ing.unitPrice)} ea (bazaar)</div>
-                  </div>
-                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>{coins(ing.unitPrice * ing.qty)}</div>
-                </div>
-              ))}
+            ))}
+            <div className="recipe-row" style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--green)' }}>Profit (after 2% AH tax)</div>
+              </div>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--green)', flexShrink: 0 }}>+{coins(row.profit)}</div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -288,20 +294,18 @@ export default function PetsFlipPage() {
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [tierBoostCost, setTbCost]   = useState(0)
+  const [aiSummary, setAiSummary]     = useState<string | null>(null)
 
-  const [minProfit,   setMinProfit]   = useState('')
-  const [maxBudget,   setMaxBudget]   = useState('')
-  const [minVolume,   setMinVolume]   = useState('')
-  const [search,      setSearch]      = useState('')
-  const [strategy,    setStrategy]    = useState<'ALL' | 'KAT_UPGRADE' | 'TIER_BOOST'>('ALL')
-  const [rarityFilter, setRarity]     = useState<string[]>([])
+  const [minProfit,    setMinProfit]   = useState('')
+  const [maxBudget,    setMaxBudget]   = useState('')
+  const [search,       setSearch]      = useState('')
+  const [rarityFilter, setRarity]      = useState<string[]>([])
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, tierBoostCost: tb } = await fetchKatFlips()
+      const { rows: data, aiSummary: ai } = await fetchKatFlips()
       setRows(data)
-      setTbCost(tb)
+      setAiSummary(ai)
       setLastUpdated(new Date())
       setError(null)
     } catch (e: unknown) {
@@ -320,17 +324,14 @@ export default function PetsFlipPage() {
   const filtered = useMemo(() => {
     const mp = parseFloat(minProfit) || 0
     const mb = parseFloat(maxBudget) || Infinity
-    const mv = parseFloat(minVolume) || 0
     const q  = search.toLowerCase()
     return rows.filter(r =>
       r.profit >= mp &&
       r.totalCost <= mb &&
-      r.sellVolume >= mv &&
-      (strategy === 'ALL' || r.strategy === strategy) &&
       (rarityFilter.length === 0 || rarityFilter.includes(r.buyRarity)) &&
       (q === '' || r.name.toLowerCase().includes(q))
     )
-  }, [rows, minProfit, maxBudget, minVolume, strategy, rarityFilter, search])
+  }, [rows, minProfit, maxBudget, rarityFilter, search])
 
   const top = filtered[0]
 
@@ -359,8 +360,7 @@ export default function PetsFlipPage() {
             </div>
             <h1 className="page-title">Kat Flips</h1>
             <p style={{ marginTop: 6, fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-              Buy pets on the AH, upgrade rarity via Kat NPC or Tier Boost, sell for profit.
-              {tierBoostCost > 0 && <span style={{ color: 'var(--purple)', marginLeft: 6 }}>Tier Boost: {coins(tierBoostCost)} ea.</span>}
+              Buy pets at lowest AH BIN, upgrade rarity via Kat NPC (with real per-pet costs), sell the upgraded rarity for profit.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -388,27 +388,24 @@ export default function PetsFlipPage() {
         <div className="info-box">
           <div className="section-label" style={{ color: 'var(--gold)', marginBottom: 6 }}>How it works</div>
           <div style={{ fontSize: '0.82rem', color: 'var(--text2)', lineHeight: 1.7 }}>
-            <strong style={{ color: 'var(--text)' }}>Kat Upgrade:</strong> Buy a pet at lowest AH BIN, take it to Kat&apos;s Florist in the Hub. Pay Kat&apos;s coin fee plus any ingredient items (sourced from bazaar) to upgrade its rarity by one tier. Sell the upgraded pet on AH. &nbsp;
-            <strong style={{ color: 'var(--text)' }}>Tier Boost:</strong> Apply a Tier Boost item (from bazaar) directly to the pet for an instant rarity upgrade — no NPC visit needed. Profit shown after 2% AH tax.
+            Buy a pet at the lowest AH BIN price. Take it to <strong style={{ color: 'var(--text)' }}>Kat&apos;s Florist</strong> in the Hub and pay Kat&apos;s exact coin fee + any required bazaar materials to upgrade its rarity. Sell the upgraded pet on the AH. Profit is shown after 2% AH tax. Costs sourced from <strong style={{ color: 'var(--text)' }}>real live Kat data</strong> — not flat estimates.
           </div>
         </div>
 
+        {/* Gemini AI summary */}
+        {aiSummary && (
+          <div style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--purple)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>✨</span> AI Analysis — Top Kat Flips
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text2)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{aiSummary}</div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="filter-panel">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>⚙ Filters</span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {(['ALL', 'KAT_UPGRADE', 'TIER_BOOST'] as const).map(s => (
-                <button key={s} onClick={() => setStrategy(s)} style={{
-                  fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.05em',
-                  padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
-                  border: `1px solid ${strategy === s ? 'rgba(251,191,36,0.4)' : 'var(--border)'}`,
-                  background: strategy === s ? 'var(--gold-dim)' : 'transparent',
-                  color: strategy === s ? 'var(--gold)' : 'var(--muted)',
-                  transition: 'all 0.15s',
-                }}>{s === 'KAT_UPGRADE' ? 'Kat NPC' : s === 'TIER_BOOST' ? 'Tier Boost' : 'All'}</button>
-              ))}
-            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 16px', marginBottom: 12 }}>
             <div>
@@ -420,12 +417,8 @@ export default function PetsFlipPage() {
               <input className="filter-input" type="number" placeholder="0" value={minProfit} onChange={e => setMinProfit(e.target.value)} />
             </div>
             <div>
-              <div className="stat-label" style={{ marginBottom: 6 }}>Max budget</div>
+              <div className="stat-label" style={{ marginBottom: 6 }}>Max total cost</div>
               <input className="filter-input" type="number" placeholder="∞" value={maxBudget} onChange={e => setMaxBudget(e.target.value)} />
-            </div>
-            <div>
-              <div className="stat-label" style={{ marginBottom: 6 }}>Min AH sell vol</div>
-              <input className="filter-input" type="number" placeholder="1" value={minVolume} onChange={e => setMinVolume(e.target.value)} />
             </div>
           </div>
           {/* Rarity filter chips */}
@@ -462,7 +455,7 @@ export default function PetsFlipPage() {
             </div>
           )}
 
-          {!loading && filtered.map(row => <KatCard key={`${row.tag}-${row.buyRarity}-${row.strategy}`} row={row} />)}
+          {!loading && filtered.map(row => <KatCard key={`${row.tag}-${row.buyRarity}`} row={row} />)}
         </div>
       </main>
 

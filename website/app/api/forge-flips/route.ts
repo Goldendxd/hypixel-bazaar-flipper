@@ -5,6 +5,24 @@ let cacheTime = 0
 const CACHE_TTL = 5 * 60 * 1000
 
 const TAX = 0.0125
+const GEMINI_KEY = 'AIzaSyDtzLvCVeHYFLsp0DR3ftPyCwA7b_Evr50'
+
+async function askGemini(prompt: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        signal: AbortSignal.timeout(12000),
+      }
+    )
+    if (!res.ok) return null
+    const j = await res.json()
+    return j?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null
+  } catch { return null }
+}
 const NEU_BASE = 'https://raw.githubusercontent.com/NotEnoughUpdates/NotEnoughUpdates-REPO/master/items'
 const MIN_WEEKLY_SELL_VOL = 500
 
@@ -146,9 +164,9 @@ function totalForgeTime(id: string, forgeMap: Map<string, NeuItem>, visited: Set
   return total
 }
 
-async function computeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number }> {
+async function computeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number; aiSummary: string | null }> {
   const [bazRes, treeRes] = await Promise.all([
-    fetch('https://api.hypixel.net/skyblock/bazaar', { signal: AbortSignal.timeout(15000) }),
+    fetch('https://api.hypixel.net/v2/skyblock/bazaar', { signal: AbortSignal.timeout(15000) }),
     fetch('https://api.github.com/repos/NotEnoughUpdates/NotEnoughUpdates-REPO/git/trees/master?recursive=1', {
       signal: AbortSignal.timeout(15000),
     }),
@@ -280,7 +298,27 @@ async function computeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: 
   }
 
   rows.sort((a, b) => b.totalProfit - a.totalProfit)
-  return { rows, totalForgeItems: forgeMap.size }
+
+  // Gemini analysis of top forge flips
+  let aiSummary: string | null = null
+  const top5 = rows.slice(0, 5)
+  if (top5.length > 0) {
+    function fmtDur(s: number) {
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
+      return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+    }
+    const prompt = `You are a Hypixel SkyBlock forge expert. Here are the top 5 forge flips right now:
+
+${top5.map((r, i) =>
+  `${i + 1}. ${r.name}: ingredients ${r.ingredientCost.toLocaleString()} coins, sell ${r.sellPrice.toLocaleString()} coins, profit ${r.profitPerForge.toLocaleString()} per forge (${r.margin.toFixed(1)}% margin), forge time ${fmtDur(r.totalDuration)}, weekly sell vol ${r.sellMovingWeek.toLocaleString()}${r.requiresHotM ? `, requires ${r.requiresHotM}` : ''}`
+).join('\n')}
+
+For each, give ONE short tip (max 15 words): is the volume real, is this worth the forge time, or is it a solid flip? Format: numbered list 1-5 only.`
+
+    aiSummary = await askGemini(prompt)
+  }
+
+  return { rows, totalForgeItems: forgeMap.size, aiSummary }
 }
 
 export async function GET() {

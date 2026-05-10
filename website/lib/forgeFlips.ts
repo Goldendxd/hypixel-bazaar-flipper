@@ -31,7 +31,7 @@ export interface ForgeFlipRow {
   ingredients: IngredientDetail[]
 }
 
-export async function fetchForgeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number }> {
+export async function fetchForgeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number; aiSummary: string | null }> {
   const res = await fetch('/api/forge-flips', { cache: 'no-store' })
   if (!res.ok) throw new Error(`Forge-flips API error ${res.status}`)
   return res.json()
