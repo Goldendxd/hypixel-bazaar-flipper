@@ -63,6 +63,11 @@ export interface MayorData {
 }
 
 // Mayor → affected bazaar items
+// All entries verified against Hypixel SkyBlock wiki game mechanics.
+// action BUY  = stock up NOW (before/at start of term), sell into demand peak
+// action SELL = clear holdings NOW (supply flood incoming during term)
+// action HOLD = price volatile, wait for signal
+// action WARN = exercise caution
 const MAYOR_ITEMS: Record<string, Array<{
   id: string
   perkKey: string
@@ -70,95 +75,162 @@ const MAYOR_ITEMS: Record<string, Array<{
   action: 'BUY' | 'SELL' | 'HOLD' | 'WARN'
   actionReason: string
 }>> = {
+  // ─── DERPY ───────────────────────────────────────────────────────────────
+  // MOAR SKILLZ!!!: +50% skill XP across ALL skills (farming, mining, combat, fishing, etc.)
+  // XP bottles grant skill XP — they become 50% more efficient, so demand genuinely spikes.
+  // TURBO MINIONS!!!: Doubles minion OUTPUT (drops), NOT speed. Output-multiplying fuels STACK
+  //   with this: HYPER_CATALYST (normally 4× output → 8× during Derpy), TASTY_CHEESE (2× → 4×)
+  //   Speed-based fuels (ENCHANTED_BREAD, HAMSTER_WHEEL) do NOT stack — do not recommend.
+  // DOUBLE MOBS HP!!!: All mobs have 2× health — combat is slower, slayer supply may dip.
+  // QUAD TAXES: 4× bazaar tax (~5% instead of 1.25%). High-value items hit hardest.
   derp: [
-    { id: 'ENCHANTED_EXPERIENCE_BOTTLE', perkKey: 'MOAR SKILLZ!!!', reason: 'Doubles skill XP gain — players rush XP items to max skills fast', action: 'BUY', actionReason: 'Buy before Derpy starts; demand spikes sharply on day 1' },
-    { id: 'GRAND_EXP_BOTTLE',            perkKey: 'MOAR SKILLZ!!!', reason: 'Largest bulk XP source — doubled efficiency during Derpy', action: 'BUY', actionReason: 'High demand from progression players — buy early and sell mid-term' },
-    { id: 'TITANIC_EXP_BOTTLE',          perkKey: 'MOAR SKILLZ!!!', reason: 'Titanic XP bottles have highest XP/coin ratio during doubled XP', action: 'BUY', actionReason: 'Prices peak mid-Derpy; buy early, sell into peak demand' },
-    { id: 'COLOSSAL_EXP_BOTTLE',         perkKey: 'MOAR SKILLZ!!!', reason: 'Large XP bottle — doubled efficiency means higher demand', action: 'BUY', actionReason: 'Steady demand rise throughout Derpy — good flip target' },
-    { id: 'ENCHANTED_BREAD',             perkKey: 'TURBO MINIONS!!!', reason: 'Best-in-slot minion fuel — stacks with doubled output perk', action: 'BUY', actionReason: 'Minion fuel demand rises with output doubling; sell mid-term' },
-    { id: 'HAMSTER_WHEEL',               perkKey: 'TURBO MINIONS!!!', reason: 'Popular minion fuel — demand spikes from players maximizing double output', action: 'BUY', actionReason: 'High-velocity flip during Derpy; buy low, sell into spike' },
-    { id: 'CATALYST',                    perkKey: 'TURBO MINIONS!!!', reason: 'Minion speed fuel — players buy more during doubled output to maximize gains', action: 'BUY', actionReason: 'Stock up early; sell mid-term for reliable profit' },
-    { id: 'FOUL_FLESH',                  perkKey: 'TURBO MINIONS!!!', reason: 'Double zombie minion drops flood the market with Foul Flesh', action: 'SELL', actionReason: 'Supply spike suppresses price — clear stock before crash' },
-    { id: 'ENCHANTED_ROTTEN_FLESH',      perkKey: 'TURBO MINIONS!!!', reason: 'Double zombie minion output → massive Rotten Flesh oversupply', action: 'SELL', actionReason: 'Sell now — price crashes mid-Derpy from supply flood' },
-    { id: 'ENCHANTED_BONE',              perkKey: 'TURBO MINIONS!!!', reason: 'Double skeleton minion drops → bone oversupply on bazaar', action: 'SELL', actionReason: 'Sell before price drops further from supply spike' },
-    { id: 'ENCHANTED_STRING',            perkKey: 'TURBO MINIONS!!!', reason: 'Spider minion output doubles → string supply spike', action: 'SELL', actionReason: 'Clear string position; supply crash imminent' },
-    { id: 'ENCHANTED_GUNPOWDER',         perkKey: 'TURBO MINIONS!!!', reason: 'Creeper minion output doubles → gunpowder oversupply', action: 'SELL', actionReason: 'Sell gunpowder holdings before supply floods in' },
+    // MOAR SKILLZ!!! — skill XP doubled → all XP bottles give 50% more skill XP
+    { id: 'GRAND_EXP_BOTTLE',      perkKey: 'MOAR SKILLZ!!!', reason: 'Gives large amounts of skill XP. With +50% XP perk, each bottle is 50% more efficient → strong demand from players pushing skill levels', action: 'BUY', actionReason: 'Buy before Derpy starts; sell into demand peak mid-term as players grind skills' },
+    { id: 'TITANIC_EXP_BOTTLE',    perkKey: 'MOAR SKILLZ!!!', reason: 'Best XP-per-coin bottle. At Enchanting 60 gives up to 850k XP — 50% efficiency boost makes it the go-to during Derpy', action: 'BUY', actionReason: 'Highest demand item during Derpy from progression players — buy early, sell at peak' },
+    { id: 'COLOSSAL_EXP_BOTTLE',   perkKey: 'MOAR SKILLZ!!!', reason: 'Second-tier bulk skill XP bottle. Popular with mid-game players rushing skills during Derpy', action: 'BUY', actionReason: 'Steady demand rise throughout Derpy — reliable flip with good volume' },
+    // TURBO MINIONS!!! — doubles minion OUTPUT (drops). Stacking fuels amplify this:
+    { id: 'HYPER_CATALYST',        perkKey: 'TURBO MINIONS!!!', reason: 'Output-multiplying fuel (normally 4× drops). Stacks with Turbo Minions: becomes 8× drop output — massively OP. Players rush to buy these', action: 'BUY', actionReason: 'Best-in-slot fuel during Derpy. Buy before term starts; demand spikes hard on day 1' },
+    { id: 'TASTY_CHEESE',          perkKey: 'TURBO MINIONS!!!', reason: 'Output-multiplying fuel (normally 2× drops). Stacks with Turbo Minions: becomes 4× output. Budget option that still stacks', action: 'BUY', actionReason: 'Accessible output fuel — buy early, sell into mid-Derpy demand' },
+    // TURBO MINIONS supply crashes — doubled minion drops flood the market
+    { id: 'ENCHANTED_ROTTEN_FLESH',perkKey: 'TURBO MINIONS!!!', reason: 'Zombie minion output doubles → massive Rotten Flesh oversupply crashes bazaar price', action: 'SELL', actionReason: 'Price crashes within hours of Derpy starting — sell immediately' },
+    { id: 'ENCHANTED_BONE',        perkKey: 'TURBO MINIONS!!!', reason: 'Skeleton minion output doubles → bone market flooded', action: 'SELL', actionReason: 'Sell skeleton minion stock before price floor collapses' },
+    { id: 'ENCHANTED_STRING',      perkKey: 'TURBO MINIONS!!!', reason: 'Spider minion output doubles → string supply spike crushes prices', action: 'SELL', actionReason: 'Clear string position; supply flood imminent when Derpy activates' },
+    { id: 'ENCHANTED_GUNPOWDER',   perkKey: 'TURBO MINIONS!!!', reason: 'Creeper minion output doubles → gunpowder oversupply', action: 'SELL', actionReason: 'Sell before price drops from doubled creeper minion drops' },
+    { id: 'ENCHANTED_IRON_INGOT',  perkKey: 'TURBO MINIONS!!!', reason: 'Iron golem minion output doubles → iron ingot supply flood on bazaar', action: 'SELL', actionReason: 'Iron prices crash during Derpy — offload now' },
+    // QUAD TAXES — avoid large bazaar trades during Derpy (5% tax vs normal 1.25%)
+    { id: 'ENCHANTED_DIAMOND',     perkKey: 'QUAD TAXES', reason: 'High-value item hit hard by 4× bazaar tax. Normal 1.25% sell tax becomes ~5% — margins disappear on expensive items', action: 'WARN', actionReason: 'Avoid buying/selling expensive items during Derpy — tax kills margins. Trade before or after' },
   ],
+  // ─── DIANA ───────────────────────────────────────────────────────────────
+  // Mythological Ritual: Players dig Griffin burrows using a Griffin Pet + Ancestral Spade.
+  // Mythological creatures (Gaia Constructs, Minotaurs, etc.) drop specific items.
+  // Key drops: Griffin Feather (100% drop), Daedalus Stick, Dwarf Turtle Shelmet, Chimera
+  // Griffin Feather price historically: ~57k during Diana → ~120k outside Diana (2× swing).
   diana: [
-    { id: 'GRIFFIN_FEATHER',             perkKey: 'Mythological Ritual', reason: "Diana's Griffin burrow event — Griffin Feathers are used in progression and have higher drop rates", action: 'SELL', actionReason: 'Feather supply rises from event activity — sell into early spike before crash' },
-    { id: 'ENCHANTED_EGG',               perkKey: 'Mythological Ritual', reason: 'Mythological creatures drop items including eggs — supply rises during event', action: 'SELL', actionReason: 'Sell surplus eggs; supply exceeds demand during Diana' },
-    { id: 'MAGIC_MUSHROOM_SOUP',          perkKey: 'Lucky!', reason: 'Diana Lucky! perk increases rare drop rates — luck-boosting items spike in demand', action: 'BUY', actionReason: 'Players buy luck items to maximize rare Mythological drops' },
-    { id: 'ENCHANTED_CLOVER',             perkKey: 'Lucky!', reason: 'Luck-boosting consumable — demand spikes during Diana for rare drop hunting', action: 'BUY', actionReason: 'Buy before event peak; sell into demand' },
-    { id: 'REPLENISH',                    perkKey: 'Sharing is Caring', reason: 'Diana event drives player activity up — general consumables rise in demand', action: 'HOLD', actionReason: 'Monitor price trend before committing' },
+    { id: 'GRIFFIN_FEATHER',       perkKey: 'Mythological Ritual', reason: 'Required for Griffin pet upgrades. During Diana, players dig Griffin burrows constantly → massive feather supply. Price historically halves during Diana term (57k vs 120k outside)', action: 'SELL', actionReason: 'Sell Griffin Feather holdings NOW before supply crashes. Buy back after Diana ends for 2× profit' },
+    { id: 'DAEDALUS_STICK',        perkKey: 'Mythological Ritual', reason: 'Rare Mythological creature drop used in Daedalus Axe crafting. Supply spikes from burrow hunting during Diana', action: 'SELL', actionReason: 'Supply rises from event activity — sell into initial demand before price drops' },
+    { id: 'ENCHANTED_EGG',         perkKey: 'Mythological Ritual', reason: 'Harp blocks, Chickens, and various mobs drop eggs during Diana event activity — supply rises', action: 'SELL', actionReason: 'Minor supply spike from increased outdoor activity — clear surplus' },
+    // Demand spike: players need specific items to dig burrows
+    { id: 'ANCESTRAL_SPADE',       perkKey: 'Mythological Ritual', reason: 'Required tool to dig Griffin burrows. Only works during Diana. Demand surges as every burrow hunter needs one', action: 'BUY', actionReason: 'Buy spades before Diana starts — every burrow hunter needs one, demand spikes immediately' },
   ],
+  // ─── MARINA ──────────────────────────────────────────────────────────────
+  // Fishing Festival: Special Fishing Festival events with Shark enemies and shark loot.
+  // Luck of the Sea 2.0: +15% Sea Creature Chance → more rare sea creature drops.
+  // Double Trouble: +0.1 Double Hook Chance per 1% Sea Creature Chance.
+  // +50 Fishing Wisdom: more fishing XP per catch.
+  // Real effect: massive fishing activity → fish drops flood market, sea creature loot spikes.
   marina: [
-    { id: 'GREAT_WHITE_SHARK_TOOTH',      perkKey: 'Legends of the Sea', reason: 'Rare fishing drop — higher drop rate during Marina term from Legends of the Sea perk', action: 'SELL', actionReason: 'Supply increases from boosted drop rates — sell into demand spike before crash' },
-    { id: 'ENCHANTED_RAW_FISH',           perkKey: 'Fishing Festival', reason: 'Fishing XP doubled every 3rd day — massive player activity floods fish supply', action: 'SELL', actionReason: 'Supply spike from Fishing Festival days — sell before price crash' },
-    { id: 'ENCHANTED_RAW_SALMON',         perkKey: 'Fishing Festival', reason: 'Salmon drops flood market during Fishing Festival days of doubled XP', action: 'SELL', actionReason: 'Clear salmon holdings; oversupply from event fishers' },
-    { id: 'ENCHANTED_CLAY',               perkKey: 'Luck of the Sea ✦', reason: 'Clay is a fishing drop — higher fishing luck and activity boosts clay supply', action: 'SELL', actionReason: 'Sell now; supply rises during Marina from increased fishing activity' },
-    { id: 'ENCHANTED_INK_SACK',           perkKey: 'Fishing Festival', reason: 'Squid fishing drops spike during Marina fishing events', action: 'SELL', actionReason: 'Ink supply rises from event — sell before price suppression' },
-    { id: 'WHALE_BAIT',                   perkKey: 'Fishing Festival', reason: 'Bait items in high demand during Marina for maximizing fishing event profits', action: 'BUY', actionReason: 'Demand spike from players preparing for Fishing Festival days' },
+    // Supply crash: common fishing items flood from increased fishing activity
+    { id: 'ENCHANTED_RAW_FISH',    perkKey: 'Fishing Festival', reason: 'Massive fishing activity during Marina floods the market with Raw Fish. Classic supply-crash scenario — price drops fast', action: 'SELL', actionReason: 'Sell before fishing activity peaks — price drops as supply floods in' },
+    { id: 'ENCHANTED_RAW_SALMON',  perkKey: 'Fishing Festival', reason: 'Salmon floods from doubled fishing session activity during Marina festival events', action: 'SELL', actionReason: 'Clear salmon before oversupply from Marina fishers tanks the price' },
+    { id: 'ENCHANTED_CLAY',        perkKey: 'Luck of the Sea 2.0', reason: 'Clay is a common fishing drop — +15% Sea Creature Chance also boosts general catch rates, flooding clay supply', action: 'SELL', actionReason: 'Clay price drops during Marina from increased fishing activity — sell now' },
+    { id: 'ENCHANTED_INK_SACK',    perkKey: 'Double Trouble', reason: 'Squid drops rise from double hook chance and high fishing activity during Marina', action: 'SELL', actionReason: 'Ink sack supply rises — sell before price suppressed' },
+    // Demand spike: players gear up for fishing events
+    { id: 'SPIKED_BAIT',           perkKey: 'Fishing Festival', reason: 'Spiked Bait gives +15% Sea Creature Chance — stacks with Marina\'s +15%, making it best-in-slot. Demand spikes as every serious fisher wants it', action: 'BUY', actionReason: 'Buy before Marina starts — stacks with her perk, every fisher wants it, demand surges day 1' },
+    { id: 'SQUIDS_KNEE',           perkKey: 'Luck of the Sea 2.0', reason: 'Fishing accessory demand rises as players min-max sea creature chance during Marina', action: 'BUY', actionReason: 'Demand rises from players maximising sea creature chance during Marina' },
   ],
+  // ─── COLE ────────────────────────────────────────────────────────────────
+  // Mining Fiesta: +75 Mining Wisdom globally (more mining XP per ore).
+  // 2× ore drops (coal, cobblestone, etc.) → common ore prices CRASH.
+  // Chance to find Refined Minerals (~1/750) and Glossy Gemstones (~1/1500) from any ore.
+  // Molten Forge: forge recipes cost 10% fewer materials.
   cole: [
-    { id: 'MITHRIL_ORE',                  perkKey: 'Prospector', reason: 'Mining drop rates doubled — mithril mining output doubles, flooding the market', action: 'SELL', actionReason: 'Sell mithril before supply crash from doubled drop rates' },
-    { id: 'REFINED_MITHRIL',              perkKey: 'Prospector', reason: 'Mithril supply spike → refined mithril supply also rises', action: 'SELL', actionReason: 'Clear refined mithril holdings; supply pressure from Cole perk' },
-    { id: 'TITANIUM_ORE',                 perkKey: 'Prospector', reason: 'Titanium mining drops doubled — rare ore becomes less scarce', action: 'SELL', actionReason: 'Supply spike during Cole; sell titanium at current prices' },
-    { id: 'RUBY_GEMSTONE',                perkKey: 'Entrench', reason: 'Gemstone mining boosted — ruby supply rises during Cole', action: 'SELL', actionReason: 'Gemstone oversupply incoming; sell now' },
-    { id: 'SAPPHIRE_GEMSTONE',            perkKey: 'Entrench', reason: 'Gemstone mining boosted — sapphire supply spikes during Cole', action: 'SELL', actionReason: 'Clear sapphire; supply exceeds demand during Cole' },
-    { id: 'FUEL_TANK',                    perkKey: 'Mining Fiesta', reason: 'Mining events doubled in frequency — mining fuel demand rises sharply', action: 'BUY', actionReason: 'Players stockpile mining fuel for doubled event frequency; buy now' },
-    { id: 'GOBLIN_EGG',                   perkKey: 'Mining Fiesta', reason: 'Mining events increased — Goblin Egg demand rises for Dwarven Mines progression', action: 'BUY', actionReason: 'Higher mining activity boosts demand for progression items' },
+    // Supply crash: ore drops double → prices crash
+    { id: 'COAL',                  perkKey: 'Mining Fiesta', reason: '2× ore drops during Cole means coal floods the market. Minion coal also doubles. Prices typically crash 30-60% at peak supply', action: 'SELL', actionReason: 'Sell all coal immediately — price crashes within the first day of Cole' },
+    { id: 'ENCHANTED_COAL',        perkKey: 'Mining Fiesta', reason: 'Enchanted coal also oversupplied from 2× mining output. Crafters avoid buying what they can easily farm', action: 'SELL', actionReason: 'Clear enchanted coal before supply crash propagates up the crafting chain' },
+    { id: 'MITHRIL_ORE',           perkKey: 'Mining Fiesta', reason: '2× mining drops → mithril floods Dwarven Mines. Price historically crashes during Cole', action: 'SELL', actionReason: 'Sell mithril before market is saturated — supply doubles overnight' },
+    { id: 'REFINED_MITHRIL',       perkKey: 'Mining Fiesta', reason: 'Mithril supply spike → refined mithril also oversupplied as players process excess ore', action: 'SELL', actionReason: 'Clear refined mithril; supply pressure from Cole cascades up the crafting chain' },
+    { id: 'TITANIUM_ORE',          perkKey: 'Mining Fiesta', reason: '2× drops includes titanium — rarer ore becomes notably less scarce during Cole', action: 'SELL', actionReason: 'Titanium supply rises enough to suppress prices — sell before crash' },
+    // Demand spike: Refined Minerals and Glossy Gemstones are rare bonus drops from Cole
+    { id: 'REFINED_MINERAL',       perkKey: 'Mining Fiesta', reason: 'Rare Cole-exclusive drop (~1/750 ore) — drops ONLY during Cole\'s term. Players rush to farm as many as possible before he leaves', action: 'BUY', actionReason: 'Buy and hoard before Cole ends — only drops during his term, price spikes after he leaves' },
+    { id: 'GOBLIN_EGG',            perkKey: 'Mining Fiesta', reason: 'Increased mining activity in Dwarven Mines drives Goblin Egg demand for Dwarven progression', action: 'BUY', actionReason: 'Mining activity surge boosts goblin egg demand — buy before peak' },
   ],
+  // ─── FINNEGAN ────────────────────────────────────────────────────────────
+  // Ephemeral Trading: Each SkyBlock day, one crop gets +25% NPC sell price, previous day crop gets -25%.
+  // This affects NPC sell prices, NOT directly bazaar prices. However bazaar prices DO react
+  // because players sell boosted crops to NPC instead of bazaar, reducing bazaar supply of that crop,
+  // while the penalized crop has no NPC demand so floods bazaar. Highly volatile day-to-day.
+  // Blooming Business: +50% farming XP on all farming activities.
   finnegan: [
-    { id: 'ENCHANTED_WHEAT',             perkKey: 'Ephemeral Trading', reason: 'Random crop selected daily for +25% NPC price — wheat may spike or crash', action: 'HOLD', actionReason: "Check which crop is the day's market crop before buying or selling" },
-    { id: 'ENCHANTED_CARROT',            perkKey: 'Ephemeral Trading', reason: 'Random crop prices shift daily — carrot may be the buffed or nerfed crop', action: 'HOLD', actionReason: 'Volatile day-to-day; hold and monitor daily crop announcement' },
-    { id: 'ENCHANTED_POTATO',            perkKey: 'Ephemeral Trading', reason: 'Random daily crop price shift — potato pricing volatile during Finnegan', action: 'HOLD', actionReason: 'Monitor daily crop before committing to a position' },
-    { id: 'ENCHANTED_MELON',             perkKey: 'Ephemeral Trading', reason: 'Melon may be the daily boosted or penalized crop — volatile pricing', action: 'HOLD', actionReason: 'Ephemeral Trading makes crop prices highly volatile — watch daily' },
-    { id: 'ENCHANTED_PUMPKIN',           perkKey: 'Ephemeral Trading', reason: 'Pumpkin pricing shifts randomly each SkyBlock day during Finnegan', action: 'HOLD', actionReason: 'High volatility — monitor before entering a large position' },
-    { id: 'ENCHANTED_SUGAR_CANE',        perkKey: 'Ephemeral Trading', reason: 'Sugar cane may be the daily boosted crop — check before trading', action: 'HOLD', actionReason: 'Price can spike 25% or drop 25% depending on daily selection' },
-    { id: 'CULTIVATING',                 perkKey: 'Blooming Business', reason: 'Farming XP doubled — Cultivating enchant book demand rises as players rush farming milestones', action: 'BUY', actionReason: 'Buy Cultivating books before Finnegan — demand spikes as players farm for XP' },
+    // Farming XP doubled — ENCHANTMENT_CULTIVATING books spike in demand
+    { id: 'ENCHANTMENT_CULTIVATING_1', perkKey: 'Blooming Business', reason: '+50% farming XP — players rush Cultivating enchant milestone farming. Cultivating book demand spikes as it requires farming collections to level', action: 'BUY', actionReason: 'Buy Cultivating books before Finnegan — farming XP rush drives demand' },
+    { id: 'ENCHANTED_WHEAT',           perkKey: 'Ephemeral Trading', reason: 'NPC price swings ±25% daily. When wheat is the "penalty" crop, players dump it on bazaar → price crash. When "bonus" crop, players sell to NPC not bazaar → bazaar supply tightens', action: 'HOLD', actionReason: 'Highly volatile. Check today\'s Finnegan crop before trading wheat' },
+    { id: 'ENCHANTED_CARROT',          perkKey: 'Ephemeral Trading', reason: 'Random daily NPC price swing affects bazaar indirectly. Bonus crop day = less supply to bazaar (sold to NPC). Penalty day = bazaar gets dumped', action: 'HOLD', actionReason: 'Daily crop changes make carrot unpredictable — hold until you know today\'s crop' },
+    { id: 'ENCHANTED_POTATO',          perkKey: 'Ephemeral Trading', reason: 'Same daily NPC swing mechanic — potato pricing volatile during Finnegan', action: 'HOLD', actionReason: 'Monitor which crop is buffed/nerfed each day before committing' },
+    { id: 'ENCHANTED_PUMPKIN',         perkKey: 'Ephemeral Trading', reason: 'Pumpkin included in daily crop rotation. Also used in Spooky Festival so has additional price drivers', action: 'HOLD', actionReason: 'Volatile — watch daily crop announcement' },
+    { id: 'ENCHANTED_SUGAR_CANE',      perkKey: 'Ephemeral Trading', reason: 'Sugar cane in daily rotation — when penalized, players dump on bazaar → price drops', action: 'HOLD', actionReason: 'High variance day-to-day — hold until daily crop is confirmed' },
+    { id: 'ENCHANTED_NETHER_WART',     perkKey: 'Ephemeral Trading', reason: 'Nether wart in daily crop NPC price rotation', action: 'HOLD', actionReason: 'Monitor daily crop before taking position' },
   ],
+  // ─── PAUL ────────────────────────────────────────────────────────────────
+  // EZPZ: +10 dungeon score for all players (free extra dungeon grade).
+  //   With EZPZ, most players can now achieve S or S+ easier → more chest opens → key demand UP.
+  //   More dungeon runs → more essence drops → essence supply UP.
+  // Marauder: Dungeon reward chests cost 20% LESS coins to open. NOT slayer-related.
+  //   Cheaper chests = players open more chests = more chest key demand.
+  // Benediction: Blessings are 25% stronger. Affects dungeon Blessings (not God Potions).
   paul: [
-    { id: 'GOD_POTION_2',                perkKey: 'Benediction', reason: 'God Potion effectiveness +15% during Paul — every end-game player wants them', action: 'BUY', actionReason: 'Demand spike on day 1 of Paul — buy before prices peak' },
-    { id: 'DUNGEON_CHEST_KEY',           perkKey: 'EZPZ', reason: '+10 dungeon score for all players makes every dungeon chest free — chest key demand spikes', action: 'BUY', actionReason: 'Massive demand spike from dungeoneer community; buy early' },
-    { id: 'WITHER_ESSENCE',              perkKey: 'EZPZ', reason: 'More dungeon runs (due to better scores) → more Wither Essence drops', action: 'SELL', actionReason: 'Increased dungeon activity floods essence market — sell before price drops' },
-    { id: 'UNDEAD_ESSENCE',              perkKey: 'EZPZ', reason: 'More dungeon activity → more Undead Essence drops from catacombs', action: 'SELL', actionReason: 'Dungeon essence supply rises; sell now' },
-    { id: 'REVIVE_STONE',                perkKey: 'EZPZ', reason: 'More dungeon runs from EZPZ bonus → Revive Stone usage rises', action: 'BUY', actionReason: 'Players do more runs; Revive Stone demand increases' },
-    { id: 'SPIRIT_LEAP',                 perkKey: 'EZPZ', reason: 'More dungeon activity → Spirit Leap demand spikes for party teleports', action: 'BUY', actionReason: 'Consumable demand rises with dungeon activity surge' },
-    { id: 'WOLF_TOOTH',                  perkKey: 'Marauder', reason: 'Slayer boss HP -10% → more slayer kills per hour → more Wolf Tooth drops', action: 'SELL', actionReason: 'Slayer drop supply rises; sell wolf teeth before price drops' },
-    { id: 'TARANTULA_WEB',               perkKey: 'Marauder', reason: 'Slayer boss HP -10% → more spider slayer kills → Tarantula Web supply rises', action: 'SELL', actionReason: 'Spider slayer drops increase during Paul — sell now' },
-    { id: 'VOIDLING_CATALYST',           perkKey: 'Marauder', reason: 'Enderman slayer easier with -10% HP → Voidling Catalyst drop rates up', action: 'SELL', actionReason: 'Enderman slayer drops increase; sell before supply crash' },
+    { id: 'DUNGEON_CHEST_KEY',     perkKey: 'EZPZ + Marauder', reason: 'EZPZ gives +10 dungeon score (easier S/S+ grades). Marauder makes chests 20% cheaper to open. Both perks together = massive chest key demand spike as dungeoneers open far more chests', action: 'BUY', actionReason: 'Biggest Paul trade. Buy chest keys before Paul starts — demand spikes hard day 1. Sell mid-term' },
+    { id: 'REVIVE_STONE',          perkKey: 'EZPZ', reason: 'More dungeon runs from easier grading → players use more Revive Stones (die less punishing with EZPZ extra deaths too)', action: 'BUY', actionReason: 'Consumable demand rises with dungeon activity surge during Paul' },
+    { id: 'SPIRIT_LEAP',           perkKey: 'EZPZ', reason: 'More dungeon activity → Spirit Leap demand spikes for mid-floor teleportation in party runs', action: 'BUY', actionReason: 'Dungeon consumable — demand rises proportionally with run volume during Paul' },
+    // Supply crash: more dungeon runs = more essence drops
+    { id: 'WITHER_ESSENCE',        perkKey: 'EZPZ', reason: 'More dungeon runs during Paul → more Wither Essence drops from Catacombs. Classic supply-demand flip', action: 'SELL', actionReason: 'Essence supply rises from increased dungeon activity — sell before price drops' },
+    { id: 'UNDEAD_ESSENCE',        perkKey: 'EZPZ', reason: 'More dungeon activity → Undead Essence drops increase from Catacombs runs', action: 'SELL', actionReason: 'Sell undead essence; supply rises from Paul-driven dungeon surge' },
+    { id: 'SPIDER_ESSENCE',        perkKey: 'EZPZ', reason: 'More dungeon runs → Spider Essence supply increases', action: 'SELL', actionReason: 'Essence supply rises — clear holdings before price pressure' },
   ],
+  // ─── FOXY ────────────────────────────────────────────────────────────────
+  // Extra Event: One extra Traveling Zoo, Spooky Festival, or similar event during term.
+  //   Extra Spooky Festival = more Spooky event candy + pumpkin farming activity.
+  // Happy Hours: 2h per day where ALL players get double skill XP.
+  //   XP bottles become 2× efficient during Happy Hours — demand spikes every day.
   foxy: [
-    { id: 'ENCHANTED_PUMPKIN',           perkKey: 'Extra Event', reason: 'Extra Spooky Festival event during Foxy — pumpkin demand spikes', action: 'BUY', actionReason: 'Spooky Festival triggers pumpkin demand; stockpile before event' },
-    { id: 'CANDY_CORN',                  perkKey: 'Extra Event', reason: 'Extra Spooky Festival means more Candy Corn — prices spike then crash', action: 'SELL', actionReason: 'Sell Candy Corn into the event supply spike' },
-    { id: 'GREEN_CANDY',                 perkKey: 'Extra Event', reason: 'Spooky Festival gives extra Green Candy — supply rises', action: 'SELL', actionReason: 'Extra event = extra candy supply; sell before crash' },
-    { id: 'PURPLE_CANDY',                perkKey: 'Extra Event', reason: 'Spooky Festival extra event gives more Purple Candy', action: 'SELL', actionReason: 'Candy supply spikes during extra Spooky event; sell now' },
-    { id: 'ENCHANTED_EXPERIENCE_BOTTLE', perkKey: 'Happy Hours', reason: 'Double skill XP for 2h per day during Foxy — XP item demand spikes', action: 'BUY', actionReason: 'Players use Happy Hours to push skills; buy XP bottles before peak demand' },
-    { id: 'GRAND_EXP_BOTTLE',            perkKey: 'Happy Hours', reason: 'Double XP during Happy Hours makes large XP bottles valuable', action: 'BUY', actionReason: 'Buy before Happy Hours demand peaks each day of Foxy' },
+    { id: 'GRAND_EXP_BOTTLE',      perkKey: 'Happy Hours', reason: 'Happy Hours (2h daily double skill XP) makes skill XP sources 2× efficient. Players buy XP bottles to burn during the 2h window every day of Foxy\'s term', action: 'BUY', actionReason: 'Daily XP bottle demand during Happy Hours — buy before Foxy starts, sell daily into the window' },
+    { id: 'TITANIC_EXP_BOTTLE',    perkKey: 'Happy Hours', reason: 'Best XP bottle — players save Titanics for Happy Hours for maximum skill XP efficiency. Demand rises throughout term', action: 'BUY', actionReason: 'Buy before term; sell into daily Happy Hours demand windows' },
+    { id: 'COLOSSAL_EXP_BOTTLE',   perkKey: 'Happy Hours', reason: 'Budget XP bottle option — strong demand from mid-game players during Happy Hours', action: 'BUY', actionReason: 'Reliable flip — consistent demand every day of Foxy' },
+    // Extra Spooky Festival event
+    { id: 'CANDY_CORN',            perkKey: 'Extra Event (Spooky)', reason: 'Extra Spooky Festival → more Candy Corn drops from Spooky events. Supply spikes after the event', action: 'SELL', actionReason: 'Sell Candy Corn before/during extra Spooky event — supply floods in after' },
+    { id: 'GREEN_CANDY',           perkKey: 'Extra Event (Spooky)', reason: 'Extra Spooky Festival event = more Green Candy supply from event mobs', action: 'SELL', actionReason: 'Sell before extra event supply hits the market' },
+    { id: 'PURPLE_CANDY',          perkKey: 'Extra Event (Spooky)', reason: 'Extra Spooky Festival = more Purple Candy. Rarer but supply still rises from extra event', action: 'SELL', actionReason: 'Extra event supply spike — offload purple candy now' },
   ],
+  // ─── AATROX ──────────────────────────────────────────────────────────────
+  // Slayer XP Buff: +25% slayer XP. Players do more slayer quests → more slayer drops.
+  // Slayer Quest Buff: Slayer quests give +1 tier (e.g., Tier 3 quest counts as Tier 4 reward).
+  //   More players reach higher tiers → more rare slayer drops.
   aatrox: [
-    { id: 'WOLF_TOOTH',                  perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Wolf Slayer runs → more Wolf Tooth drops', action: 'SELL', actionReason: 'Slayer activity rises; Wolf Tooth supply floods in — sell now' },
-    { id: 'TARANTULA_WEB',               perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Spider Slayer runs → Tarantula Web supply rises', action: 'SELL', actionReason: 'Spider slayer drops increase; sell before price drops' },
-    { id: 'VOIDLING_CATALYST',            perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Enderman Slayer → Voidling Catalyst supply rises', action: 'SELL', actionReason: 'Enderman slayer more active; sell catalyst drops now' },
-    { id: 'BLAZE_ROD',                   perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Blaze Slayer runs → Blaze Rod supply rises', action: 'SELL', actionReason: 'Blaze slayer activity up; sell blaze drops before supply crash' },
-    { id: 'REVENANT_FLESH',              perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Zombie Slayer → Revenant Flesh supply rises', action: 'SELL', actionReason: 'Zombie slayer drops increase during Aatrox; clear holdings' },
-    { id: 'SUMMONING_EYE',               perkKey: 'Slayer Quest Buff', reason: 'Slayer quest tier +1 — more players reach higher tiers and farm Summoning Eyes', action: 'SELL', actionReason: 'Summoning Eye supply increases from higher-tier slayer activity' },
-    { id: 'SPIDER_CATALYST',             perkKey: 'Slayer XP Buff', reason: 'More spider slayer activity → Spider Catalyst demand rises for progression', action: 'BUY', actionReason: 'Spider slayer players buy catalysts; demand rises during Aatrox' },
+    // Supply crashes: more slayer runs = more drops from bosses
+    { id: 'WOLF_TOOTH',            perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → players do more Wolf Slayer runs → more Wolf Tooth drops flood the bazaar', action: 'SELL', actionReason: 'Sell wolf teeth before Aatrox starts — supply rises fast from increased slayer activity' },
+    { id: 'TARANTULA_WEB',         perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Spider Slayer runs → Tarantula Web supply rises significantly', action: 'SELL', actionReason: 'Spider slayer drops increase during Aatrox — sell tarantula webs now' },
+    { id: 'VOIDLING_CATALYST',     perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Enderman Slayer activity → Voidling Catalyst supply rises', action: 'SELL', actionReason: 'Enderman slayer more active; catalyst supply rises — sell now' },
+    { id: 'REVENANT_FLESH',        perkKey: 'Slayer XP Buff', reason: '+25% slayer XP → more Zombie Slayer runs → Revenant Flesh floods bazaar', action: 'SELL', actionReason: 'Zombie slayer supply spike — clear revenant flesh holdings' },
+    { id: 'SUMMONING_EYE',         perkKey: 'Slayer Quest Buff (+1 tier)', reason: 'Quest tier +1 means more players reach Tier 4 (the eye-dropping tier) of Enderman Slayer. Eye supply rises from players who couldn\'t normally farm T4', action: 'SELL', actionReason: 'Eye supply rises as more players can now farm T4 Enderman — sell before market floods' },
+    // Demand spike: players gear up for slayer runs
+    { id: 'MANA_FLUX_POWER_ORB',   perkKey: 'Slayer XP Buff', reason: 'Slayer-focused players buy consumables and support items for longer grinding sessions during Aatrox', action: 'BUY', actionReason: 'Support item demand rises proportionally with slayer activity surge during Aatrox' },
   ],
+  // ─── SCORPIUS ────────────────────────────────────────────────────────────
+  // Bribe: Players who voted for Scorpius receive 50k–1M coins directly.
+  //   This is a pure coin handout — NOT related to gold trading. No gold market effect.
+  // Darker Auctions: Dark Auction has 7 rounds instead of 4, includes corrupted items.
+  //   Dark Orbs used to participate → demand spikes.
   scorpius: [
-    { id: 'DARK_ORBS',                   perkKey: 'Darker Auctions', reason: 'Corrupted items more likely at Dark Auction — Dark Orb demand spikes', action: 'BUY', actionReason: 'Players buy Dark Orbs to maximize Darker Auctions perk value' },
-    { id: 'ENCHANTED_GOLD',              perkKey: 'Bribe', reason: 'Bribe perk gives extra coins for selling to Scorpius NPC — gold trade volume spikes', action: 'BUY', actionReason: 'Gold demand rises as players exploit Bribe NPC selling bonus' },
-    { id: 'ENCHANTED_GOLD_BLOCK',        perkKey: 'Bribe', reason: 'Bribe perk drives gold market — enchanted gold blocks affected by increased trade', action: 'HOLD', actionReason: 'Monitor gold block prices during Bribe exploitation' },
+    { id: 'DARK_ORBS',             perkKey: 'Darker Auctions', reason: 'Darker Auctions adds 3 extra Dark Auction rounds and exclusive corrupted items. Players need Dark Orbs to participate → strong demand spike', action: 'BUY', actionReason: 'Buy Dark Orbs before Scorpius term — every Dark Auction attendee needs them, demand surges' },
+    // Bribe = direct coin welfare. No item market effect. Do not add fake items here.
   ],
+  // ─── BARRY ───────────────────────────────────────────────────────────────
+  // Barry's Cans: Extra Barry Cans drop from fishing — used in Barry's questline.
+  // Prosecution: Players can place bounties on other players.
   barry: [
-    { id: 'BARRY_SKIN',                  perkKey: "Barry's Cans", reason: "Barry's Cans drop more from fishing during his term — Barry Skin collectible rises", action: 'SELL', actionReason: 'Barry Can supply rises; sell Barry-related collectibles during term' },
+    { id: 'BARRY_SKIN',            perkKey: "Barry's Cans", reason: "Barry-exclusive collectible only obtainable during his term from Barry Cans — supply rises only while he's active", action: 'SELL', actionReason: 'Barry Skins are only available during his term — sell into supply spike during term' },
   ],
+  // ─── JERRY ───────────────────────────────────────────────────────────────
+  // Perkpocalypse: Activates ALL other mayors' perks simultaneously for a limited time.
+  // This is a chaotic everything-happens-at-once scenario.
+  // Key items: Turbo Minions fuels (stacking output fuels), XP bottles (multiple XP perks active),
+  //   dungeon keys (EZPZ active), slayer drops (multiple slayer perks active)
   jerry: [
-    { id: 'ENCHANTED_EXPERIENCE_BOTTLE', perkKey: 'Perkpocalypse', reason: 'Jerry activates all mayor perks — MOAR SKILLZ!!! and Happy Hours both active', action: 'BUY', actionReason: 'Multiple XP perks stack during Jerry; massive XP demand spike' },
-    { id: 'DUNGEON_CHEST_KEY',           perkKey: 'Perkpocalypse', reason: 'Jerry activates EZPZ from Paul perk simultaneously with others', action: 'BUY', actionReason: 'EZPZ bonus active during Jerry — dungeon chest key demand spikes' },
-    { id: 'GOD_POTION_2',               perkKey: 'Perkpocalypse', reason: 'Paul Benediction perk active during Jerry — God Pot demand spikes', action: 'BUY', actionReason: 'God Pots in high demand as Benediction stacks with other Jerry perks' },
-    { id: 'HAMSTER_WHEEL',               perkKey: 'Perkpocalypse', reason: 'TURBO MINIONS!!! from Derpy active during Jerry perkpocalypse', action: 'BUY', actionReason: 'Minion fuel demand spikes; all minion perks active during Jerry' },
-    { id: 'WOLF_TOOTH',                  perkKey: 'Perkpocalypse', reason: 'Slayer buffs from Aatrox/Paul active during Jerry — all slayer drops rise', action: 'SELL', actionReason: 'Multiple slayer perks activate; slayer drop supply spikes' },
+    { id: 'HYPER_CATALYST',        perkKey: 'Perkpocalypse (TURBO MINIONS)', reason: 'Jerry activates Turbo Minions from Derpy — output-multiplying fuels stack. Hyper Catalyst (4× normal → 8× with Turbo Minions) is the biggest winner', action: 'BUY', actionReason: 'Best fuel during Jerry perkpocalypse — same logic as Derpy but all perks hit at once' },
+    { id: 'GRAND_EXP_BOTTLE',      perkKey: 'Perkpocalypse (MOAR SKILLZ + Happy Hours)', reason: 'Jerry activates both MOAR SKILLZ (Derpy +50% skill XP) AND Happy Hours (Foxy double XP windows) simultaneously — XP bottles are massively amplified', action: 'BUY', actionReason: 'Multiple XP perks active at once — huge XP bottle demand spike during Jerry' },
+    { id: 'DUNGEON_CHEST_KEY',     perkKey: 'Perkpocalypse (EZPZ + Marauder)', reason: 'Jerry activates Paul\'s EZPZ (+10 dungeon score) and Marauder (20% cheaper chests) — chest key demand spikes just like during Paul', action: 'BUY', actionReason: 'EZPZ + Marauder stack during Jerry — same chest key demand spike as Paul' },
+    // Supply crashes from multiple slayer perks at once
+    { id: 'WOLF_TOOTH',            perkKey: 'Perkpocalypse (Aatrox slayer perks)', reason: 'Aatrox slayer buffs activate during Jerry — all slayer drops flood the market from increased activity', action: 'SELL', actionReason: 'Multiple slayer perks active — wolf tooth and slayer drops spike in supply' },
+    { id: 'ENCHANTED_ROTTEN_FLESH',perkKey: 'Perkpocalypse (TURBO MINIONS)', reason: 'Turbo Minions active during Jerry → zombie minion output doubles → rotten flesh floods market', action: 'SELL', actionReason: 'Minion output doubles — zombie drops crash in price' },
   ],
 }
 
