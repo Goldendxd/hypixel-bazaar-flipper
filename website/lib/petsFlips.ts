@@ -1,13 +1,15 @@
-export type FlipType = 'TIER_BOOST' | 'RARITY_ARBITRAGE'
+export type FlipStrategy = 'KAT_UPGRADE' | 'TIER_BOOST'
 
-export interface PetFlipRow {
+export interface KatFlipRow {
   tag: string
   name: string
-  flipType: FlipType
+  strategy: FlipStrategy
   buyRarity: string
   sellRarity: string
   iconUrl: string
   buyPrice: number
+  katCoins: number
+  itemCost: number
   tierBoostCost: number
   totalCost: number
   sellPrice: number
@@ -15,10 +17,11 @@ export interface PetFlipRow {
   roi: number
   buyVolume: number
   sellVolume: number
+  katIngredients: Array<{ id: string; name: string; qty: number; unitPrice: number }>
 }
 
-export async function fetchPetsFlips(): Promise<{ rows: PetFlipRow[]; tierBoostCost: number }> {
+export async function fetchKatFlips(): Promise<{ rows: KatFlipRow[]; tierBoostCost: number }> {
   const res = await fetch('/api/pets-flips', { cache: 'no-store' })
-  if (!res.ok) throw new Error(`Pets-flips API error ${res.status}`)
+  if (!res.ok) throw new Error(`Kat-flips API error ${res.status}`)
   return res.json()
 }

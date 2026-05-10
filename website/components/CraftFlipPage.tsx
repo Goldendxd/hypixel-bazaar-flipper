@@ -69,7 +69,7 @@ function Sidebar({ active }: { active: string }) {
           <span style={{ fontSize: 15 }}>🔨</span>Forge Flips
         </Link>
         <Link href="/pets" className={`nav-item${active === '/pets' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>
-          <span style={{ fontSize: 15 }}>🐾</span>Pet Flips
+          <span style={{ fontSize: 15 }}>🐾</span>Kat Flips
         </Link>
         <Link href="/books" className={`nav-item${active === '/books' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>
           <span style={{ fontSize: 15 }}>📚</span>Book Flips

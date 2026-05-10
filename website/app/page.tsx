@@ -68,7 +68,7 @@ export default function Home() {
             </Link>
             <Link href="/pets" className="nav-item" style={{ textDecoration: 'none' }}>
               <span style={{ fontSize: 15 }}>🐾</span>
-              Pet Flips
+              Kat Flips
             </Link>
             <Link href="/books" className="nav-item" style={{ textDecoration: 'none' }}>
               <span style={{ fontSize: 15 }}>📚</span>
