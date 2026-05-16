@@ -37,23 +37,25 @@ function ItemIcon({ id, name, size = 36 }: { id: string; name: string; size?: nu
 
 function SkeletonCard() {
   return (
-    <div className="flip-card" style={{ padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
+    <div className="flip-card" style={{ padding: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div className="skeleton" style={{ height: 13, width: '55%', marginBottom: 7 }} />
-          <div className="skeleton" style={{ height: 10, width: '35%' }} />
+          <div className="skeleton" style={{ height: 11, width: '60%', marginBottom: 6 }} />
+          <div className="skeleton" style={{ height: 9, width: '40%' }} />
         </div>
+        <div className="skeleton" style={{ height: 20, width: 44, borderRadius: 3 }} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+      <div className="divider" style={{ marginBottom: 10 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 10px', marginBottom: 10 }}>
         {[0,1,2,3].map(i => (
           <div key={i}>
-            <div className="skeleton" style={{ height: 9, width: 60, marginBottom: 5 }} />
-            <div className="skeleton" style={{ height: 13, width: 48 }} />
+            <div className="skeleton" style={{ height: 8, width: 52, marginBottom: 4 }} />
+            <div className="skeleton" style={{ height: 12, width: 44 }} />
           </div>
         ))}
       </div>
-      <div className="skeleton" style={{ height: 40, borderRadius: 8 }} />
+      <div className="skeleton" style={{ height: 36, borderRadius: 4 }} />
     </div>
   )
 }
@@ -65,92 +67,59 @@ function FlipCard({
   starred: boolean; blocked: boolean; onStar: () => void; onBlock: () => void
 }) {
   const totalCost = row.buyOrder * qty
-
   const marginColor = row.orderMargin >= 5 ? 'var(--green)' : row.orderMargin >= 2 ? 'var(--gold)' : 'var(--red)'
 
   return (
     <div className="flip-card">
-      {/* Top accent line */}
-      <div style={{ height: 2, background: 'linear-gradient(90deg, var(--blue), var(--purple))', opacity: 0.7 }} />
-
-      {/* Header */}
-      <div style={{ padding: '12px 14px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Icon */}
-          <div style={{
-            width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-          }}>
-            <ItemIcon id={row.id} name={row.name} size={36} />
-          </div>
-
-          {/* Name + ID */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              letterSpacing: '-0.01em',
-            }}>
-              {row.name}
-            </div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 2, letterSpacing: '0.04em' }}>
-              {row.id}
-            </div>
-          </div>
-
-          {/* Margin chip + buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <span style={{
-              fontSize: '0.68rem', fontWeight: 800, color: marginColor,
-              background: `${marginColor}18`, border: `1px solid ${marginColor}35`,
-              borderRadius: 99, padding: '2px 7px', letterSpacing: '0.04em',
-            }}>{row.orderMargin.toFixed(1)}%</span>
-            <button className={`icon-btn ${starred ? 'starred' : ''}`} onClick={onStar} title="Whitelist"
-              style={{ color: starred ? 'var(--gold)' : 'var(--muted)', fontSize: 13 }}>⭐</button>
-            <button className="icon-btn" onClick={onBlock} title="Blacklist"
-              style={{ color: blocked ? 'var(--red)' : 'var(--muted)', fontSize: 13 }}>🚫</button>
-          </div>
+      <div className="card-accent" style={{ background: `linear-gradient(90deg, var(--blue), var(--purple))` }} />
+      <div className="card-header">
+        <div className="icon-box">
+          <ItemIcon id={row.id} name={row.name} size={36} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="card-name">{row.name}</div>
+          <div className="card-sub">{row.id}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <span className="mono" style={{
+            fontSize: '0.72rem', fontWeight: 700, color: marginColor,
+            background: `${marginColor}15`, border: `1px solid ${marginColor}30`,
+            borderRadius: 3, padding: '2px 6px',
+          }}>{row.orderMargin.toFixed(1)}%</span>
+          <button className={`icon-btn${starred ? ' starred' : ''}`} onClick={onStar} title="Star" style={{ fontSize: 12 }}>★</button>
+          <button className="icon-btn" onClick={onBlock} title="Block" style={{ fontSize: 12, color: blocked ? 'var(--red)' : undefined }}>✕</button>
         </div>
       </div>
 
       <div className="divider" />
 
-      {/* Stats */}
-      <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 12px' }}>
+      <div className="card-stats">
         <div>
           <div className="stat-label">Buy Order</div>
-          <div className="stat-value" style={{ color: 'var(--blue)' }}>{coins(row.buyOrder)}</div>
+          <div className="stat-value mono" style={{ color: 'var(--blue)', fontSize: '0.9rem' }}>{coins(row.buyOrder)}</div>
         </div>
         <div>
           <div className="stat-label">Sell Order</div>
-          <div className="stat-value" style={{ color: 'var(--blue)' }}>{coins(row.sellOrder)}</div>
+          <div className="stat-value mono" style={{ color: 'var(--cyan)', fontSize: '0.9rem' }}>{coins(row.sellOrder)}</div>
         </div>
         <div>
-          <div className="stat-label">Quantity</div>
-          <div className="stat-value">{qty.toLocaleString()}</div>
+          <div className="stat-label">Qty ({coins(totalCost)})</div>
+          <div className="stat-value mono" style={{ fontSize: '0.9rem' }}>{qty.toLocaleString()}</div>
         </div>
         <div>
-          <div className="stat-label">Total Cost</div>
-          <div className="stat-value" style={{ color: 'var(--text2)' }}>{coins(totalCost)}</div>
+          <div className="stat-label">Fill Score</div>
+          <div className="stat-value mono" style={{ fontSize: '0.9rem', color: 'var(--text2)' }}>{row.fillScore}</div>
         </div>
       </div>
 
-      {/* Profit */}
-      <div style={{ padding: '0 12px 12px' }}>
-        <div className="profit-bar">
-          <div>
-            <div style={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--green)', textTransform: 'uppercase', opacity: 0.7 }}>Est. Profit</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--green)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-              +{coins(profitTotal)}
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Fill</div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text2)' }}>{row.fillScore}</div>
-          </div>
+      <div className="profit-row">
+        <div>
+          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Est. Profit</div>
+          <div className="mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--green)', letterSpacing: '-0.02em' }}>+{coins(profitTotal)}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Weekly Buy</div>
+          <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text2)' }}>{coins(row.weeklyVolume)}</div>
         </div>
       </div>
     </div>
@@ -162,10 +131,11 @@ function FilterField({ label, value, onChange }: {
 }) {
   return (
     <div>
-      <div className="stat-label" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="stat-label" style={{ marginBottom: 4 }}>{label}</div>
       <input
         type="number"
         className="filter-input"
+        style={{ width: '100%' }}
         value={value}
         onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
         min={0}
@@ -248,85 +218,67 @@ export default function FlipFinder() {
 
   return (
     <div>
-      {/* Page header */}
       <div className="page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span className="live-badge">
-              <span className="pulse-dot" />
-              Live
-            </span>
-            {lastUpdated && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-                Updated {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-            {error && <span style={{ fontSize: '0.72rem', color: 'var(--red)' }}>⚠ {error}</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            {lastUpdated
+              ? <span className="live-badge"><span className="pulse-dot" />Live</span>
+              : <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Loading…</span>}
+            {lastUpdated && <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{lastUpdated.toLocaleTimeString()}</span>}
+            {error && <span style={{ fontSize: '0.7rem', color: 'var(--red)' }}>⚠ {error}</span>}
           </div>
           <h1 className="page-title">Order Flips</h1>
-          <p style={{ marginTop: 6, fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-            Post buy &amp; sell orders to capture the spread. {productCount > 0 && <span>{productCount.toLocaleString()} products tracked.</span>}
+          <p className="page-subtitle" style={{ marginTop: 4 }}>
+            Post buy + sell orders to capture the spread.{' '}
+            {productCount > 0 && <span style={{ color: 'var(--text2)' }}>{productCount.toLocaleString()} products tracked.</span>}
           </p>
         </div>
-
-        {/* Top stat blocks */}
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <div className="stat-block" style={{ minWidth: 120 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="stat-block" style={{ minWidth: 110 }}>
             <div className="stat-label">Best Profit</div>
-            <div style={{ marginTop: 6, fontSize: '1.1rem', fontWeight: 800, color: 'var(--green)', fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.02em' }}>
+            <div className="stat-value mono" style={{ color: 'var(--green)', marginTop: 4 }}>
               {loading ? '—' : `+${coins(topProfit)}`}
             </div>
           </div>
-          <div className="stat-block" style={{ minWidth: 120 }}>
+          <div className="stat-block" style={{ minWidth: 100 }}>
             <div className="stat-label">Opportunities</div>
-            <div style={{ marginTop: 6, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', fontFamily: 'Space Grotesk, sans-serif' }}>
-              {loading ? '—' : filtered.length.toLocaleString()}
+            <div className="stat-value mono" style={{ marginTop: 4 }}>
+              {loading ? '—' : filtered.length}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter panel */}
-      <div className="filter-panel">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--blue)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>⚙ Filters</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="stat-label">Show</span>
-            <select
-              value={showFilter}
-              onChange={e => setShowFilter(e.target.value as 'all' | 'starred')}
-              className="styled-select"
-            >
-              <option value="all">All Items</option>
-              <option value="starred">Starred Only</option>
-            </select>
-          </div>
+      <div className="toolbar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text2)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
+          <select value={showFilter} onChange={e => setShowFilter(e.target.value as 'all' | 'starred')} className="styled-select" style={{ fontSize: '0.75rem' }}>
+            <option value="all">All Items</option>
+            <option value="starred">Starred Only</option>
+          </select>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 16px' }}>
-          <FilterField label="Max Budget"        value={maxMoney}      onChange={setMaxMoney} />
-          <FilterField label="Max Items / Flip"  value={maxItems}      onChange={setMaxItems} />
-          <FilterField label="Min Weekly Buy Vol" value={minWeeklyBuy}  onChange={setMinWeeklyBuy} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px 14px' }}>
+          <FilterField label="Max Budget"         value={maxMoney}      onChange={setMaxMoney} />
+          <FilterField label="Max Items / Flip"   value={maxItems}      onChange={setMaxItems} />
+          <FilterField label="Min Weekly Buy Vol"  value={minWeeklyBuy}  onChange={setMinWeeklyBuy} />
           <FilterField label="Min Weekly Sell Vol" value={minWeeklySell} onChange={setMinWeeklySell} />
-          <FilterField label="Min Buy Orders"    value={minCurBuy}     onChange={setMinCurBuy} />
-          <FilterField label="Min Sell Orders"   value={minCurSell}    onChange={setMinCurSell} />
+          <FilterField label="Min Buy Orders"      value={minCurBuy}     onChange={setMinCurBuy} />
+          <FilterField label="Min Sell Orders"     value={minCurSell}    onChange={setMinCurSell} />
         </div>
       </div>
 
-      {/* Card grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(272px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(268px, 1fr))', gap: 10 }}>
         {loading && Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
 
         {!loading && filtered.length === 0 && (
           <div style={{
-            gridColumn: '1/-1', textAlign: 'center', padding: '80px 0',
-            color: 'var(--muted)', border: '1px dashed var(--border2)',
-            borderRadius: 16, background: 'rgba(255,255,255,0.01)',
+            gridColumn: '1/-1', textAlign: 'center', padding: '60px 0',
+            color: 'var(--muted)', border: '1px dashed var(--border)',
+            borderRadius: 6,
           }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: 12, opacity: 0.2 }}>⊘</div>
-            <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 6 }}>No flips match your filters</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Try lowering volume requirements or clearing hidden items</div>
+            <div style={{ fontSize: '2rem', marginBottom: 10, opacity: 0.15 }}>⊘</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>No flips match your filters</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Try lowering volume requirements or clearing blocked items</div>
           </div>
         )}
 
