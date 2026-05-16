@@ -8,7 +8,7 @@ import Sidebar from '@/components/Sidebar'
 import RefreshTimer from '@/components/RefreshTimer'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coin helpers
+// Formatters
 // ─────────────────────────────────────────────────────────────────────────────
 
 function coins(n: number): string {
@@ -20,7 +20,7 @@ function coins(n: number): string {
   if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(1)}K`
   return `${sign}${abs.toLocaleString()}`
 }
-function coinsShort(n: number): string {
+function coinsMed(n: number): string {
   if (!isFinite(n)) return '—'
   const sign = n < 0 ? '-' : ''
   const abs  = Math.abs(n)
@@ -30,12 +30,11 @@ function coinsShort(n: number): string {
   return `${sign}${abs.toFixed(0)}`
 }
 
-function parseCoinInput(raw: string): number {
+function parseCoin(raw: string): number {
   const s = raw.trim().toLowerCase().replace(/,/g, '')
   if (!s) return NaN
   const mul = s.endsWith('b') ? 1e9 : s.endsWith('m') ? 1e6 : s.endsWith('k') ? 1e3 : 1
-  const num = parseFloat(s.replace(/[kmb]$/, ''))
-  return isFinite(num) ? num * mul : NaN
+  return parseFloat(s.replace(/[kmb]$/, '')) * mul
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,40 +42,35 @@ function parseCoinInput(raw: string): number {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type ExecMode = 'INSTA_BUY' | 'BUY_ORDERS' | 'MIXED'
+const MIXED_SAVE_THRESHOLD = 1_000_000
 
-// For MIXED: use buy orders for items where the spread * qty >= MIXED_THRESHOLD
-const MIXED_THRESHOLD = 1_000_000  // 1M min saving to bother waiting
-
-function resolvePrice(pricing: IngredientPricing, qty: number, mode: ExecMode): number {
-  if (pricing.source === 'AH') return pricing.instaBuy  // AH has no buy orders
-  if (mode === 'INSTA_BUY') return pricing.instaBuy
+function execPrice(pricing: IngredientPricing, qty: number, mode: ExecMode): number {
+  if (pricing.source === 'AH') return pricing.instaBuy
+  if (mode === 'INSTA_BUY')  return pricing.instaBuy
   if (mode === 'BUY_ORDERS') return pricing.buyOrder
-  // MIXED: use buy order only if saving is meaningful
-  const saving = (pricing.instaBuy - pricing.buyOrder) * qty
-  return saving >= MIXED_THRESHOLD ? pricing.buyOrder : pricing.instaBuy
+  return (pricing.instaBuy - pricing.buyOrder) * qty >= MIXED_SAVE_THRESHOLD
+    ? pricing.buyOrder : pricing.instaBuy
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// OTC types
+// OTC
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface OtcEntry { useOtc: boolean; rawInput: string }
 type OtcMap = Record<string, OtcEntry>
 
-function otcPrice(id: string, marketPrice: number, otc: OtcMap): number {
+function resolveUnit(id: string, marketPrice: number, otc: OtcMap): number {
   const e = otc[id]
-  if (e?.useOtc && e.rawInput) {
-    const p = parseCoinInput(e.rawInput)
-    if (isFinite(p) && p > 0) return p
-  }
-  return marketPrice
+  if (!e?.useOtc || !e.rawInput) return marketPrice
+  const p = parseCoin(e.rawInput)
+  return isFinite(p) && p > 0 ? p : marketPrice
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared UI primitives
+// Micro components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ItemIcon({ id, size = 28 }: { id: string; size?: number }) {
+function ItemIcon({ id, size = 36 }: { id: string; size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={`https://sky.shiiyu.moe/item/${id}`} alt={id} width={size} height={size}
@@ -92,7 +86,15 @@ function ItemIcon({ id, size = 28 }: { id: string; size?: number }) {
 const RISK_CLR: Record<string, string> = { LOW: 'var(--green)', MEDIUM: 'var(--gold)', HIGH: 'var(--red)' }
 const LIQ_CLR:  Record<string, string> = { HIGH: 'var(--green)', MEDIUM: 'var(--gold)', LOW: 'var(--red)' }
 
-function Sparkline({ data, color = 'var(--blue)', w = 64, h = 20 }: { data: PricePoint[]; color?: string; w?: number; h?: number }) {
+function Chip({ text, color, bg }: { text: string; color: string; bg?: string }) {
+  return (
+    <span className="chip" style={{ background: bg ?? `${color}15`, color, border: `1px solid ${color}30` }}>
+      {text}
+    </span>
+  )
+}
+
+function Sparkline({ data, color = 'var(--blue)', w = 72, h = 24 }: { data: PricePoint[]; color?: string; w?: number; h?: number }) {
   const vals = data.map(d => d.avg).filter(v => v > 0)
   if (vals.length < 2) return <div style={{ width: w, height: h }} />
   const mn = Math.min(...vals), mx = Math.max(...vals), range = mx - mn || 1
@@ -100,352 +102,459 @@ function Sparkline({ data, color = 'var(--blue)', w = 64, h = 20 }: { data: Pric
     `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - ((v - mn) / range) * (h - 4) - 2).toFixed(1)}`
   ).join(' ')
   return (
-    <svg width={w} height={h} style={{ display: 'block' }}>
+    <svg width={w} height={h} style={{ display: 'block', flexShrink: 0 }}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
 
-function BarChart({ data, color = 'var(--blue)' }: { data: PricePoint[]; color?: string }) {
+function MiniBar({ data, color = 'var(--blue)' }: { data: PricePoint[]; color?: string }) {
   const vals = data.map(d => d.avg).filter(v => v > 0)
-  if (!vals.length) return <div style={{ padding: '14px 0', textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)' }}>No history</div>
+  if (!vals.length) return <div style={{ color: 'var(--muted)', fontSize: '0.75rem', padding: '8px 0' }}>No history</div>
   const mx = Math.max(...vals)
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 36 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 48 }}>
       {vals.map((v, i) => (
-        <div key={i} style={{ flex: 1, height: `${Math.max(3, (v / mx) * 36)}px`, background: color, borderRadius: '2px 2px 0 0', opacity: 0.6 + (i / vals.length) * 0.4 }} />
+        <div key={i} style={{ flex: 1, height: `${Math.max(4, (v / mx) * 48)}px`, background: color, borderRadius: '3px 3px 0 0', opacity: 0.5 + (i / vals.length) * 0.5 }} />
       ))}
     </div>
   )
 }
 
-function Pill({ text, color }: { text: string; color: string }) {
-  return (
-    <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 3, border: `1px solid ${color}50`, background: `${color}12`, fontSize: '0.58rem', fontWeight: 700, color, letterSpacing: '0.05em' }}>
-      {text}
-    </span>
-  )
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Collapsible panel wrapper
+// ─────────────────────────────────────────────────────────────────────────────
 
-function StatRow({ label, value, color, mono = true }: { label: string; value: string; color?: string; mono?: boolean }) {
+function Panel({
+  title, subtitle, accent, chips, defaultOpen = false, children,
+}: {
+  title: string; subtitle?: string; accent?: string; chips?: React.ReactNode
+  defaultOpen?: boolean; children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
-      <span style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 600 }}>{label}</span>
-      <span className={mono ? 'mono' : ''} style={{ fontSize: '0.72rem', fontWeight: 700, color: color ?? 'var(--text)' }}>{value}</span>
+    <div className="panel" style={{ borderColor: accent ? `${accent}30` : undefined, marginBottom: 20 }}>
+      <button className="panel-header" onClick={() => setOpen(o => !o)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+          {accent && <div style={{ width: 4, height: 36, background: accent, borderRadius: 99, flexShrink: 0 }} />}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', letterSpacing: '-0.01em' }}>{title}</span>
+              {chips}
+            </div>
+            {subtitle && <div style={{ fontSize: '0.775rem', color: 'var(--text2)', marginTop: 2 }}>{subtitle}</div>}
+          </div>
+        </div>
+        <span style={{ color: 'var(--muted)', fontSize: '0.75rem', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+      </button>
+      {open && <div className="panel-body">{children}</div>}
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Execution mode panel
+// PnL hero — big profit display
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ExecModePanel({
-  weapon, mode, setMode, scrollsIncluded, accentColor,
+function PnlHero({
+  profit, craftCost, netRevenue, accentColor, otcSaving, marketProfit,
 }: {
-  weapon: WeaponFlip; mode: ExecMode; setMode: (m: ExecMode) => void
-  scrollsIncluded: boolean; accentColor: string
+  profit: number; craftCost: number; netRevenue: number; accentColor: string
+  otcSaving?: number; marketProfit?: number
 }) {
-  const allItems = [
+  const pos = profit > 0
+  return (
+    <div style={{
+      background: pos ? 'var(--green-dim)' : 'var(--red-dim)',
+      border:     `1px solid ${pos ? 'var(--green-border)' : 'var(--red-border)'}`,
+      borderRadius: 12, padding: '20px 24px',
+    }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 24, alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Net Profit</div>
+          <div className="num-xl" style={{ color: pos ? 'var(--green)' : 'var(--red)' }}>
+            {pos ? '+' : ''}{coins(profit)}
+          </div>
+          {otcSaving != null && otcSaving > 0 && (
+            <div style={{ fontSize: '0.72rem', color: 'var(--green)', marginTop: 5, fontWeight: 500 }}>
+              OTC saves <span className="mono" style={{ fontWeight: 700 }}>+{coinsMed(otcSaving)}</span>
+              {marketProfit != null && <span style={{ color: 'var(--muted)' }}> · AH base: {coinsMed(marketProfit)}</span>}
+            </div>
+          )}
+        </div>
+        <div style={{ width: 1, height: 48, background: 'var(--border)', flexShrink: 0 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+          <div>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Craft Cost</div>
+            <div className="num-lg" style={{ color: 'var(--red)' }}>{coins(craftCost)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Revenue (after tax)</div>
+            <div className="num-lg" style={{ color: accentColor }}>{coins(netRevenue)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Execution Mode Panel
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ExecPanel({ weapon, mode, setMode, scrollsIncluded, accent }: {
+  weapon: WeaponFlip; mode: ExecMode; setMode: (m: ExecMode) => void
+  scrollsIncluded: boolean; accent: string
+}) {
+  const items = [
     ...weapon.ingredients,
     ...(scrollsIncluded ? weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })) : []),
   ]
+  const bzItems = weapon.ingredients.filter(x => x.source === 'BZ')
 
-  const bzItems = allItems.filter(x => x.source === 'BZ')
+  const netRev = weapon.cleanLbin * (1 - weapon.ahTax)
+  const instaCost  = items.reduce((a, x) => a + x.pricing.instaBuy * x.qty, 0)
+  const orderCost  = items.reduce((a, x) => a + x.pricing.buyOrder * x.qty, 0)
+  const mixedCost  = items.reduce((a, x) => a + execPrice(x.pricing, x.qty, 'MIXED') * x.qty, 0)
 
-  const instaBuyCost  = allItems.reduce((a, x) => a + resolvePrice(x.pricing, x.qty, 'INSTA_BUY')  * x.qty, 0)
-  const buyOrderCost  = allItems.reduce((a, x) => a + resolvePrice(x.pricing, x.qty, 'BUY_ORDERS') * x.qty, 0)
-  const mixedCost     = allItems.reduce((a, x) => a + resolvePrice(x.pricing, x.qty, 'MIXED')      * x.qty, 0)
+  const scenarios = [
+    { key: 'INSTA_BUY'  as ExecMode, label: 'Insta Buy',   cost: instaCost,  profit: netRev - instaCost,  desc: 'Buy now, no waiting' },
+    { key: 'BUY_ORDERS' as ExecMode, label: 'Buy Orders',  cost: orderCost,  profit: netRev - orderCost,  desc: 'Patient — fill at bid' },
+    { key: 'MIXED'      as ExecMode, label: 'Smart Mix',   cost: mixedCost,  profit: netRev - mixedCost,  desc: 'Orders where spread ≥ 1M' },
+  ]
+  const best = scenarios.reduce((a, b) => a.profit > b.profit ? a : b)
+  const boSaving = instaCost - orderCost
 
-  const outputNetRev = weapon.cleanLbin * (1 - weapon.ahTax)
-  const profitInsta  = outputNetRev - instaBuyCost
-  const profitOrder  = outputNetRev - buyOrderCost
-  const profitMixed  = outputNetRev - mixedCost
-  const boSaving     = instaBuyCost - buyOrderCost
+  return (
+    <div style={{ padding: '20px 24px' }}>
+      {/* Strategy cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        {scenarios.map(s => {
+          const active = mode === s.key
+          const pos    = s.profit > 0
+          const isBest = s.key === best.key
+          return (
+            <button key={s.key} onClick={() => setMode(s.key)} style={{
+              background:   active ? `${accent}12` : 'var(--surface2)',
+              border:       `1px solid ${active ? accent : isBest ? 'rgba(0,229,160,0.3)' : 'var(--border)'}`,
+              borderRadius: 10, padding: '14px 16px', cursor: 'pointer', textAlign: 'left',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '0.775rem', fontWeight: 700, color: active ? accent : 'var(--text)' }}>{s.label}</span>
+                {isBest && <span style={{ fontSize: '0.62rem', color: 'var(--green)', fontWeight: 700 }}>Best ★</span>}
+              </div>
+              <div className="mono" style={{ fontSize: '1rem', fontWeight: 800, color: pos ? 'var(--green)' : 'var(--red)', marginBottom: 4 }}>
+                {pos ? '+' : ''}{coinsMed(s.profit)}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text2)' }}>{s.desc}</div>
+            </button>
+          )
+        })}
+      </div>
 
-  // Per-BZ-item recommendation
-  const itemRecs = bzItems.map(x => {
-    const saving = (x.pricing.instaBuy - x.pricing.buyOrder) * x.qty
-    const spread = x.pricing.spread
-    const rec    = saving >= MIXED_THRESHOLD && spread < 8 ? 'BUY_ORDER' : 'INSTA_BUY'
-    return { id: x.id, name: x.name, saving, spread, rec, fillTime: x.pricing.fillTimeEst, liquidity: x.pricing.liquidity }
-  })
+      {/* Buy order savings alert */}
+      {boSaving > 2_000_000 && (
+        <div style={{ background: 'var(--green-dim)', border: '1px solid var(--green-border)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.875rem', color: 'var(--green)', fontWeight: 600 }}>
+            Use Buy Orders for <span className="mono" style={{ fontWeight: 800 }}>+{coinsMed(boSaving)}</span> extra profit
+          </span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text2)' }}>
+            {((boSaving / instaCost) * 100).toFixed(1)}% cost reduction
+          </span>
+        </div>
+      )}
 
-  const strategies: Array<{ key: ExecMode; label: string; profit: number; cost: number; desc: string }> = [
-    { key: 'INSTA_BUY',   label: 'Insta Buy',    profit: profitInsta, cost: instaBuyCost, desc: 'Buy everything now — no waiting' },
-    { key: 'BUY_ORDERS',  label: 'Buy Orders',   profit: profitOrder, cost: buyOrderCost, desc: `Save ${coinsShort(boSaving)} — wait for fills` },
-    { key: 'MIXED',       label: 'Mixed',         profit: profitMixed, cost: mixedCost,    desc: `Smart split — orders only where spread ≥ ${coinsShort(MIXED_THRESHOLD)}` },
+      {/* Per BZ item table */}
+      {bzItems.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+            Bazaar Item Spreads
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {bzItems.map(item => {
+              const saving  = (item.pricing.instaBuy - item.pricing.buyOrder) * item.qty
+              const spread  = item.pricing.spread
+              const useOrder = mode === 'BUY_ORDERS' || (mode === 'MIXED' && saving >= MIXED_SAVE_THRESHOLD)
+              return (
+                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 72px 72px 72px', gap: 12, alignItems: 'center', padding: '10px 14px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text2)', marginTop: 2 }}>
+                      ×{item.qty} · <span style={{ color: 'var(--blue)' }}>BZ</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <Chip text={useOrder ? 'ORDER' : 'INSTANT'} color={useOrder ? 'var(--green)' : 'var(--blue)'} />
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>Insta</div>
+                    <div className="mono" style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--red)' }}>{coinsMed(item.pricing.instaBuy)}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>Order</div>
+                    <div className="mono" style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--green)' }}>{coinsMed(item.pricing.buyOrder)}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 2 }}>Save</div>
+                    <div className="mono" style={{ fontSize: '0.775rem', fontWeight: 700, color: saving > 0 ? 'var(--green)' : 'var(--muted)' }}>
+                      {saving > 100_000 ? `+${coinsMed(saving)}` : '—'}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Spread: {weapon.ingredients.filter(x => x.source === 'BZ').map(x => `${x.name.split(' ')[0]} ${x.pricing.spread.toFixed(1)}%`).join(' · ')}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Variant Panel (Hyperion only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function VariantPanel({ weapon, selected, setSelected, execMode, setScrolls, accent }: {
+  weapon: WeaponFlip; selected: number; setSelected: (i: number) => void
+  execMode: ExecMode; setScrolls: (v: boolean) => void; accent: string
+}) {
+  const baseCost = weapon.ingredients.reduce((a, x) => a + execPrice(x.pricing, x.qty, execMode) * x.qty, 0)
+
+  return (
+    <div style={{ padding: '20px 24px' }}>
+      <div style={{ fontSize: '0.775rem', color: 'var(--text2)', marginBottom: 16, lineHeight: 1.6 }}>
+        All Hyperion variants share one AH tag — Coflnet has no scroll filter API.
+        Scrolled LBIN is estimated as <strong style={{ color: 'var(--text)' }}>clean LBIN + scroll market prices</strong>, which is how real traders calculate it.
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+        {weapon.variants.map((v, i) => {
+          const scrollCost = weapon.scrollAddons
+            .filter(s => v.scrollIds.includes(s.id))
+            .reduce((a, s) => a + execPrice(s.pricing, 1, execMode), 0)
+          const totalCost = baseCost + scrollCost
+          const net       = v.estimatedLbin * (1 - weapon.ahTax)
+          const profit    = net - totalCost
+          const pos       = profit > 0
+          const active    = selected === i
+          return (
+            <button key={v.label} onClick={() => { setSelected(i); setScrolls(v.scrollCount > 0) }} style={{
+              background:   active ? `${accent}12` : 'var(--surface2)',
+              border:       `1px solid ${active ? accent : 'var(--border)'}`,
+              borderRadius: 12, padding: '16px 18px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+            }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: active ? accent : 'var(--text)', marginBottom: 6 }}>{v.label}</div>
+              <div className="mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: pos ? 'var(--green)' : 'var(--red)', marginBottom: 6 }}>
+                {pos ? '+' : ''}{coinsMed(profit)}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text2)', marginBottom: 3 }}>
+                Est. LBIN: <span className="mono" style={{ color: 'var(--text)' }}>{coinsMed(v.estimatedLbin)}</span>
+              </div>
+              {v.scrollCount > 0 && (
+                <div style={{ fontSize: '0.68rem', color: 'var(--purple)', marginTop: 4 }}>
+                  +{v.scrollCount} scroll{v.scrollCount > 1 ? 's' : ''}
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profit Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ProfitEnginePanel({ weapon, execMode, otc, variantIdx, scrolls, accent }: {
+  weapon: WeaponFlip; execMode: ExecMode; otc: OtcMap
+  variantIdx: number; scrolls: boolean; accent: string
+}) {
+  const variant    = weapon.variants[variantIdx] ?? weapon.variants[0]
+  const scrollItems = scrolls ? weapon.scrollAddons : []
+
+  const instaCost  = weapon.ingredients.reduce((a, x) => a + x.pricing.instaBuy * x.qty, 0)
+                   + scrollItems.reduce((a, s) => a + s.pricing.instaBuy, 0)
+  const orderCost  = weapon.ingredients.reduce((a, x) => a + x.pricing.buyOrder * x.qty, 0)
+                   + scrollItems.reduce((a, s) => a + s.pricing.buyOrder, 0)
+  const otcCost    = [...weapon.ingredients, ...scrollItems.map(s => ({ ...s, qty: 1 }))].reduce((acc, x) => {
+    const base = execPrice(x.pricing, x.qty, execMode)
+    return acc + resolveUnit(x.id, base, otc) * x.qty
+  }, 0)
+
+  const netRev     = variant.estimatedLbin * (1 - weapon.ahTax)
+  const profitInsta = netRev - instaCost
+  const profitOrder = netRev - orderCost
+  const profitOtc   = netRev - otcCost
+
+  const best = Math.max(profitInsta, profitOrder, profitOtc)
+  const bestLabel = best === profitOtc ? 'OTC' : best === profitOrder ? 'Buy Orders' : 'Insta Buy'
+
+  const difficulty = instaCost > 400e6 ? { label: 'Extreme', color: 'var(--red)' }
+    : instaCost > 200e6 ? { label: 'High',   color: 'var(--gold)' }
+    : { label: 'Medium', color: 'var(--blue)' }
+
+  const metrics = [
+    { label: 'Est. LBIN (variant)',      val: coins(variant.estimatedLbin),      color: 'var(--text)'  },
+    { label: 'Revenue after 2% AH tax',  val: coins(netRev),                     color: accent          },
+    { label: 'Insta-buy cost',           val: coins(instaCost),                  color: 'var(--red)'   },
+    { label: 'Buy-order cost',           val: coins(orderCost),                  color: 'var(--gold)'  },
+    { label: 'OTC + exec cost',          val: coins(otcCost),                    color: 'var(--purple)' },
+    { label: 'Buy-order saving',         val: `+${coinsMed(instaCost - orderCost)}`, color: 'var(--green)' },
+    { label: 'Profit — Insta Buy',       val: `${profitInsta > 0 ? '+' : ''}${coins(profitInsta)}`, color: profitInsta > 0 ? 'var(--green)' : 'var(--red)' },
+    { label: 'Profit — Buy Orders',      val: `${profitOrder > 0 ? '+' : ''}${coins(profitOrder)}`, color: profitOrder > 0 ? 'var(--green)' : 'var(--red)' },
+    { label: 'Profit — OTC strategy',   val: `${profitOtc  > 0 ? '+' : ''}${coins(profitOtc)}`,   color: profitOtc  > 0 ? 'var(--green)' : 'var(--red)' },
+    { label: 'Flip difficulty',          val: difficulty.label,                  color: difficulty.color },
+    { label: 'Manip. risk',              val: weapon.manipulationRisk,           color: RISK_CLR[weapon.manipulationRisk] },
+    { label: 'Est. sell time',           val: weapon.estimatedSellDays >= 99 ? 'Unknown' : weapon.estimatedSellDays < 1 ? `${(weapon.estimatedSellDays * 24).toFixed(0)}h` : `${weapon.estimatedSellDays.toFixed(1)}d`, color: 'var(--text)' },
   ]
 
-  const bestStrategy = strategies.reduce((a, b) => a.profit > b.profit ? a : b)
-
   return (
-    <div style={{ border: `1px solid ${accentColor}35`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-      {/* Header */}
-      <div style={{ background: 'var(--surface2)', padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Execution Strategy — {weapon.name}</span>
-          <Pill text={`BEST: ${bestStrategy.label.toUpperCase()}`} color="var(--green)" />
+    <div style={{ padding: '20px 24px' }}>
+      {/* Verdict box */}
+      <div style={{ background: best > 0 ? 'var(--green-dim)' : 'var(--red-dim)', border: `1px solid ${best > 0 ? 'var(--green-border)' : 'var(--red-border)'}`, borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Best Strategy: {bestLabel}</div>
+        <div className="mono" style={{ fontSize: '1.3rem', fontWeight: 800, color: best > 0 ? 'var(--green)' : 'var(--red)', marginBottom: 6 }}>
+          {best > 0 ? '+' : ''}{coins(best)}
         </div>
-        <span style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>affects all BZ items ({bzItems.length})</span>
+        <div style={{ fontSize: '0.825rem', color: 'var(--text2)' }}>
+          {best <= 0
+            ? `${weapon.name} craft is currently unprofitable — market spread too tight`
+            : bestLabel === 'OTC'
+              ? `+${coinsMed(best - profitInsta)} extra vs AH insta-buy — source ingredients directly from players`
+              : bestLabel === 'Buy Orders'
+                ? `+${coinsMed(best - profitInsta)} extra profit by being patient — place buy orders instead of insta-buying`
+                : 'Insta-buy is optimal — spread too small to justify waiting for orders'}
+        </div>
       </div>
 
-      <div style={{ padding: '12px 14px', background: 'var(--surface)' }}>
-        {/* Strategy selector cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
-          {strategies.map(s => {
-            const active  = mode === s.key
-            const isBest  = s.key === bestStrategy.key
-            const profitable = s.profit > 0
-            return (
-              <button
-                key={s.key}
-                onClick={() => setMode(s.key)}
-                style={{
-                  background:   active ? `${accentColor}15` : 'var(--surface2)',
-                  border:       `1px solid ${active ? accentColor : isBest ? 'var(--green)50' : 'var(--border)'}`,
-                  borderRadius: 4, padding: '10px 10px', cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: active ? accentColor : 'var(--text)', textTransform: 'uppercase' }}>{s.label}</span>
-                  {isBest && <span style={{ fontSize: '0.52rem', color: 'var(--green)', fontWeight: 700 }}>★ BEST</span>}
-                </div>
-                <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: profitable ? 'var(--green)' : 'var(--red)', marginBottom: 3 }}>
-                  {profitable ? '+' : ''}{coinsShort(s.profit)}
-                </div>
-                <div style={{ fontSize: '0.56rem', color: 'var(--muted)', lineHeight: 1.3 }}>{s.desc}</div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Buy order savings summary */}
-        {boSaving > 0 && (
-          <div style={{ background: 'rgba(0,255,135,0.04)', border: '1px solid rgba(0,255,135,0.15)', borderRadius: 4, padding: '8px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '0.63rem', color: 'var(--green)', fontWeight: 700 }}>
-              Use Buy Orders for <span className="mono">+{coinsShort(boSaving)}</span> extra profit
-            </div>
-            <div style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>
-              {boSaving / (outputNetRev || 1) > 0 ? `(${((boSaving / (instaBuyCost || 1)) * 100).toFixed(1)}% cost reduction)` : ''}
-            </div>
+      {/* Metrics */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {metrics.map(m => (
+          <div key={m.label} className="metric-row">
+            <span className="metric-label">{m.label}</span>
+            <span className="metric-value mono" style={{ color: m.color }}>{m.val}</span>
           </div>
-        )}
-
-        {/* Per-item BZ recommendations */}
-        {itemRecs.length > 0 && (
-          <div>
-            <div style={{ fontSize: '0.58rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Per-Item Execution</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {itemRecs.map(r => (
-                <div key={r.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 70px 70px 70px', gap: 8, alignItems: 'center', padding: '5px 8px', background: 'var(--surface2)', borderRadius: 3 }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text)' }}>{r.name}</span>
-                  <span style={{ textAlign: 'right' }}>
-                    <Pill text={r.rec === 'BUY_ORDER' ? 'ORDER' : 'INSTANT'} color={r.rec === 'BUY_ORDER' ? 'var(--green)' : 'var(--blue)'} />
-                  </span>
-                  <span className="mono" style={{ fontSize: '0.62rem', color: r.saving > 0 ? 'var(--green)' : 'var(--muted)', textAlign: 'right' }}>
-                    {r.saving > 0 ? `+${coinsShort(r.saving)}` : '—'}
-                  </span>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--muted)', textAlign: 'right' }}>
-                    {r.spread.toFixed(1)}% spread
-                  </span>
-                  <span style={{ fontSize: '0.6rem', color: LIQ_CLR[r.liquidity], textAlign: 'right' }}>
-                    {r.fillTime}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
       </div>
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Variant selector panel (Hyperion only)
+// OTC Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-function VariantPanel({
-  weapon, selectedVariant, setSelectedVariant, execMode, scrollsIncluded, setScrollsIncluded, accentColor,
-}: {
-  weapon: WeaponFlip
-  selectedVariant: number; setSelectedVariant: (i: number) => void
-  execMode: ExecMode
-  scrollsIncluded: boolean; setScrollsIncluded: (v: boolean) => void
-  accentColor: string
-}) {
-  if (weapon.scrollAddons.length === 0) return null
-
-  const craftCostBase = weapon.ingredients.reduce(
-    (a, x) => a + resolvePrice(x.pricing, x.qty, execMode) * x.qty, 0
-  )
-
-  return (
-    <div style={{ border: `1px solid ${accentColor}35`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-      <div style={{ background: 'var(--surface2)', padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hyperion Variant</span>
-        <Pill text="SCROLL COMBINATIONS" color={accentColor} />
-      </div>
-      <div style={{ padding: '12px 14px', background: 'var(--surface)' }}>
-        <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginBottom: 10, lineHeight: 1.5 }}>
-          All Hyperion variants share one AH item tag. Scrolled LBIN is estimated as <strong style={{ color: 'var(--text)' }}>clean LBIN + scroll market prices</strong>. The thin scrolled AH market prices additively — this is how real traders calculate it.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
-          {weapon.variants.map((v, i) => {
-            const active = selectedVariant === i
-            const scrollCostForVariant = weapon.scrollAddons
-              .filter(s => v.scrollIds.includes(s.id))
-              .reduce((a, s) => a + resolvePrice(s.pricing, 1, execMode), 0)
-            const totalCost   = craftCostBase + scrollCostForVariant
-            const netRevenue  = v.estimatedLbin * (1 - weapon.ahTax)
-            const profit      = netRevenue - totalCost
-            const profitable  = profit > 0
-            return (
-              <button
-                key={v.label}
-                onClick={() => { setSelectedVariant(i); setScrollsIncluded(v.scrollCount > 0) }}
-                style={{
-                  background:   active ? `${accentColor}18` : 'var(--surface2)',
-                  border:       `1px solid ${active ? accentColor : 'var(--border)'}`,
-                  borderRadius: 4, padding: '10px 12px', cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: active ? accentColor : 'var(--text)', marginBottom: 4 }}>
-                  {v.label}
-                </div>
-                <div className="mono" style={{ fontSize: '0.85rem', fontWeight: 800, color: profitable ? 'var(--green)' : 'var(--red)', marginBottom: 3 }}>
-                  {profitable ? '+' : ''}{coinsShort(profit)}
-                </div>
-                <div style={{ fontSize: '0.58rem', color: 'var(--muted)', marginBottom: 2 }}>
-                  Est. LBIN <span className="mono" style={{ color: 'var(--text2)' }}>{coinsShort(v.estimatedLbin)}</span>
-                </div>
-                <div style={{ fontSize: '0.56rem', color: 'var(--muted)', lineHeight: 1.3 }}>{v.note}</div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OTC panel
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface OtcAnalysis {
-  breakevenMax: number; aggressiveBuy: number; safeBuy: number
-  lowballLow: number; lowballHigh: number
-}
-
-function computeOtcAnalysis(qty: number, othersCost: number, outputNetRev: number, marketUnit: number): OtcAnalysis {
-  const maxForItem    = outputNetRev - othersCost
-  const breakevenMax  = qty > 0 ? maxForItem / qty : 0
-  return {
-    breakevenMax,
-    aggressiveBuy: breakevenMax * 0.95,
-    safeBuy:       breakevenMax * 0.90,
-    lowballLow:    marketUnit * 0.93,
-    lowballHigh:   marketUnit * 0.97,
-  }
-}
-
-function OtcItemRow({
-  id, name, qty, marketUnitPrice, source, priceHistory, volatility, execMode,
-  entry, onChange, outputNetRev, othersCost, accentColor,
-}: {
-  id: string; name: string; qty: number; marketUnitPrice: number
-  source: 'AH' | 'BZ'; priceHistory: PricePoint[]; volatility: number; execMode: ExecMode
+function OtcIngRow({ id, name, qty, marketUnit, source, history, vol, execMode, entry, onChange, netRev, othersCost, accent }: {
+  id: string; name: string; qty: number; marketUnit: number
+  source: 'AH' | 'BZ'; history: PricePoint[]; vol: number; execMode: ExecMode
   entry: OtcEntry; onChange: (e: OtcEntry) => void
-  outputNetRev: number; othersCost: number; accentColor: string
+  netRev: number; othersCost: number; accent: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const analysis = useMemo(
-    () => computeOtcAnalysis(qty, othersCost, outputNetRev, marketUnitPrice),
-    [qty, othersCost, outputNetRev, marketUnitPrice]
-  )
-  const parsed    = entry.useOtc ? parseCoinInput(entry.rawInput) : NaN
-  const effective = entry.useOtc && isFinite(parsed) && parsed > 0 ? parsed : marketUnitPrice
-  const discount  = marketUnitPrice > 0 ? ((marketUnitPrice - effective) / marketUnitPrice) * 100 : 0
-  const saved     = (marketUnitPrice - effective) * qty
-  const viable    = entry.useOtc && isFinite(parsed) && parsed > 0
-    ? parsed * qty <= outputNetRev - othersCost : null
+  const parsed    = entry.useOtc ? parseCoin(entry.rawInput) : NaN
+  const effective = entry.useOtc && isFinite(parsed) && parsed > 0 ? parsed : marketUnit
+  const discount  = marketUnit > 0 ? ((marketUnit - effective) / marketUnit) * 100 : 0
+  const saved     = (marketUnit - effective) * qty
+
+  // Breakeven analysis
+  const maxForItem   = netRev - othersCost
+  const breakeven    = qty > 0 ? maxForItem / qty : 0
+  const safeBuy      = breakeven * 0.9
+  const aggressive   = breakeven * 0.95
+  const lbLow        = marketUnit * 0.93
+  const lbHigh       = marketUnit * 0.97
+  const viable       = isFinite(parsed) && parsed > 0 ? parsed * qty <= maxForItem : null
 
   return (
-    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-        <div style={{ width: 26, height: 26, background: 'var(--surface2)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-          <ItemIcon id={id} size={22} />
+    <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
+      {/* Row header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <div style={{ width: 36, height: 36, background: 'var(--surface)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)' }}>
+          <ItemIcon id={id} size={30} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)' }}>{name}</div>
-          <div style={{ fontSize: '0.57rem', color: 'var(--muted)', marginTop: 1 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>{name}</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text2)', marginTop: 2 }}>
             ×{qty} · <span style={{ color: source === 'AH' ? 'var(--gold)' : 'var(--blue)' }}>{source}</span>
-            {source === 'BZ' && <span style={{ marginLeft: 4, color: 'var(--muted)', fontStyle: 'italic' }}>BZ — OTC N/A</span>}
-            {volatility > 10 && <span style={{ marginLeft: 4, color: 'var(--red)' }}>±{volatility.toFixed(0)}% vol</span>}
+            {source === 'BZ' && <span style={{ marginLeft: 6, color: 'var(--muted)', fontStyle: 'italic' }}>Bazaar only — OTC N/A</span>}
+            {vol > 10 && <span style={{ marginLeft: 6, color: 'var(--red)' }}>±{vol.toFixed(0)}% volatility</span>}
           </div>
         </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 3 }}>Market</div>
+          <div className="mono" style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)' }}>{coinsMed(marketUnit)}</div>
+        </div>
         {source === 'AH' && (
-          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-            <button onClick={() => onChange({ ...entry, useOtc: false })}
-              style={{ padding: '2px 7px', fontSize: '0.58rem', fontWeight: 700, borderRadius: '3px 0 0 3px', border: '1px solid var(--border2)', cursor: 'pointer',
-                background: !entry.useOtc ? 'var(--gold)' : 'var(--surface2)', color: !entry.useOtc ? '#000' : 'var(--muted)' }}>
-              AH
-            </button>
-            <button onClick={() => { onChange({ ...entry, useOtc: true }); setTimeout(() => inputRef.current?.focus(), 40) }}
-              style={{ padding: '2px 7px', fontSize: '0.58rem', fontWeight: 700, borderRadius: '0 3px 3px 0', border: '1px solid var(--border2)', borderLeft: 'none', cursor: 'pointer',
-                background: entry.useOtc ? accentColor : 'var(--surface2)', color: entry.useOtc ? '#000' : 'var(--muted)' }}>
-              OTC
-            </button>
+          <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+            <button onClick={() => onChange({ ...entry, useOtc: false })} style={{
+              padding: '6px 12px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '8px 0 0 8px',
+              border: '1px solid var(--border)', cursor: 'pointer',
+              background: !entry.useOtc ? 'var(--gold)' : 'var(--surface)',
+              color:      !entry.useOtc ? '#000' : 'var(--text2)',
+            }}>AH</button>
+            <button onClick={() => { onChange({ ...entry, useOtc: true }); setTimeout(() => inputRef.current?.focus(), 40) }} style={{
+              padding: '6px 12px', fontSize: '0.72rem', fontWeight: 700, borderRadius: '0 8px 8px 0',
+              border: '1px solid var(--border)', borderLeft: 'none', cursor: 'pointer',
+              background: entry.useOtc ? accent : 'var(--surface)',
+              color:      entry.useOtc ? '#000' : 'var(--text2)',
+            }}>OTC</button>
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: entry.useOtc && source === 'AH' ? 8 : 0 }}>
-        <span style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>
-          Market: <span className="mono" style={{ color: 'var(--text2)' }}>{coinsShort(marketUnitPrice)} ea</span>
-          {source === 'BZ' && execMode === 'BUY_ORDERS' && <span style={{ marginLeft: 4, color: 'var(--green)', fontSize: '0.56rem' }}>(using buy order price)</span>}
-        </span>
-        <Sparkline data={priceHistory} color={volatility > 15 ? 'var(--red)' : 'var(--muted)'} w={56} h={16} />
+      {/* Sparkline */}
+      <div style={{ marginBottom: entry.useOtc && source === 'AH' ? 12 : 0 }}>
+        <Sparkline data={history} color={vol > 15 ? 'var(--red)' : 'var(--text2)'} w={160} h={28} />
       </div>
 
+      {/* OTC input */}
       {entry.useOtc && source === 'AH' && (
-        <div style={{ background: 'var(--surface2)', borderRadius: 4, padding: '9px 10px', border: `1px solid ${accentColor}25` }}>
-          <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 7 }}>
-            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>OTC PRICE</span>
+        <div style={{ background: 'var(--surface)', border: `1px solid ${accent}25`, borderRadius: 10, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text2)', flexShrink: 0 }}>OTC Price / unit</label>
             <input ref={inputRef} value={entry.rawInput}
               onChange={e => onChange({ ...entry, rawInput: e.target.value })}
-              placeholder={coinsShort(marketUnitPrice * 0.95)}
+              placeholder={`e.g. ${coinsMed(marketUnit * 0.95)}`}
               className="filter-input mono"
-              style={{ flex: 1, fontSize: '0.78rem', fontWeight: 700, padding: '4px 7px' }} />
+              style={{ flex: 1, fontSize: '0.925rem', fontWeight: 700, padding: '8px 12px' }} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5, marginBottom: 7 }}>
+
+          {/* Quick-fill buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
             {[
-              { label: 'Safe',       val: analysis.safeBuy,       color: 'var(--green)' },
-              { label: 'Aggressive', val: analysis.aggressiveBuy, color: 'var(--gold)'  },
-              { label: 'Breakeven',  val: analysis.breakevenMax,  color: 'var(--red)'   },
+              { label: 'Safe Buy',    val: safeBuy,    color: 'var(--green)'  },
+              { label: 'Aggressive', val: aggressive,  color: 'var(--gold)'   },
+              { label: 'Breakeven',  val: breakeven,   color: 'var(--red)'    },
             ].map(({ label, val, color }) => (
               <button key={label} onClick={() => onChange({ ...entry, rawInput: val > 0 ? `${(val / 1e6).toFixed(2)}m` : '' })}
-                style={{ background: 'var(--surface)', border: `1px solid ${color}35`, borderRadius: 3, padding: '4px 0', cursor: 'pointer', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.52rem', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 1 }}>{label}</div>
-                <div className="mono" style={{ fontSize: '0.67rem', fontWeight: 700, color }}>{val > 0 ? coinsShort(val) : '—'}</div>
+                style={{ background: 'var(--surface2)', border: `1px solid ${color}30`, borderRadius: 8, padding: '8px 0', cursor: 'pointer' }}>
+                <div style={{ fontSize: '0.62rem', color: 'var(--muted)', marginBottom: 3 }}>{label}</div>
+                <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val > 0 ? coinsMed(val) : '—'}</div>
               </button>
             ))}
           </div>
-          <div style={{ fontSize: '0.57rem', color: 'var(--muted)', marginBottom: isFinite(parsed) && parsed > 0 ? 7 : 0 }}>
-            Typical lowball: <span className="mono" style={{ color: 'var(--text2)' }}>{coinsShort(analysis.lowballLow)} – {coinsShort(analysis.lowballHigh)}</span>
+
+          <div style={{ fontSize: '0.72rem', color: 'var(--text2)', marginBottom: isFinite(parsed) && parsed > 0 ? 12 : 0 }}>
+            Typical lowball: <span className="mono" style={{ color: 'var(--text)' }}>{coinsMed(lbLow)} – {coinsMed(lbHigh)}</span>
+            <span style={{ margin: '0 8px', color: 'var(--muted)' }}>·</span>
+            3–7% below market
           </div>
+
           {isFinite(parsed) && parsed > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               {[
-                { label: 'Discount',  val: `${discount > 0 ? '-' : '+'}${Math.abs(discount).toFixed(1)}%`, color: discount > 0 ? 'var(--green)' : 'var(--red)' },
-                { label: 'Saved',     val: saved > 0 ? `+${coinsShort(saved)}` : coinsShort(saved), color: saved > 0 ? 'var(--green)' : 'var(--red)' },
-                { label: 'Viable',    val: viable === true ? 'YES' : viable === false ? 'NO' : '—', color: viable === true ? 'var(--green)' : viable === false ? 'var(--red)' : 'var(--muted)' },
+                { label: 'Discount', val: `${discount > 0 ? '-' : '+'}${Math.abs(discount).toFixed(1)}%`, color: discount > 0 ? 'var(--green)' : 'var(--red)' },
+                { label: 'Saved',    val: `${saved > 0 ? '+' : ''}${coinsMed(saved)}`,                   color: saved > 0 ? 'var(--green)' : 'var(--red)' },
+                { label: 'Viable',   val: viable === true ? 'YES ✓' : viable === false ? 'NO ✗' : '—',   color: viable === true ? 'var(--green)' : viable === false ? 'var(--red)' : 'var(--muted)' },
               ].map(({ label, val, color }) => (
-                <div key={label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.52rem', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 2 }}>{label}</div>
-                  <div className="mono" style={{ fontSize: '0.7rem', fontWeight: 700, color }}>{val}</div>
+                <div key={label} style={{ textAlign: 'center', background: 'var(--surface2)', borderRadius: 8, padding: '10px 0' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                  <div className="mono" style={{ fontSize: '0.875rem', fontWeight: 800, color }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -456,537 +565,272 @@ function OtcItemRow({
   )
 }
 
-function OtcPanel({
-  weapon, accentColor, scrollsIncluded, selectedVariant, execMode, otc, setOtc,
-}: {
-  weapon: WeaponFlip; accentColor: string; scrollsIncluded: boolean
-  selectedVariant: number; execMode: ExecMode
+function OtcPanel({ weapon, accent, scrolls, variantIdx, execMode, otc, setOtc }: {
+  weapon: WeaponFlip; accent: string; scrolls: boolean
+  variantIdx: number; execMode: ExecMode
   otc: OtcMap; setOtc: (fn: (prev: OtcMap) => OtcMap) => void
 }) {
-  const [open, setOpen] = useState(false)
-
-  const variantLbin   = weapon.variants[selectedVariant]?.estimatedLbin ?? weapon.cleanLbin
-  const outputNetRev  = variantLbin * (1 - weapon.ahTax)
+  const variant    = weapon.variants[variantIdx] ?? weapon.variants[0]
+  const netRev     = variant.estimatedLbin * (1 - weapon.ahTax)
 
   const allItems = useMemo(() => [
     ...weapon.ingredients,
-    ...(scrollsIncluded ? weapon.scrollAddons.map(s => ({
-      id: s.id, name: s.name, qty: 1,
-      pricing: s.pricing,
-      unitPrice: s.unitPrice, totalCost: s.unitPrice,
-      source: s.source, iconUrl: s.iconUrl, priceHistory: [] as PricePoint[], volatility: 0,
-    })) : []),
-  ], [weapon, scrollsIncluded])
+    ...(scrolls ? weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })) : []),
+  ], [weapon, scrolls])
 
-  const otcCraftCost = allItems.reduce((acc, item) => {
-    const marketPrice = resolvePrice(item.pricing, item.qty, execMode)
-    return acc + otcPrice(item.id, marketPrice, otc) * item.qty
-  }, 0)
-  const marketCraftCost = allItems.reduce((a, x) => a + resolvePrice(x.pricing, x.qty, execMode) * x.qty, 0)
-  const otcProfit       = outputNetRev - otcCraftCost
-  const marketProfit    = outputNetRev - marketCraftCost
-  const otcMargin       = otcCraftCost > 0 ? (otcProfit / otcCraftCost) * 100 : 0
-  const anyOtcActive    = allItems.some(x => otc[x.id]?.useOtc)
-  const totalSaved      = allItems.reduce((acc, item) => {
-    if (!otc[item.id]?.useOtc) return acc
-    const p = parseCoinInput(otc[item.id]?.rawInput ?? '')
-    const m = resolvePrice(item.pricing, item.qty, execMode)
-    if (!isFinite(p) || p <= 0) return acc
-    return acc + (m - p) * item.qty
-  }, 0)
+  const otcCraft    = allItems.reduce((a, x) => a + resolveUnit(x.id, execPrice(x.pricing, x.qty, execMode), otc) * x.qty, 0)
+  const mktCraft    = allItems.reduce((a, x) => a + execPrice(x.pricing, x.qty, execMode) * x.qty, 0)
+  const otcProfit   = netRev - otcCraft
+  const mktProfit   = netRev - mktCraft
+  const anyActive   = allItems.some(x => otc[x.id]?.useOtc)
+  const totalSaved  = mktCraft - otcCraft
 
-  // OTC opportunity alerts
-  const alerts = useMemo(() => {
-    const out: Array<{ label: string; color: string }> = []
-    allItems.forEach(item => {
-      if (item.source !== 'AH') return
-      const otherCost  = allItems.filter(x => x.id !== item.id)
-        .reduce((a, x) => a + otcPrice(x.id, resolvePrice(x.pricing, x.qty, execMode), otc) * x.qty, 0)
-      const { breakevenMax } = computeOtcAnalysis(item.qty, otherCost, outputNetRev, resolvePrice(item.pricing, item.qty, execMode))
-      const mktTotal  = resolvePrice(item.pricing, item.qty, execMode) * item.qty
-      const lbTotal   = item.pricing.instaBuy * 0.95 * item.qty
-      const lbProfit  = outputNetRev - (marketCraftCost - mktTotal + lbTotal)
-      if (marketProfit <= 0 && lbProfit > 0)
-        out.push({ label: `Profitable if ${item.name} bought ≤ ${coinsShort(breakevenMax)}`, color: 'var(--gold)' })
-      else if (lbProfit > marketProfit * 1.5 && marketProfit > 0)
-        out.push({ label: `Strong OTC margin on ${item.name} — save ~${coinsShort(mktTotal * 0.05)} per craft`, color: 'var(--green)' })
+  // Alerts
+  const alerts = allItems
+    .filter(x => x.source === 'AH')
+    .flatMap(item => {
+      const others = allItems.filter(x => x.id !== item.id)
+        .reduce((a, x) => a + resolveUnit(x.id, execPrice(x.pricing, x.qty, execMode), otc) * x.qty, 0)
+      const breakeven = item.qty > 0 ? (netRev - others) / item.qty : 0
+      const lbProfit  = netRev - (mktCraft - execPrice(item.pricing, item.qty, execMode) * item.qty + item.pricing.instaBuy * 0.95 * item.qty)
+      if (mktProfit <= 0 && lbProfit > 0)
+        return [{ text: `Profitable if ${item.name} ≤ ${coinsMed(breakeven)}`, color: 'var(--gold)' }]
+      if (lbProfit > mktProfit * 1.5 && mktProfit > 0)
+        return [{ text: `Strong OTC margin on ${item.name}`, color: 'var(--green)' }]
+      return []
     })
-    return out
-  }, [allItems, otc, execMode, outputNetRev, marketCraftCost, marketProfit])
 
-  const scenarioLabel = (() => {
-    if (!anyOtcActive) return { text: 'No OTC active', color: 'var(--muted)' }
-    if (otcProfit > 0 && marketProfit <= 0) return { text: 'PROFITABLE ONLY VIA LOWBALL', color: 'var(--gold)' }
-    if (otcProfit > marketProfit * 1.4)     return { text: 'HIGH-MARGIN OTC OPPORTUNITY', color: 'var(--green)' }
-    if (otcProfit > marketProfit)            return { text: 'OTC improves margin', color: 'var(--green)' }
-    if (otcProfit <= 0)                     return { text: 'Still unprofitable at OTC price', color: 'var(--red)' }
-    return { text: 'Marginal OTC benefit', color: 'var(--text2)' }
-  })()
+  const scenario = !anyActive ? { text: 'No overrides — using market prices', color: 'var(--muted)' }
+    : otcProfit > 0 && mktProfit <= 0 ? { text: 'PROFITABLE ONLY VIA LOWBALL', color: 'var(--gold)' }
+    : otcProfit > mktProfit * 1.4     ? { text: 'HIGH-MARGIN OTC OPPORTUNITY',  color: 'var(--green)' }
+    : otcProfit > mktProfit           ? { text: 'OTC improves margin',           color: 'var(--green)' }
+    : { text: 'Marginal or no OTC benefit', color: 'var(--text2)' }
 
-  const lowballScore = !anyOtcActive || totalSaved <= 0 ? 0
-    : Math.min(100, Math.round((totalSaved / (marketCraftCost * 0.08)) * 100))
+  const activeChip = anyActive ? <Chip text={`ACTIVE · save ${coinsMed(totalSaved)}`} color="var(--green)" /> : undefined
 
   return (
-    <div style={{ border: `1px solid ${accentColor}35`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-      <button onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', background: 'var(--surface2)', border: 'none', cursor: 'pointer', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: anyOtcActive ? 'var(--green)' : 'var(--muted)', flexShrink: 0 }} />
-          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Direct Trade / Lowball — {weapon.name}
-          </span>
-          {anyOtcActive && <Pill text={`ACTIVE · save ${coinsShort(totalSaved)}`} color="var(--green)" />}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {anyOtcActive && <span style={{ fontSize: '0.63rem', fontWeight: 700, color: scenarioLabel.color }}>{scenarioLabel.text}</span>}
-          <span style={{ fontSize: '0.68rem', color: 'var(--muted)', transform: open ? 'rotate(180deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▾</span>
-        </div>
-      </button>
-
-      {open && (
-        <div style={{ background: 'var(--surface)' }}>
-          {anyOtcActive && (
-            <div style={{ padding: '10px 14px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px 14px' }}>
-              {[
-                { label: 'OTC Craft Cost', val: coins(otcCraftCost),                   color: 'var(--red)'   },
-                { label: 'OTC Profit',     val: `${otcProfit > 0 ? '+' : ''}${coins(otcProfit)}`, color: otcProfit > 0 ? 'var(--green)' : 'var(--red)' },
-                { label: 'OTC Margin',     val: `${otcMargin.toFixed(1)}%`,             color: otcMargin > 0 ? 'var(--green)' : 'var(--red)' },
-                { label: 'Profit Delta',   val: `${(otcProfit - marketProfit) > 0 ? '+' : ''}${coinsShort(otcProfit - marketProfit)}`, color: 'var(--green)' },
-                { label: 'Total Saved',    val: `+${coinsShort(totalSaved)}`,           color: 'var(--green)' },
-                { label: 'OTC Score',      val: `${lowballScore}/100`,                  color: lowballScore > 60 ? 'var(--green)' : lowballScore > 30 ? 'var(--gold)' : 'var(--red)' },
-              ].map(({ label, val, color }) => (
-                <div key={label}>
-                  <div style={{ fontSize: '0.52rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 2 }}>{label}</div>
-                  <div className="mono" style={{ fontSize: '0.85rem', fontWeight: 800, color }}>{val}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ padding: '7px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 7, height: 7, borderRadius: 2, background: scenarioLabel.color }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: scenarioLabel.color }}>{scenarioLabel.text}</span>
-            {anyOtcActive && <span style={{ marginLeft: 'auto', fontSize: '0.58rem', color: 'var(--muted)' }}>vs market: <span className="mono">{coins(marketProfit)}</span></span>}
-          </div>
-
-          {alerts.map((a, i) => (
-            <div key={i} style={{ padding: '5px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.63rem', color: a.color }}>
-              <span style={{ fontWeight: 800 }}>▶</span> {a.label}
+    <Panel title={`Direct Trade / Lowball — ${weapon.name}`} accent={accent} chips={activeChip}>
+      {/* Summary header */}
+      {anyActive && (
+        <div style={{ padding: '16px 24px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px 24px' }}>
+          {[
+            { label: 'OTC Craft Cost', val: coins(otcCraft),                       color: 'var(--red)'   },
+            { label: 'OTC Profit',     val: `${otcProfit > 0 ? '+' : ''}${coins(otcProfit)}`, color: otcProfit > 0 ? 'var(--green)' : 'var(--red)' },
+            { label: 'Total Saved',    val: `+${coinsMed(totalSaved)}`,             color: 'var(--green)' },
+            { label: 'Profit Delta',   val: `${otcProfit - mktProfit > 0 ? '+' : ''}${coinsMed(otcProfit - mktProfit)}`, color: 'var(--green)' },
+          ].map(({ label, val, color }) => (
+            <div key={label}>
+              <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</div>
+              <div className="mono" style={{ fontSize: '1rem', fontWeight: 800, color }}>{val}</div>
             </div>
           ))}
-
-          {allItems.map(item => {
-            const baseMarketPrice = resolvePrice(item.pricing, item.qty, execMode)
-            const othersCost = allItems.filter(x => x.id !== item.id)
-              .reduce((acc, x) => acc + otcPrice(x.id, resolvePrice(x.pricing, x.qty, execMode), otc) * x.qty, 0)
-            return (
-              <OtcItemRow
-                key={item.id}
-                id={item.id} name={item.name} qty={item.qty}
-                marketUnitPrice={baseMarketPrice}
-                source={item.source}
-                priceHistory={item.priceHistory}
-                volatility={item.volatility}
-                execMode={execMode}
-                entry={otc[item.id] ?? { useOtc: false, rawInput: '' }}
-                onChange={e => setOtc(prev => ({ ...prev, [item.id]: e }))}
-                outputNetRev={outputNetRev}
-                othersCost={othersCost}
-                accentColor={accentColor}
-              />
-            )
-          })}
-
-          <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.58rem', color: 'var(--muted)' }}>Mixed sourcing — toggle AH/OTC per ingredient independently</span>
-            <button onClick={() => setOtc(() => ({}))}
-              style={{ padding: '2px 9px', fontSize: '0.6rem', fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 3, color: 'var(--muted)', cursor: 'pointer' }}>
-              RESET
-            </button>
-          </div>
         </div>
       )}
-    </div>
-  )
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Advanced Profit Engine panel
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ProfitEngine({
-  weapon, execMode, otc, selectedVariant, scrollsIncluded, accentColor,
-}: {
-  weapon: WeaponFlip; execMode: ExecMode; otc: OtcMap
-  selectedVariant: number; scrollsIncluded: boolean; accentColor: string
-}) {
-  const variant       = weapon.variants[selectedVariant] ?? weapon.variants[0]
-  const variantLbin   = variant.estimatedLbin
-
-  const allIngredients = weapon.ingredients
-  const scrollItems    = scrollsIncluded ? weapon.scrollAddons : []
-
-  const instaBuyCost  = allIngredients.reduce((a, x) => a + x.pricing.instaBuy * x.qty, 0)
-                      + scrollItems.reduce((a, s) => a + s.pricing.instaBuy, 0)
-
-  const buyOrderCost  = allIngredients.reduce((a, x) => a + x.pricing.buyOrder * x.qty, 0)
-                      + scrollItems.reduce((a, s) => a + s.pricing.buyOrder, 0)
-
-  const otcCost = [...allIngredients, ...scrollItems.map(s => ({ ...s, qty: 1 }))].reduce((acc, x) => {
-    const base = resolvePrice(x.pricing, x.qty, execMode)
-    return acc + otcPrice(x.id, base, otc) * x.qty
-  }, 0)
-
-  const netRev        = variantLbin * (1 - weapon.ahTax)
-
-  // Scenarios
-  const scenarios = [
-    { label: 'Insta Buy (worst case)',   cost: instaBuyCost, profit: netRev - instaBuyCost },
-    { label: 'Buy Orders (patient)',     cost: buyOrderCost, profit: netRev - buyOrderCost },
-    { label: 'OTC + selected exec',      cost: otcCost,      profit: netRev - otcCost      },
-  ]
-
-  const best = scenarios.reduce((a, b) => a.profit > b.profit ? a : b)
-
-  // Flip difficulty
-  const difficulty = (() => {
-    if (instaBuyCost > 400e6) return { label: 'EXTREME', color: 'var(--red)' }
-    if (instaBuyCost > 200e6) return { label: 'HIGH',    color: 'var(--gold)' }
-    if (instaBuyCost > 50e6)  return { label: 'MEDIUM',  color: 'var(--blue)' }
-    return { label: 'LOW', color: 'var(--green)' }
-  })()
-
-  return (
-    <div style={{ border: `1px solid ${accentColor}35`, borderRadius: 6, overflow: 'hidden', marginBottom: 12 }}>
-      <div style={{ background: 'var(--surface2)', padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Profit Engine — {weapon.name}</span>
-        <Pill text={variant.label.toUpperCase()} color={accentColor} />
+      {/* Scenario + alerts */}
+      <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: scenario.color, flexShrink: 0 }} />
+        <span style={{ fontSize: '0.825rem', fontWeight: 700, color: scenario.color }}>{scenario.text}</span>
+        {anyActive && <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text2)' }}>vs market: <span className="mono">{coins(mktProfit)}</span></span>}
       </div>
-      <div style={{ padding: '12px 14px', background: 'var(--surface)' }}>
-        {/* Scenario comparison */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-          {scenarios.map(s => {
-            const isBest = s.label === best.label
-            const prof   = s.profit
-            return (
-              <div key={s.label} style={{ background: 'var(--surface2)', border: `1px solid ${isBest ? 'var(--green)' : 'var(--border)'}`, borderRadius: 4, padding: '10px 10px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 700, color: isBest ? 'var(--green)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-                  {s.label}{isBest ? ' ★' : ''}
-                </div>
-                <div className="mono" style={{ fontSize: '0.88rem', fontWeight: 800, color: prof > 0 ? 'var(--green)' : 'var(--red)', marginBottom: 3 }}>
-                  {prof > 0 ? '+' : ''}{coinsShort(prof)}
-                </div>
-                <div style={{ fontSize: '0.57rem', color: 'var(--muted)' }}>cost: <span className="mono">{coinsShort(s.cost)}</span></div>
-              </div>
-            )
-          })}
+
+      {alerts.map((a, i) => (
+        <div key={i} style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.825rem', color: a.color, background: `${a.color}08` }}>
+          <span>▶</span> {a.text}
         </div>
+      ))}
 
-        {/* Detailed breakdown */}
-        <div style={{ marginBottom: 12 }}>
-          <StatRow label="Est. LBIN (variant)"    value={coins(variantLbin)}                    color="var(--text)"   />
-          <StatRow label="After 2% AH tax"         value={coins(netRev)}                         color={accentColor}   />
-          <StatRow label="Insta-buy cost"           value={coins(instaBuyCost)}                   color="var(--red)"    />
-          <StatRow label="Buy-order cost"           value={coins(buyOrderCost)}                   color="var(--gold)"   />
-          <StatRow label="OTC + exec cost"          value={coins(otcCost)}                        color="var(--purple)" />
-          <StatRow label="Buy-order saving"         value={`+${coinsShort(instaBuyCost - buyOrderCost)}`} color="var(--green)" />
-          <StatRow label="Best-case profit"         value={`+${coinsShort(best.profit)}`}         color="var(--green)"  />
-          <StatRow label="Realistic profit (insta)" value={`${netRev - instaBuyCost > 0 ? '+' : ''}${coinsShort(netRev - instaBuyCost)}`} color={netRev - instaBuyCost > 0 ? 'var(--green)' : 'var(--red)'} />
-          <StatRow label="Market liq. risk"         value={weapon.manipulationRisk}               color={RISK_CLR[weapon.manipulationRisk]} />
-          <StatRow label="Flip difficulty"          value={difficulty.label}                      color={difficulty.color} />
-          <StatRow label="Est. sell time"           value={weapon.estimatedSellDays >= 99 ? 'Unknown' : weapon.estimatedSellDays < 1 ? `${(weapon.estimatedSellDays * 24).toFixed(0)}h` : `${weapon.estimatedSellDays.toFixed(1)}d`} />
-        </div>
-
-        {/* Headline verdict */}
-        <div style={{ background: best.profit > 0 ? 'rgba(0,255,135,0.05)' : 'rgba(255,77,77,0.05)', border: `1px solid ${best.profit > 0 ? 'rgba(0,255,135,0.2)' : 'rgba(255,77,77,0.2)'}`, borderRadius: 4, padding: '10px 12px' }}>
-          <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Verdict</div>
-          <div style={{ fontSize: '0.72rem', color: best.profit > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 700, lineHeight: 1.4 }}>
-            {best.profit <= 0
-              ? `Not profitable via any strategy — market is too tight on ${weapon.name}`
-              : best.profit === netRev - otcCost && otcCost < instaBuyCost
-                ? `+${coinsShort(best.profit)} profit if OTC-sourced · +${coinsShort(best.profit - (netRev - instaBuyCost))} gain over AH`
-                : best.profit === netRev - buyOrderCost
-                  ? `+${coinsShort(best.profit)} profit via buy orders · save ${coinsShort(instaBuyCost - buyOrderCost)} vs insta-buy`
-                  : `+${coinsShort(best.profit)} profit via insta-buy — tight spread, not worth waiting`
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Ingredient table (weapon card inner)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function IngredientTable({ weapon, execMode, otc }: {
-  weapon: WeaponFlip; execMode: ExecMode; otc: OtcMap
-}) {
-  const allItems: Array<CraftIngredient | (ScrollAddon & { qty: number; priceHistory: PricePoint[]; volatility: number })> = [
-    ...weapon.ingredients,
-    ...weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })),
-  ]
-
-  return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 44px 64px 64px 58px', gap: 6, padding: '4px 10px 5px', borderBottom: '1px solid var(--border)' }}>
-        {['', 'Item', 'Qty', 'Unit', 'Total', '24h'].map(h => (
-          <div key={h} style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', textAlign: h === '' ? 'left' : 'right' }}>{h}</div>
-        ))}
-      </div>
-      {allItems.map((item, i) => {
-        const isScroll   = !('totalCost' in item)
-        const basePrice  = resolvePrice(item.pricing, item.qty, execMode)
-        const effective  = otcPrice(item.id, basePrice, otc)
-        const total      = effective * item.qty
-        const isOtc      = effective !== basePrice
-        const isLast     = i === allItems.length - 1
+      {/* Per-item rows */}
+      {allItems.map(item => {
+        const mktUnit    = execPrice(item.pricing, item.qty, execMode)
+        const othersCost = allItems.filter(x => x.id !== item.id)
+          .reduce((a, x) => a + resolveUnit(x.id, execPrice(x.pricing, x.qty, execMode), otc) * x.qty, 0)
         return (
-          <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 44px 64px 64px 58px', gap: 6, alignItems: 'center', padding: '6px 10px', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-            <div style={{ width: 26, height: 26, background: 'var(--surface2)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-              <ItemIcon id={item.id} size={22} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{item.name}</div>
-              <div style={{ fontSize: '0.56rem', color: 'var(--muted)', marginTop: 1 }}>
-                <span style={{ color: item.source === 'AH' ? 'var(--gold)' : 'var(--blue)' }}>{item.source}</span>
-                {isScroll && <span style={{ marginLeft: 4, color: 'var(--purple)' }}>scroll</span>}
-                {isOtc    && <span style={{ marginLeft: 4, color: 'var(--green)', fontWeight: 700 }}>OTC</span>}
-                {!isOtc && item.source === 'BZ' && execMode !== 'INSTA_BUY' && (
-                  <span style={{ marginLeft: 4, color: 'var(--green)' }}>
-                    {execMode === 'BUY_ORDERS' ? 'order' : item.pricing.spread > 0 ? 'order' : 'instant'}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="mono" style={{ fontSize: '0.65rem', color: 'var(--text2)', textAlign: 'right' }}>×{item.qty}</div>
-            <div className="mono" style={{ fontSize: '0.65rem', color: 'var(--text2)', textAlign: 'right' }}>{coinsShort(effective)}</div>
-            <div className="mono" style={{ fontSize: '0.7rem', fontWeight: 700, color: isOtc ? 'var(--green)' : 'var(--red)', textAlign: 'right' }}>{coinsShort(total)}</div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Sparkline data={item.priceHistory} color={item.volatility > 15 ? 'var(--red)' : 'var(--muted)'} w={52} h={16} />
-            </div>
-          </div>
+          <OtcIngRow
+            key={item.id}
+            id={item.id} name={item.name} qty={item.qty}
+            marketUnit={mktUnit} source={item.source}
+            history={item.priceHistory} vol={item.volatility}
+            execMode={execMode}
+            entry={otc[item.id] ?? { useOtc: false, rawInput: '' }}
+            onChange={e => setOtc(prev => ({ ...prev, [item.id]: e }))}
+            netRev={netRev} othersCost={othersCost} accent={accent}
+          />
         )
       })}
-    </div>
+
+      <div style={{ padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text2)' }}>Mixed sourcing supported — toggle AH/OTC per ingredient independently</span>
+        <button onClick={() => setOtc(() => ({}))} style={{ padding: '6px 14px', fontSize: '0.72rem', fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text2)', cursor: 'pointer' }}>
+          Reset All
+        </button>
+      </div>
+    </Panel>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bazaar spread widget
+// Weapon card (market overview)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SpreadRow({ item, execMode }: { item: CraftIngredient; execMode: ExecMode }) {
-  if (item.source !== 'BZ') return null
-  const { instaBuy, buyOrder, spread, liquidity, fillTimeEst } = item.pricing
-  const saving = (instaBuy - buyOrder) * item.qty
-  const usingOrder = execMode === 'BUY_ORDERS' || (execMode === 'MIXED' && saving >= MIXED_THRESHOLD)
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 10px', borderBottom: '1px solid var(--border)', background: usingOrder ? 'rgba(0,255,135,0.02)' : 'transparent' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.63rem', fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 3 }}>
-          <span style={{ fontSize: '0.57rem', color: 'var(--muted)' }}>Insta: <span className="mono" style={{ color: 'var(--red)' }}>{coinsShort(instaBuy)}</span></span>
-          <span style={{ fontSize: '0.57rem', color: 'var(--muted)' }}>Order: <span className="mono" style={{ color: 'var(--green)' }}>{coinsShort(buyOrder)}</span></span>
-          <span style={{ fontSize: '0.57rem', color: 'var(--muted)' }}>Spread: <span className="mono" style={{ color: spread > 5 ? 'var(--gold)' : 'var(--text2)' }}>{spread.toFixed(1)}%</span></span>
-        </div>
-      </div>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: '0.6rem', fontWeight: 700, color: saving > 0 ? 'var(--green)' : 'var(--muted)' }}>
-          {saving > 0 ? `+${coinsShort(saving)}` : '—'}
-        </div>
-        <div style={{ fontSize: '0.55rem', color: LIQ_CLR[liquidity] }}>{liquidity} · {fillTimeEst}</div>
-      </div>
-      {usingOrder && <Pill text="ORDER" color="var(--green)" />}
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main weapon card
-// ─────────────────────────────────────────────────────────────────────────────
-
-function WeaponCard({
-  weapon, accentColor, execMode, otc, selectedVariant, scrollsIncluded,
-}: {
-  weapon: WeaponFlip; accentColor: string; execMode: ExecMode; otc: OtcMap
-  selectedVariant: number; scrollsIncluded: boolean
+function WeaponCard({ weapon, accent, execMode, otc, variantIdx, scrolls }: {
+  weapon: WeaponFlip; accent: string; execMode: ExecMode; otc: OtcMap
+  variantIdx: number; scrolls: boolean
 }) {
-  const [showSpreads, setShowSpreads] = useState(false)
-  const variant    = weapon.variants[selectedVariant] ?? weapon.variants[0]
+  const variant    = weapon.variants[variantIdx] ?? weapon.variants[0]
   const variantLbin = variant.estimatedLbin
 
   const allItems = [
     ...weapon.ingredients,
-    ...(scrollsIncluded ? weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })) : []),
+    ...(scrolls ? weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })) : []),
   ]
 
-  const effectiveCost = allItems.reduce((acc, x) => {
-    const base = resolvePrice(x.pricing, x.qty, execMode)
-    return acc + otcPrice(x.id, base, otc) * x.qty
+  const effectiveCost = allItems.reduce((a, x) => {
+    const base = execPrice(x.pricing, x.qty, execMode)
+    return a + resolveUnit(x.id, base, otc) * x.qty
   }, 0)
-
-  const netRev    = variantLbin * (1 - weapon.ahTax)
-  const profit    = netRev - effectiveCost
-  const margin    = effectiveCost > 0 ? (profit / effectiveCost) * 100 : 0
-  const isProfit  = profit > 0
-
-  const marketCost = allItems.reduce((a, x) => a + resolvePrice(x.pricing, x.qty, execMode) * x.qty, 0)
+  const marketCost = allItems.reduce((a, x) => a + execPrice(x.pricing, x.qty, execMode) * x.qty, 0)
+  const netRev     = variantLbin * (1 - weapon.ahTax)
+  const profit     = netRev - effectiveCost
   const otcSaving  = marketCost - effectiveCost
-  const anyOtc     = allItems.some(x => otc[x.id]?.useOtc && parseCoinInput(otc[x.id]?.rawInput ?? '') > 0)
-
-  const bzItems = weapon.ingredients.filter(x => x.source === 'BZ')
+  const anyOtc     = allItems.some(x => otc[x.id]?.useOtc && parseCoin(otc[x.id]?.rawInput ?? '') > 0)
 
   return (
-    <div className="flip-card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      <div className="card-accent" style={{ background: `linear-gradient(90deg, ${accentColor}, var(--purple))` }} />
+    <div className="flip-card" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="card-accent" style={{ background: `linear-gradient(90deg, ${accent}, var(--purple))` }} />
 
-      <div style={{ padding: '13px 14px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ width: 44, height: 44, background: 'var(--surface2)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, border: `1px solid ${accentColor}30` }}>
-            <ItemIcon id={weapon.id} size={40} />
+      {/* Weapon header */}
+      <div style={{ padding: '20px 22px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+          <div style={{ width: 52, height: 52, background: 'var(--surface2)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, border: `1px solid ${accent}30` }}>
+            <ItemIcon id={weapon.id} size={44} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>{weapon.name}</div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginTop: 2 }}>
-              {variant.label} · LBIN <span className="mono" style={{ color: accentColor }}>{coinsShort(variantLbin)}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>{weapon.name}</div>
+            <div style={{ fontSize: '0.775rem', color: 'var(--text2)', marginTop: 4 }}>
+              {variant.label} · LBIN
+              <span className="mono" style={{ color: accent, marginLeft: 6, fontWeight: 700 }}>{coinsMed(variantLbin)}</span>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-            <span className={`badge ${isProfit ? 'badge-green' : 'badge-red'} mono`}>
-              {isProfit ? '+' : ''}{margin.toFixed(1)}%
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <span className={`badge ${profit > 0 ? 'badge-green' : 'badge-red'} mono`} style={{ fontSize: '0.775rem' }}>
+              {profit > 0 ? '+' : ''}{(effectiveCost > 0 ? (profit / effectiveCost) * 100 : 0).toFixed(1)}%
             </span>
-            <span style={{ fontSize: '0.56rem', fontWeight: 700, color: RISK_CLR[weapon.manipulationRisk] }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: RISK_CLR[weapon.manipulationRisk] }}>
               {weapon.manipulationRisk} RISK
             </span>
           </div>
         </div>
-      </div>
 
-      {/* P&L */}
-      <div style={{ margin: '0 14px 10px', background: isProfit ? 'rgba(0,255,135,0.04)' : 'rgba(255,77,77,0.04)', border: `1px solid ${isProfit ? 'rgba(0,255,135,0.18)' : 'rgba(255,77,77,0.18)'}`, borderRadius: 4, padding: '10px 12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: anyOtc ? 7 : 0 }}>
-          <div>
-            <div style={{ fontSize: '0.53rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Net Profit</div>
-            <div className="mono" style={{ fontSize: '1.1rem', fontWeight: 800, color: isProfit ? 'var(--green)' : 'var(--red)', letterSpacing: '-0.02em' }}>
-              {isProfit ? '+' : ''}{coins(profit)}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.53rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Craft Cost</div>
-            <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--red)' }}>{coinsShort(effectiveCost)}</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.53rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Net Revenue</div>
-            <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 700, color: accentColor }}>{coinsShort(netRev)}</div>
-          </div>
-        </div>
-        {anyOtc && (
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 5, display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.58rem', color: 'var(--green)', fontWeight: 700 }}>OTC: <span className="mono">+{coinsShort(otcSaving)}</span> saved</span>
-            <span style={{ fontSize: '0.56rem', color: 'var(--muted)' }}>AH: <span className="mono">{coinsShort(netRev - marketCost)}</span></span>
-          </div>
-        )}
+        <PnlHero profit={profit} craftCost={effectiveCost} netRevenue={netRev} accentColor={accent}
+          otcSaving={anyOtc ? otcSaving : undefined} marketProfit={anyOtc ? netRev - marketCost : undefined} />
       </div>
-
-      {weapon.manipulationReason && (
-        <div style={{ margin: '0 14px 10px', padding: '6px 9px', background: 'rgba(255,183,0,0.06)', border: '1px solid rgba(255,183,0,0.2)', borderRadius: 4, fontSize: '0.62rem', color: 'var(--gold)' }}>
-          ⚠ {weapon.manipulationReason}
-        </div>
-      )}
 
       {/* 24h chart */}
-      <div style={{ margin: '0 14px 10px' }}>
-        <div style={{ fontSize: '0.56rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>24h Price History</div>
-        <BarChart data={weapon.priceHistory} color={accentColor} />
+      <div style={{ padding: '0 22px 16px' }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>24h Price History</div>
+        <MiniBar data={weapon.priceHistory} color={accent} />
         {weapon.priceHistory.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-            <span style={{ fontSize: '0.54rem', color: 'var(--muted)' }}>24h ago</span>
-            <span style={{ fontSize: '0.54rem', color: 'var(--muted)' }}>now</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+            <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>24h ago</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>now</span>
           </div>
         )}
       </div>
 
       <div className="divider" />
 
-      {/* Ingredient table */}
-      <div style={{ padding: '8px 0 0' }}>
-        <IngredientTable weapon={weapon} execMode={execMode} otc={otc} />
+      {/* Ingredients */}
+      <div style={{ padding: '16px 22px' }}>
+        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Ingredients</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[...weapon.ingredients, ...(scrolls ? weapon.scrollAddons.map(s => ({ ...s, qty: 1, priceHistory: [] as PricePoint[], volatility: 0 })) : [])].map(item => {
+            const base = execPrice(item.pricing, item.qty, execMode)
+            const eff  = resolveUnit(item.id, base, otc)
+            const tot  = eff * item.qty
+            const isOtc = eff !== base
+            return (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div style={{ width: 32, height: 32, background: 'var(--surface)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  <ItemIcon id={item.id} size={28} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {item.name}
+                    {isOtc && <Chip text="OTC" color="var(--green)" />}
+                    {'volatility' in item && item.volatility > 10 && <Chip text={`±${item.volatility.toFixed(0)}%`} color="var(--red)" />}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text2)', marginTop: 2 }}>
+                    ×{item.qty} · <span style={{ color: item.source === 'AH' ? 'var(--gold)' : 'var(--blue)' }}>{item.source}</span>
+                    {!isOtc && item.source === 'BZ' && execMode !== 'INSTA_BUY' && (
+                      <span style={{ marginLeft: 5, color: 'var(--green)' }}>
+                        {execMode === 'BUY_ORDERS' ? 'buy order' : item.pricing.spread > 0 ? 'buy order' : 'insta'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div className="mono" style={{ fontSize: '0.875rem', fontWeight: 700, color: isOtc ? 'var(--green)' : 'var(--red)' }}>{coinsMed(tot)}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text2)', marginTop: 2 }}>{coinsMed(eff)} ea</div>
+                </div>
+                <Sparkline data={item.priceHistory} color={'volatility' in item && item.volatility > 15 ? 'var(--red)' : 'var(--text2)'} w={56} h={22} />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* BZ spread toggle */}
-      {bzItems.length > 0 && (
-        <>
-          <button onClick={() => setShowSpreads(s => !s)}
-            style={{ margin: '8px 14px 0', padding: '5px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', fontSize: '0.6rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.05em' }}>
-            {showSpreads ? '▲ HIDE' : '▼ SHOW'} BZ SPREADS ({bzItems.length} items)
-          </button>
-          {showSpreads && (
-            <div style={{ marginTop: 8, borderTop: '1px solid var(--border)' }}>
-              {bzItems.map(item => <SpreadRow key={item.id} item={item} execMode={execMode} />)}
-            </div>
-          )}
-        </>
-      )}
-
-      <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--border)', marginTop: 8 }}>
-        <div style={{ fontSize: '0.54rem', color: 'var(--muted)' }}>Updated {new Date(weapon.lastUpdated).toLocaleTimeString()}</div>
+      <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Updated {new Date(weapon.lastUpdated).toLocaleTimeString()}</div>
       </div>
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Comparison panel
+// Comparison table
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ComparisonPanel({
-  hyperion, terminator, execModeH, execModeT, otcH, otcT,
-}: {
+function CompareTable({ hyperion, terminator, execH, execT, otcH, otcT }: {
   hyperion: WeaponFlip; terminator: WeaponFlip
-  execModeH: ExecMode; execModeT: ExecMode
-  otcH: OtcMap; otcT: OtcMap
+  execH: ExecMode; execT: ExecMode; otcH: OtcMap; otcT: OtcMap
 }) {
-  const compute = (w: WeaponFlip, mode: ExecMode, otc: OtcMap, variantIdx: number) => {
-    const variant   = w.variants[variantIdx] ?? w.variants[0]
-    const cost      = w.ingredients.reduce((a, x) => a + otcPrice(x.id, resolvePrice(x.pricing, x.qty, mode), otc) * x.qty, 0)
-    const net       = variant.estimatedLbin * (1 - w.ahTax)
-    const profit    = net - cost
-    const margin    = cost > 0 ? (profit / cost) * 100 : 0
-    const boSaving  = w.ingredients.filter(x => x.source === 'BZ').reduce((a, x) => a + (x.pricing.instaBuy - x.pricing.buyOrder) * x.qty, 0)
-    return { profit, margin, boSaving }
+  const calc = (w: WeaponFlip, mode: ExecMode, otc: OtcMap) => {
+    const cost   = w.ingredients.reduce((a, x) => a + resolveUnit(x.id, execPrice(x.pricing, x.qty, mode), otc) * x.qty, 0)
+    const net    = w.cleanLbin * (1 - w.ahTax)
+    const profit = net - cost
+    const margin = cost > 0 ? (profit / cost) * 100 : 0
+    const boSave = w.ingredients.filter(x => x.source === 'BZ').reduce((a, x) => a + (x.pricing.instaBuy - x.pricing.buyOrder) * x.qty, 0)
+    return { profit, margin, boSave }
   }
+  const h = calc(hyperion, execH, otcH)
+  const t = calc(terminator, execT, otcT)
 
-  const h = compute(hyperion, execModeH, otcH, 0)
-  const t = compute(terminator, execModeT, otcT, 0)
-
-  const rows = [
-    { label: 'Clean LBIN',         h: coins(hyperion.cleanLbin),        t: coins(terminator.cleanLbin),        better: hyperion.cleanLbin > terminator.cleanLbin ? 'h' : 't' },
-    { label: 'Craft Cost',         h: coins(hyperion.craftCost),        t: coins(terminator.craftCost),        better: hyperion.craftCost < terminator.craftCost ? 'h' : 't' },
-    { label: 'AH Profit (insta)',  h: coins(hyperion.profitNoScrolls),  t: coins(terminator.profitNoScrolls),  better: hyperion.profitNoScrolls > terminator.profitNoScrolls ? 'h' : 't' },
-    { label: 'Exec Profit',        h: coins(h.profit),                  t: coins(t.profit),                   better: h.profit > t.profit ? 'h' : 't' },
-    { label: 'Exec Margin',        h: `${h.margin.toFixed(1)}%`,        t: `${t.margin.toFixed(1)}%`,         better: h.margin > t.margin ? 'h' : 't' },
-    { label: 'Buy Order Saving',   h: `+${coinsShort(h.boSaving)}`,     t: `+${coinsShort(t.boSaving)}`,      better: h.boSaving > t.boSaving ? 'h' : 't' },
-    { label: 'Manip. Risk',        h: hyperion.manipulationRisk,        t: terminator.manipulationRisk,        better: (hyperion.manipulationRisk === 'LOW' ? 0 : hyperion.manipulationRisk === 'MEDIUM' ? 1 : 2) < (terminator.manipulationRisk === 'LOW' ? 0 : terminator.manipulationRisk === 'MEDIUM' ? 1 : 2) ? 'h' : 't' },
-    { label: 'Est. Sell',          h: hyperion.estimatedSellDays >= 99 ? '—' : `${hyperion.estimatedSellDays.toFixed(1)}d`, t: terminator.estimatedSellDays >= 99 ? '—' : `${terminator.estimatedSellDays.toFixed(1)}d`, better: hyperion.estimatedSellDays < terminator.estimatedSellDays ? 'h' : 't' },
+  const rows: Array<{ label: string; h: string; t: string; hColor?: string; tColor?: string; better: 'h' | 't' | 'none' }> = [
+    { label: 'Clean LBIN',        h: coins(hyperion.cleanLbin),        t: coins(terminator.cleanLbin),        better: hyperion.cleanLbin > terminator.cleanLbin ? 'h' : 't' },
+    { label: 'Craft Cost',        h: coins(hyperion.craftCost),        t: coins(terminator.craftCost),        better: hyperion.craftCost < terminator.craftCost ? 'h' : 't' },
+    { label: 'Profit (AH insta)', h: coins(hyperion.profitNoScrolls),  t: coins(terminator.profitNoScrolls),  hColor: hyperion.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', tColor: terminator.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', better: hyperion.profitNoScrolls > terminator.profitNoScrolls ? 'h' : 't' },
+    { label: 'Profit (current)',  h: coins(h.profit),                  t: coins(t.profit),                   hColor: h.profit > 0 ? 'var(--green)' : 'var(--red)', tColor: t.profit > 0 ? 'var(--green)' : 'var(--red)', better: h.profit > t.profit ? 'h' : 't' },
+    { label: 'Margin %',         h: `${h.margin.toFixed(1)}%`,        t: `${t.margin.toFixed(1)}%`,         better: h.margin > t.margin ? 'h' : 't' },
+    { label: 'BZ Order Saving',   h: `+${coinsMed(h.boSave)}`,        t: `+${coinsMed(t.boSave)}`,          better: h.boSave > t.boSave ? 'h' : 't' },
+    { label: 'Manip. Risk',      h: hyperion.manipulationRisk,        t: terminator.manipulationRisk,        better: (hyperion.manipulationRisk === 'LOW' ? 0 : hyperion.manipulationRisk === 'MEDIUM' ? 1 : 2) < (terminator.manipulationRisk === 'LOW' ? 0 : terminator.manipulationRisk === 'MEDIUM' ? 1 : 2) ? 'h' : 't' },
   ]
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', marginBottom: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '148px 1fr 1fr', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ padding: '8px 10px', fontSize: '0.56rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Metric</div>
-        <div style={{ padding: '8px 10px', fontSize: '0.68rem', fontWeight: 700, color: 'var(--blue)', textAlign: 'center' }}>HYPERION</div>
-        <div style={{ padding: '8px 10px', fontSize: '0.68rem', fontWeight: 700, color: 'var(--purple)', textAlign: 'center' }}>TERMINATOR</div>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 1fr', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '14px 18px', fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Metric</div>
+        <div style={{ padding: '14px 18px', fontSize: '0.825rem', fontWeight: 700, color: 'var(--blue)', textAlign: 'center' }}>Hyperion</div>
+        <div style={{ padding: '14px 18px', fontSize: '0.825rem', fontWeight: 700, color: 'var(--purple)', textAlign: 'center' }}>Terminator</div>
       </div>
       {rows.map((row, i) => (
-        <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '148px 1fr 1fr', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none' }}>
-          <div style={{ padding: '7px 10px', fontSize: '0.61rem', fontWeight: 600, color: 'var(--muted)' }}>{row.label}</div>
-          <div className="mono" style={{ padding: '7px 10px', fontSize: '0.68rem', fontWeight: 700, color: row.better === 'h' ? 'var(--green)' : 'var(--text2)', textAlign: 'center', background: row.better === 'h' ? 'rgba(0,255,135,0.04)' : 'transparent' }}>
-            {row.h}{row.better === 'h' && <span style={{ marginLeft: 3, fontSize: '0.5rem' }}>✓</span>}
+        <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '180px 1fr 1fr', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none' }}>
+          <div style={{ padding: '12px 18px', fontSize: '0.8rem', fontWeight: 500, color: 'var(--text2)' }}>{row.label}</div>
+          <div className="mono" style={{ padding: '12px 18px', fontSize: '0.825rem', fontWeight: 700, color: row.hColor ?? (row.better === 'h' ? 'var(--green)' : 'var(--text2)'), textAlign: 'center', background: row.better === 'h' ? 'rgba(0,229,160,0.04)' : 'transparent' }}>
+            {row.h}{row.better === 'h' && <span style={{ marginLeft: 5, color: 'var(--green)', fontSize: '0.65rem' }}>✓</span>}
           </div>
-          <div className="mono" style={{ padding: '7px 10px', fontSize: '0.68rem', fontWeight: 700, color: row.better === 't' ? 'var(--green)' : 'var(--text2)', textAlign: 'center', background: row.better === 't' ? 'rgba(0,255,135,0.04)' : 'transparent' }}>
-            {row.t}{row.better === 't' && <span style={{ marginLeft: 3, fontSize: '0.5rem' }}>✓</span>}
+          <div className="mono" style={{ padding: '12px 18px', fontSize: '0.825rem', fontWeight: 700, color: row.tColor ?? (row.better === 't' ? 'var(--green)' : 'var(--text2)'), textAlign: 'center', background: row.better === 't' ? 'rgba(167,139,250,0.04)' : 'transparent' }}>
+            {row.t}{row.better === 't' && <span style={{ marginLeft: 5, color: 'var(--green)', fontSize: '0.65rem' }}>✓</span>}
           </div>
         </div>
       ))}
@@ -998,27 +842,27 @@ function ComparisonPanel({
 // Skeleton
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SkeletonCard() {
+function Skeleton() {
   return (
-    <div className="flip-card" style={{ padding: 14 }}>
-      <div style={{ height: 4, background: 'var(--surface3)', borderRadius: 2, marginBottom: 14 }} />
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div className="skeleton" style={{ width: 44, height: 44, borderRadius: 4, flexShrink: 0 }} />
+    <div className="flip-card" style={{ padding: 22 }}>
+      <div style={{ height: 3, background: 'var(--surface3)', borderRadius: 2, marginBottom: 20 }} />
+      <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+        <div className="skeleton" style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div className="skeleton" style={{ height: 13, width: '50%', marginBottom: 7 }} />
-          <div className="skeleton" style={{ height: 9, width: '38%' }} />
+          <div className="skeleton" style={{ height: 16, width: '48%', marginBottom: 10 }} />
+          <div className="skeleton" style={{ height: 11, width: '32%' }} />
         </div>
       </div>
-      <div className="skeleton" style={{ height: 60, borderRadius: 4, marginBottom: 10 }} />
-      <div className="skeleton" style={{ height: 36, borderRadius: 4, marginBottom: 10 }} />
+      <div className="skeleton" style={{ height: 80, borderRadius: 12, marginBottom: 16 }} />
+      <div className="skeleton" style={{ height: 48, borderRadius: 8, marginBottom: 16 }} />
       {[0,1,2,3].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 7, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-          <div className="skeleton" style={{ width: 26, height: 26, borderRadius: 3, flexShrink: 0 }} />
+        <div key={i} style={{ display: 'flex', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+          <div className="skeleton" style={{ width: 32, height: 32, borderRadius: 7, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div className="skeleton" style={{ height: 9, width: '55%', marginBottom: 4 }} />
-            <div className="skeleton" style={{ height: 7, width: '32%' }} />
+            <div className="skeleton" style={{ height: 12, width: '52%', marginBottom: 6 }} />
+            <div className="skeleton" style={{ height: 9, width: '28%' }} />
           </div>
-          <div className="skeleton" style={{ height: 10, width: 44 }} />
+          <div className="skeleton" style={{ height: 14, width: 56 }} />
         </div>
       ))}
     </div>
@@ -1036,43 +880,32 @@ export default function CraftWeaponsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState<string | null>(null)
-  const [manualRefresh, setManualRefresh] = useState(0)
+  const [refresh, setRefresh]         = useState(0)
 
-  // Per-weapon exec mode
-  const [execModeH, setExecModeH]   = useState<ExecMode>('INSTA_BUY')
-  const [execModeT, setExecModeT]   = useState<ExecMode>('INSTA_BUY')
-
-  // Per-weapon OTC
-  const [otcH, setOtcH] = useState<OtcMap>({})
-  const [otcT, setOtcT] = useState<OtcMap>({})
-
-  // Hyperion variant selection (0=clean, 1=1-scroll, 2=2-scroll, 3=fully scrolled)
-  const [variantH, setVariantH]           = useState(0)
-  const [scrollsIncludedH, setScrollsH]   = useState(false)
+  const [execH, setExecH] = useState<ExecMode>('INSTA_BUY')
+  const [execT, setExecT] = useState<ExecMode>('INSTA_BUY')
+  const [otcH, setOtcH]   = useState<OtcMap>({})
+  const [otcT, setOtcT]   = useState<OtcMap>({})
+  const [variantH, setVariantH]   = useState(0)
+  const [scrollsH, setScrollsH]   = useState(false)
 
   const load = useCallback(async () => {
     try {
       const data = await fetchCraftWeapons()
-      setHyperion(data.hyperion)
-      setTerminator(data.terminator)
-      setAiSummary(data.aiSummary)
-      setLastUpdated(new Date())
-      setError(null)
+      setHyperion(data.hyperion); setTerminator(data.terminator)
+      setAiSummary(data.aiSummary); setLastUpdated(new Date()); setError(null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
-    setLoading(true)
-    load()
+    setLoading(true); load()
     const id = window.setInterval(load, 3 * 60 * 1000)
     return () => window.clearInterval(id)
-  }, [load, manualRefresh])
+  }, [load, refresh])
 
-  const bestWeapon = useMemo(() => {
+  const best = useMemo(() => {
     if (!hyperion || !terminator) return null
     return hyperion.profitNoScrolls > terminator.profitNoScrolls ? 'Hyperion' : 'Terminator'
   }, [hyperion, terminator])
@@ -1081,104 +914,116 @@ export default function CraftWeaponsPage() {
     <div className="app-shell">
       <Sidebar />
       <main className="main-scroll">
-        {/* Page header */}
+        {/* Header */}
         <div className="page-header">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
               {lastUpdated
-                ? <span className="live-badge"><span className="pulse-dot" style={{ background: 'var(--blue)' }} />Live</span>
-                : <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Loading…</span>}
-              {lastUpdated && <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{lastUpdated.toLocaleTimeString()}</span>}
-              {error && <span style={{ fontSize: '0.7rem', color: 'var(--red)' }}>⚠ {error}</span>}
-              <button onClick={() => { setLoading(true); setManualRefresh(n => n + 1) }}
-                style={{ marginLeft: 4, padding: '2px 8px', fontSize: '0.63rem', fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--text2)', cursor: 'pointer', letterSpacing: '0.06em' }}>
-                REFRESH
+                ? <span className="live-badge"><span className="pulse-dot" />Live</span>
+                : <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Loading…</span>}
+              {lastUpdated && <span style={{ fontSize: '0.775rem', color: 'var(--text2)' }}>{lastUpdated.toLocaleTimeString()}</span>}
+              {error && <span style={{ fontSize: '0.775rem', color: 'var(--red)' }}>⚠ {error}</span>}
+              <button onClick={() => { setLoading(true); setRefresh(n => n + 1) }}
+                style={{ padding: '5px 12px', fontSize: '0.72rem', fontWeight: 700, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text2)', cursor: 'pointer' }}>
+                Refresh
               </button>
             </div>
             <h1 className="page-title">Weapon Craft Flips</h1>
-            <p className="page-subtitle" style={{ marginTop: 4 }}>
-              Live crafting flip terminal · Hyperion &amp; Terminator · Bazaar buy/sell orders · OTC calculator · 2% AH tax
-            </p>
+            <p className="page-subtitle">Live crafting flip terminal · Hyperion & Terminator · BZ buy orders · OTC calculator · 2% AH tax</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {hyperion && (
-              <div className="stat-block" style={{ minWidth: 110 }}>
+              <div className="stat-block" style={{ minWidth: 130 }}>
                 <div className="stat-label">Hyperion Profit</div>
-                <div className="stat-value mono" style={{ color: hyperion.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
-                  {hyperion.profitNoScrolls > 0 ? '+' : ''}{coinsShort(hyperion.profitNoScrolls)}
+                <div className="stat-value" style={{ color: hyperion.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', marginTop: 6 }}>
+                  {hyperion.profitNoScrolls > 0 ? '+' : ''}{coinsMed(hyperion.profitNoScrolls)}
                 </div>
               </div>
             )}
             {terminator && (
-              <div className="stat-block" style={{ minWidth: 110 }}>
+              <div className="stat-block" style={{ minWidth: 130 }}>
                 <div className="stat-label">Terminator Profit</div>
-                <div className="stat-value mono" style={{ color: terminator.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', marginTop: 4 }}>
-                  {terminator.profitNoScrolls > 0 ? '+' : ''}{coinsShort(terminator.profitNoScrolls)}
+                <div className="stat-value" style={{ color: terminator.profitNoScrolls > 0 ? 'var(--green)' : 'var(--red)', marginTop: 6 }}>
+                  {terminator.profitNoScrolls > 0 ? '+' : ''}{coinsMed(terminator.profitNoScrolls)}
                 </div>
               </div>
             )}
-            {bestWeapon && (
-              <div className="stat-block" style={{ minWidth: 90 }}>
-                <div className="stat-label">Best Now</div>
-                <div className="stat-value mono" style={{ color: 'var(--gold)', marginTop: 4 }}>{bestWeapon}</div>
+            {best && (
+              <div className="stat-block" style={{ minWidth: 110 }}>
+                <div className="stat-label">Best Right Now</div>
+                <div className="stat-value" style={{ color: 'var(--gold)', marginTop: 6 }}>{best}</div>
               </div>
             )}
           </div>
         </div>
 
-        {/* How it works */}
+        {/* Pricing accuracy callout */}
         <div className="info-callout">
-          <div className="info-callout-label" style={{ color: 'var(--blue)' }}>Pricing accuracy</div>
-          <strong style={{ color: 'var(--text)' }}>BZ items</strong> use Hypixel Bazaar API directly —
-          {' '}<span style={{ color: 'var(--red)' }}>insta-buy</span> = lowest ask (sell_summary[0]),
-          {' '}<span style={{ color: 'var(--green)' }}>buy order</span> = highest bid (buy_summary[0]).
-          {' '}<strong style={{ color: 'var(--text)' }}>AH items</strong> use Coflnet /bin endpoint (LBIN).
-          {' '}Scrolled Hyperion LBIN = clean LBIN + scroll market prices (no dedicated API endpoint exists — this is the standard trader methodology).
+          <div className="info-callout-label" style={{ color: 'var(--blue)' }}>Pricing sources</div>
+          <strong style={{ color: 'var(--text)' }}>BZ items</strong> — Hypixel Bazaar API:
+          <span style={{ color: 'var(--red)', margin: '0 4px' }}>insta-buy</span> = lowest ask (sell_summary[0]),
+          <span style={{ color: 'var(--green)', margin: '0 4px' }}>buy order</span> = highest bid (buy_summary[0]).
+          {' '}<strong style={{ color: 'var(--text)' }}>AH items</strong> — Coflnet /bin endpoint (live LBIN).
+          {' '}Scrolled Hyperion LBIN = clean LBIN + scroll prices (no dedicated API — standard trader methodology).
         </div>
 
-        {/* AI panel */}
+        {/* AI */}
         {aiSummary && (
           <div className="ai-panel">
-            <div className="ai-panel-label">✦ AI Analysis — Weapon Craft Flips</div>
+            <div className="ai-panel-label">✦ AI Analysis</div>
             <div className="ai-panel-body">{aiSummary}</div>
           </div>
         )}
 
         {/* Comparison */}
         {hyperion && terminator && !loading && (
-          <ComparisonPanel hyperion={hyperion} terminator={terminator} execModeH={execModeH} execModeT={execModeT} otcH={otcH} otcT={otcT} />
+          <CompareTable hyperion={hyperion} terminator={terminator} execH={execH} execT={execT} otcH={otcH} otcT={otcT} />
         )}
 
-        {/* ─── HYPERION SECTIONS ─── */}
+        {/* ── HYPERION ── */}
         {!loading && hyperion && (
           <>
-            <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '4px 0 8px', paddingLeft: 2 }}>
-              ── HYPERION ──────────────────────────────────────
-            </div>
-            <VariantPanel weapon={hyperion} selectedVariant={variantH} setSelectedVariant={setVariantH} execMode={execModeH} scrollsIncluded={scrollsIncludedH} setScrollsIncluded={setScrollsH} accentColor="var(--blue)" />
-            <ExecModePanel weapon={hyperion} mode={execModeH} setMode={setExecModeH} scrollsIncluded={scrollsIncludedH} accentColor="var(--blue)" />
-            <ProfitEngine weapon={hyperion} execMode={execModeH} otc={otcH} selectedVariant={variantH} scrollsIncluded={scrollsIncludedH} accentColor="var(--blue)" />
-            <OtcPanel weapon={hyperion} accentColor="var(--blue)" scrollsIncluded={scrollsIncludedH} selectedVariant={variantH} execMode={execModeH} otc={otcH} setOtc={setOtcH} />
+            <div className="section-label" style={{ color: 'var(--blue)' }}>Hyperion</div>
+
+            <Panel title="Variant & Scroll Selection" subtitle="Choose clean, partial, or fully scrolled — affects LBIN estimate and margin" accent="var(--blue)" defaultOpen>
+              <VariantPanel weapon={hyperion} selected={variantH} setSelected={setVariantH} execMode={execH} setScrolls={setScrollsH} accent="var(--blue)" />
+            </Panel>
+
+            <Panel title="Execution Strategy" subtitle="Insta Buy vs Buy Orders vs Smart Mix — affects all BZ ingredients" accent="var(--blue)">
+              <ExecPanel weapon={hyperion} mode={execH} setMode={setExecH} scrollsIncluded={scrollsH} accent="var(--blue)" />
+            </Panel>
+
+            <Panel title="Profit Engine" subtitle="All scenarios side-by-side — best strategy, full breakdown" accent="var(--blue)">
+              <ProfitEnginePanel weapon={hyperion} execMode={execH} otc={otcH} variantIdx={variantH} scrolls={scrollsH} accent="var(--blue)" />
+            </Panel>
+
+            <OtcPanel weapon={hyperion} accent="var(--blue)" scrolls={scrollsH} variantIdx={variantH} execMode={execH} otc={otcH} setOtc={setOtcH} />
           </>
         )}
 
-        {/* ─── TERMINATOR SECTIONS ─── */}
+        {/* ── TERMINATOR ── */}
         {!loading && terminator && (
           <>
-            <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '8px 0 8px', paddingLeft: 2 }}>
-              ── TERMINATOR ─────────────────────────────────────
-            </div>
-            <ExecModePanel weapon={terminator} mode={execModeT} setMode={setExecModeT} scrollsIncluded={false} accentColor="var(--purple)" />
-            <ProfitEngine weapon={terminator} execMode={execModeT} otc={otcT} selectedVariant={0} scrollsIncluded={false} accentColor="var(--purple)" />
-            <OtcPanel weapon={terminator} accentColor="var(--purple)" scrollsIncluded={false} selectedVariant={0} execMode={execModeT} otc={otcT} setOtc={setOtcT} />
+            <div className="section-label" style={{ color: 'var(--purple)' }}>Terminator</div>
+
+            <Panel title="Execution Strategy" subtitle="Insta Buy vs Buy Orders vs Smart Mix" accent="var(--purple)">
+              <ExecPanel weapon={terminator} mode={execT} setMode={setExecT} scrollsIncluded={false} accent="var(--purple)" />
+            </Panel>
+
+            <Panel title="Profit Engine" subtitle="All scenarios side-by-side — full breakdown" accent="var(--purple)">
+              <ProfitEnginePanel weapon={terminator} execMode={execT} otc={otcT} variantIdx={0} scrolls={false} accent="var(--purple)" />
+            </Panel>
+
+            <OtcPanel weapon={terminator} accent="var(--purple)" scrolls={false} variantIdx={0} execMode={execT} otc={otcT} setOtc={setOtcT} />
           </>
         )}
 
-        {/* Weapon cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12, marginTop: 8 }}>
-          {loading && <><SkeletonCard /><SkeletonCard /></>}
-          {!loading && hyperion && <WeaponCard weapon={hyperion} accentColor="var(--blue)" execMode={execModeH} otc={otcH} selectedVariant={variantH} scrollsIncluded={scrollsIncludedH} />}
-          {!loading && terminator && <WeaponCard weapon={terminator} accentColor="var(--purple)" execMode={execModeT} otc={otcT} selectedVariant={0} scrollsIncluded={false} />}
+        {/* Weapon overview cards */}
+        <div className="section-label">Market Overview</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 16 }}>
+          {loading && <><Skeleton /><Skeleton /></>}
+          {!loading && hyperion && <WeaponCard weapon={hyperion} accent="var(--blue)" execMode={execH} otc={otcH} variantIdx={variantH} scrolls={scrollsH} />}
+          {!loading && terminator && <WeaponCard weapon={terminator} accent="var(--purple)" execMode={execT} otc={otcT} variantIdx={0} scrolls={false} />}
         </div>
       </main>
       <RefreshTimer intervalMs={3 * 60 * 1000} lastUpdated={lastUpdated} />
