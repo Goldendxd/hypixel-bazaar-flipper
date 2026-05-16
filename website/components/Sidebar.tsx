@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/',       icon: '↕',  label: 'Order Flips'  },
-  { href: '/craft',  icon: '⚒',  label: 'Craft Flips'  },
-  { href: '/fusion', icon: '⚗',  label: 'Fusion Flips' },
-  { href: '/forge',  icon: '🔥', label: 'Forge Flips'  },
-  { href: '/pets',   icon: '🐾', label: 'Kat Flips'    },
-  { href: '/books',  icon: '📖', label: 'Book Flips'   },
-  { href: '/mayor',  icon: '👑', label: 'Mayor Flips'  },
+  { href: '/',               icon: '↕',  label: 'Order Flips'   },
+  { href: '/craft',          icon: '⚒',  label: 'Craft Flips'   },
+  { href: '/fusion',         icon: '⚗',  label: 'Fusion Flips'  },
+  { href: '/forge',          icon: '🔥', label: 'Forge Flips'   },
+  { href: '/pets',           icon: '🐾', label: 'Kat Flips'     },
+  { href: '/books',          icon: '📖', label: 'Book Flips'    },
+  { href: '/mayor',          icon: '👑', label: 'Mayor Flips'   },
+  { href: '/craft-weapons',  icon: '⚔',  label: 'Weapon Crafts' },
 ]
 
 export default function Sidebar() {
