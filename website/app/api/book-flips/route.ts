@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 let cachedResult: object | null = null
 let cacheTime = 0
 const CACHE_TTL = 60_000
@@ -10,8 +12,23 @@ const GEMINI_KEY = 'AIzaSyDtzLvCVeHYFLsp0DR3ftPyCwA7b_Evr50'
 // Enchantment book combining on the anvil: 2× Tier N → 1× Tier N+1
 // All routes checked: TN→TM where M > N, cost = 2^(M-N) × price(TN)
 // We check every (inputTier, outputTier) pair where both exist on bazaar.
+//
+// GAME-RULE VALIDITY (critical):
+//  - Tier 6 books of classic enchants (Sharpness VI, Growth VI, Power VI, …)
+//    are DROP-ONLY. 2× Tier V does NOT combine into Tier VI.
+//  - 2× Tier VI → Tier VII IS a legal combine (both books are drop-tier).
+//  - Therefore any route that crosses the T5→T6 boundary is impossible in-game
+//    and must never be shown as a flip.
+//  - Ultimate/Kuudra enchants max at Tier V on the bazaar and combine freely
+//    within 1–5, so the same boundary rule covers them safely.
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+
+function isValidCombine(inputTier: number, outputTier: number): boolean {
+  // Block any chain that would have to craft a drop-only Tier 6 book
+  if (inputTier <= 5 && outputTier >= 6) return false
+  return true
+}
 
 export interface BookFlipRow {
   outputId: string
@@ -110,6 +127,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
       for (let outIdx = inIdx + 1; outIdx < tierNums.length; outIdx++) {
         const inputTier  = tierNums[inIdx]
         const outputTier = tierNums[outIdx]
+        if (!isValidCombine(inputTier, outputTier)) continue  // skip impossible in-game routes
         const steps      = outputTier - inputTier
         const inputQty   = Math.pow(2, steps)  // 2^steps books needed
 

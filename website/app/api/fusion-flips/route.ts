@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 let cachedResult: object | null = null
 let cacheTime = 0
 const CACHE_TTL = 60_000 // 1 minute — shard prices move fast

@@ -71,14 +71,18 @@ function FlipCard({
 
   return (
     <div className="flip-card">
-      <div className="card-accent" style={{ background: `linear-gradient(90deg, var(--blue), var(--purple))` }} />
+      <div className="card-accent" style={{ background: row.manipulationFlag ? 'linear-gradient(90deg, var(--red), var(--gold))' : `linear-gradient(90deg, var(--blue), var(--purple))` }} />
       <div className="card-header">
         <div className="icon-box">
           <ItemIcon id={row.id} name={row.name} size={36} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="card-name">{row.name}</div>
-          <div className="card-sub">{row.id}</div>
+          <div className="card-sub">
+            {row.manipulationFlag
+              ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>⚠ {row.manipulationReason}</span>
+              : row.id}
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <span className="mono" style={{
@@ -107,8 +111,8 @@ function FlipCard({
           <div className="stat-value mono" style={{ fontSize: '0.9rem' }}>{qty.toLocaleString()}</div>
         </div>
         <div>
-          <div className="stat-label">Fill Score</div>
-          <div className="stat-value mono" style={{ fontSize: '0.9rem', color: 'var(--text2)' }}>{row.fillScore}</div>
+          <div className="stat-label">Fill Chance</div>
+          <div className="stat-value mono" style={{ fontSize: '0.9rem', color: row.fillProbability > 60 ? 'var(--green)' : row.fillProbability > 30 ? 'var(--gold)' : 'var(--red)' }}>{row.fillProbability}%</div>
         </div>
       </div>
 
@@ -158,6 +162,7 @@ export default function FlipFinder() {
   const [minCurBuy,     setMinCurBuy]     = useState<number | ''>(0)
   const [minCurSell,    setMinCurSell]    = useState<number | ''>(0)
   const [showFilter,    setShowFilter]    = useState<'all' | 'starred'>('all')
+  const [hideManip,     setHideManip]     = useState(true)
 
   const [starred, setStarred] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -198,6 +203,7 @@ export default function FlipFinder() {
   const filtered = useMemo(() => {
     return rows
       .filter(r => !blocked.has(r.id))
+      .filter(r => !hideManip || !r.manipulationFlag)
       .filter(r => minWeeklyBuy  === '' || r.weeklyVolume   >= minWeeklyBuy)
       .filter(r => minWeeklySell === '' || r.sellMovingWeek >= minWeeklySell)
       .filter(r => minCurBuy     === '' || r.buyOrders      >= minCurBuy)
@@ -205,7 +211,7 @@ export default function FlipFinder() {
       .filter(r => showFilter === 'all' || starred.has(r.id))
       .sort((a, b) => (b.orderProfit * effectiveQty(b)) - (a.orderProfit * effectiveQty(a)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, maxMoney, maxItems, minWeeklyBuy, minWeeklySell, minCurBuy, minCurSell, blocked, starred, showFilter])
+  }, [rows, maxMoney, maxItems, minWeeklyBuy, minWeeklySell, minCurBuy, minCurSell, blocked, starred, showFilter, hideManip])
 
   function toggleStar(id: string) {
     setStarred(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); localStorage.setItem('bf_starred', JSON.stringify([...n])); return n })
@@ -252,10 +258,19 @@ export default function FlipFinder() {
       <div className="toolbar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.68rem', color: 'var(--text2)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
-          <select value={showFilter} onChange={e => setShowFilter(e.target.value as 'all' | 'starred')} className="styled-select" style={{ fontSize: '0.75rem' }}>
-            <option value="all">All Items</option>
-            <option value="starred">Starred Only</option>
-          </select>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              className={`tab-btn${hideManip ? ' active-green' : ''}`}
+              onClick={() => setHideManip(v => !v)}
+              style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+            >
+              {hideManip ? '✓ Manipulation filter ON' : 'Manipulation filter OFF'}
+            </button>
+            <select value={showFilter} onChange={e => setShowFilter(e.target.value as 'all' | 'starred')} className="styled-select" style={{ fontSize: '0.75rem' }}>
+              <option value="all">All Items</option>
+              <option value="starred">Starred Only</option>
+            </select>
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px 14px' }}>
           <FilterField label="Max Budget"         value={maxMoney}      onChange={setMaxMoney} />

@@ -45,7 +45,16 @@ export interface FlipRow {
   sellMovingWeek: number
   buyOrders: number
   sellOrders: number
-  fillScore: number         // 0–100
+
+  // ── Execution intelligence ──
+  fillScore: number         // 0–100 composite (legacy, kept for UI compat)
+  liquidityScore: number    // 0–100 — how fast this item actually moves
+  fillProbability: number   // 0–100 — chance both your orders fill in reasonable time
+  stabilityScore: number    // 0–100 — higher = calmer market (from spread sanity)
+  manipulationFlag: boolean // margin too good to be true on thin volume
+  manipulationReason: string | null
+  hourlyThroughput: number  // items/hour the market actually trades
+
   flipType: 'instant' | 'order'
 }
 
@@ -84,7 +93,6 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
 
   const products = Object.values(data.products)
   const totalProducts = products.length
-  const maxVol = Math.max(...products.map((p) => p.quick_status.buyMovingWeek), 1)
 
   const rows: FlipRow[] = []
 
@@ -102,14 +110,44 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
     const sellOrder = fmt(q.buyPrice - 0.1)
     const orderProfit = fmt(sellOrder * (1 - TAX) - buyOrder)
     const orderMargin = fmt((orderProfit / buyOrder) * 100)
+    if (orderProfit <= 0) continue
 
-    // Instant flip: pay ask, receive bid immediately
+    // Instant flip: pay ask, receive bid immediately (almost always negative — shown for reference)
     const instantProfit = fmt(q.sellPrice * (1 - TAX) - q.buyPrice)
     const instantMargin = fmt((instantProfit / q.buyPrice) * 100)
 
-    const volScore = Math.min(100, (q.buyMovingWeek / maxVol) * 100)
-    const depthPenalty = Math.min(100, ((q.buyOrders + q.sellOrders) / 200) * 100)
-    const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
+    // ── Liquidity: log-scaled on the THINNER side of the market ──
+    // You must both buy AND sell — the slower side bounds your real throughput.
+    const minWeek = Math.min(q.buyMovingWeek, q.sellMovingWeek)
+    const liquidityScore = Math.min(100, Math.round(Math.log10(Math.max(1, minWeek)) * 18))
+    const hourlyThroughput = fmt(minWeek / 168)
+
+    // ── Fill probability: throughput vs order book competition ──
+    // More open orders on the book = more people waiting in line ahead of you.
+    const competition = Math.max(1, q.buyOrders + q.sellOrders)
+    const fillProbability = Math.min(100, Math.round(
+      (hourlyThroughput / (hourlyThroughput + competition * 8)) * 130 + liquidityScore * 0.35
+    ))
+
+    // ── Stability: tight spread relative to price = stable two-sided market ──
+    const spreadPct = (spread / q.buyPrice) * 100
+    const stabilityScore = Math.max(0, Math.min(100, Math.round(100 - spreadPct * 3)))
+
+    // ── Manipulation detection ──
+    let manipulationReason: string | null = null
+    if (orderMargin > 100) {
+      manipulationReason = 'Margin >100% — almost certainly a pumped or dead market'
+    } else if (orderMargin > 25 && minWeek < 5_000) {
+      manipulationReason = 'Huge margin on thin volume — classic manipulation signature'
+    } else if (q.sellOrders < 3 && q.buyOrders < 3 && orderMargin > 15) {
+      manipulationReason = 'Nearly empty order book — price discovery unreliable'
+    } else if (q.sellPrice < q.buyPrice * 0.2 && q.buyPrice > 10_000) {
+      manipulationReason = 'Bid collapsed far below ask — one-sided market'
+    }
+    const manipulationFlag = manipulationReason !== null
+
+    // Legacy composite fill score (kept for existing UI)
+    const fillScore = Math.round(liquidityScore * 0.5 + fillProbability * 0.3 + stabilityScore * 0.2)
 
     rows.push({
       id,
@@ -128,7 +166,13 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
       buyOrders: q.buyOrders,
       sellOrders: q.sellOrders,
       fillScore,
-      flipType: 'instant',
+      liquidityScore,
+      fillProbability,
+      stabilityScore,
+      manipulationFlag,
+      manipulationReason,
+      hourlyThroughput,
+      flipType: 'order',
     })
   }
 

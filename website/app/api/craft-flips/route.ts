@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // Server-side in-memory cache so we don't re-fetch 1913 items every request
 let cachedResult: object | null = null
 let cacheTime = 0
