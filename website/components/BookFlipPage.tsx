@@ -65,7 +65,7 @@ function BookCard({ row }: { row: BookFlipRow }) {
 
   return (
     <div className="flip-card">
-      <div className="card-accent" style={{ background: 'linear-gradient(90deg, var(--blue), var(--purple))' }} />
+      <div className="card-accent" style={{ background: row.warning ? 'linear-gradient(90deg, var(--gold), var(--red))' : 'linear-gradient(90deg, var(--blue), var(--purple))' }} />
       <div className="card-header">
         <div className="icon-box">
           <BookIcon id={row.outputId} size={36} />
@@ -77,8 +77,14 @@ function BookCard({ row }: { row: BookFlipRow }) {
             <span style={{ marginLeft: 4, color: 'var(--muted)' }}>· {row.inputQty === 2 ? '1 step' : `${Math.log2(row.inputQty)} steps`}</span>
           </div>
         </div>
-        <span className="badge badge-green mono">{row.margin.toFixed(1)}%</span>
+        <span className={`badge ${row.warning ? 'badge-gold' : 'badge-green'} mono`}>{row.margin.toFixed(1)}%</span>
       </div>
+
+      {row.warning && (
+        <div style={{ margin: '0 12px 11px', padding: '8px 11px', background: 'var(--gold-dim)', border: '1px solid var(--gold-border)', borderRadius: 7, fontSize: '0.68rem', color: 'var(--gold)', lineHeight: 1.5, fontWeight: 600 }}>
+          ⚠ {row.warning}
+        </div>
+      )}
 
       <div className="recipe-box">
         <div className="recipe-label">Combine on anvil</div>

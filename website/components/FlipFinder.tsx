@@ -3,150 +3,50 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { fetchBazaarFlips, FlipRow, iconFallbacks } from '@/lib/api'
 import RefreshTimer from '@/components/RefreshTimer'
+import { AnimatedNumber, coinsShort, Tag } from '@/components/ui'
 
 function coins(n: number): string {
-  if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
-  if (Math.abs(n) >= 1_000_000)     return `${(n / 1_000_000).toFixed(2)}M`
-  if (Math.abs(n) >= 1_000)         return `${(n / 1_000).toFixed(1)}K`
-  return n.toFixed(1)
+  if (!isFinite(n)) return '—'
+  const a = Math.abs(n)
+  const s = n < 0 ? '-' : ''
+  if (a >= 1e9) return `${s}${(a / 1e9).toFixed(2)}B`
+  if (a >= 1e6) return `${s}${(a / 1e6).toFixed(2)}M`
+  if (a >= 1e3) return `${s}${(a / 1e3).toFixed(1)}K`
+  return `${s}${a.toFixed(1)}`
 }
 
-function ItemIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }) {
+function ItemIcon({ id, name, size = 28 }: { id: string; name: string; size?: number }) {
   const fallbacks = iconFallbacks(id)
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={fallbacks[0]}
-      alt={name}
-      width={size}
-      height={size}
+      src={fallbacks[0]} alt={name} width={size} height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated' }}
       onError={(e) => {
         const img = e.target as HTMLImageElement
         const idx = parseInt(img.dataset.fallbackIdx ?? '0', 10)
-        if (idx < fallbacks.length - 1) {
-          img.dataset.fallbackIdx = String(idx + 1)
-          img.src = fallbacks[idx + 1]
-        } else {
-          img.style.display = 'none'
-        }
+        if (idx < fallbacks.length - 1) { img.dataset.fallbackIdx = String(idx + 1); img.src = fallbacks[idx + 1] }
+        else img.style.display = 'none'
       }}
     />
   )
 }
 
-function SkeletonCard() {
-  return (
-    <div className="flip-card" style={{ padding: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div className="skeleton" style={{ height: 11, width: '60%', marginBottom: 6 }} />
-          <div className="skeleton" style={{ height: 9, width: '40%' }} />
-        </div>
-        <div className="skeleton" style={{ height: 20, width: 44, borderRadius: 3 }} />
-      </div>
-      <div className="divider" style={{ marginBottom: 10 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 10px', marginBottom: 10 }}>
-        {[0,1,2,3].map(i => (
-          <div key={i}>
-            <div className="skeleton" style={{ height: 8, width: 52, marginBottom: 4 }} />
-            <div className="skeleton" style={{ height: 12, width: 44 }} />
-          </div>
-        ))}
-      </div>
-      <div className="skeleton" style={{ height: 36, borderRadius: 4 }} />
-    </div>
-  )
+// Realistic execution: you can capture only a slice of real market flow.
+// Cap quantity at 5% of the thinner side's weekly volume — beyond that you ARE the market.
+const FLOW_CAPTURE = 0.05
+
+function realisticQty(row: FlipRow, budget: number | '', maxItems: number | ''): number {
+  const byBudget = budget !== '' && budget > 0 ? Math.floor(budget / row.buyOrder) : Infinity
+  const byItems  = maxItems !== '' && maxItems > 0 ? maxItems : Infinity
+  const byMarket = Math.max(1, Math.floor(Math.min(row.weeklyVolume, row.sellMovingWeek) * FLOW_CAPTURE))
+  const q = Math.min(byBudget, byItems, byMarket)
+  return Math.max(0, q === Infinity ? 1 : q)
 }
 
-function FlipCard({
-  row, qty, profitTotal, starred, blocked, onStar, onBlock,
-}: {
-  row: FlipRow; qty: number; profitTotal: number
-  starred: boolean; blocked: boolean; onStar: () => void; onBlock: () => void
-}) {
-  const totalCost = row.buyOrder * qty
-  const marginColor = row.orderMargin >= 5 ? 'var(--green)' : row.orderMargin >= 2 ? 'var(--gold)' : 'var(--red)'
+const GRID = '30px minmax(170px, 1.5fr) 92px 92px 70px 92px 84px 104px 58px 64px'
 
-  return (
-    <div className="flip-card">
-      <div className="card-accent" style={{ background: row.manipulationFlag ? 'linear-gradient(90deg, var(--red), var(--gold))' : `linear-gradient(90deg, var(--blue), var(--purple))` }} />
-      <div className="card-header">
-        <div className="icon-box">
-          <ItemIcon id={row.id} name={row.name} size={36} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="card-name">{row.name}</div>
-          <div className="card-sub">
-            {row.manipulationFlag
-              ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>⚠ {row.manipulationReason}</span>
-              : row.id}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          <span className="mono" style={{
-            fontSize: '0.72rem', fontWeight: 700, color: marginColor,
-            background: `${marginColor}15`, border: `1px solid ${marginColor}30`,
-            borderRadius: 3, padding: '2px 6px',
-          }}>{row.orderMargin.toFixed(1)}%</span>
-          <button className={`icon-btn${starred ? ' starred' : ''}`} onClick={onStar} title="Star" style={{ fontSize: 12 }}>★</button>
-          <button className="icon-btn" onClick={onBlock} title="Block" style={{ fontSize: 12, color: blocked ? 'var(--red)' : undefined }}>✕</button>
-        </div>
-      </div>
-
-      <div className="divider" />
-
-      <div className="card-stats">
-        <div>
-          <div className="stat-label">Buy Order</div>
-          <div className="stat-value mono" style={{ color: 'var(--blue)', fontSize: '0.9rem' }}>{coins(row.buyOrder)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Sell Order</div>
-          <div className="stat-value mono" style={{ color: 'var(--cyan)', fontSize: '0.9rem' }}>{coins(row.sellOrder)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Qty ({coins(totalCost)})</div>
-          <div className="stat-value mono" style={{ fontSize: '0.9rem' }}>{qty.toLocaleString()}</div>
-        </div>
-        <div>
-          <div className="stat-label">Fill Chance</div>
-          <div className="stat-value mono" style={{ fontSize: '0.9rem', color: row.fillProbability > 60 ? 'var(--green)' : row.fillProbability > 30 ? 'var(--gold)' : 'var(--red)' }}>{row.fillProbability}%</div>
-        </div>
-      </div>
-
-      <div className="profit-row">
-        <div>
-          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Est. Profit</div>
-          <div className="mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--green)', letterSpacing: '-0.02em' }}>+{coins(profitTotal)}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Weekly Buy</div>
-          <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text2)' }}>{coins(row.weeklyVolume)}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function FilterField({ label, value, onChange }: {
-  label: string; value: number | ''; onChange: (v: number | '') => void
-}) {
-  return (
-    <div>
-      <div className="stat-label" style={{ marginBottom: 4 }}>{label}</div>
-      <input
-        type="number"
-        className="filter-input"
-        style={{ width: '100%' }}
-        value={value}
-        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-        min={0}
-      />
-    </div>
-  )
-}
+type SortKey = 'estProfit' | 'margin' | 'profitItem' | 'fill'
 
 export default function FlipFinder() {
   const [rows, setRows]               = useState<FlipRow[]>([])
@@ -154,15 +54,14 @@ export default function FlipFinder() {
   const [error, setError]             = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [productCount, setProductCount] = useState(0)
+  const [expanded, setExpanded]       = useState<string | null>(null)
 
-  const [maxMoney,      setMaxMoney]      = useState<number | ''>(10_000_000)
-  const [maxItems,      setMaxItems]      = useState<number | ''>(71_680)
-  const [minWeeklyBuy,  setMinWeeklyBuy]  = useState<number | ''>(20_000)
-  const [minWeeklySell, setMinWeeklySell] = useState<number | ''>(20_000)
-  const [minCurBuy,     setMinCurBuy]     = useState<number | ''>(0)
-  const [minCurSell,    setMinCurSell]    = useState<number | ''>(0)
-  const [showFilter,    setShowFilter]    = useState<'all' | 'starred'>('all')
-  const [hideManip,     setHideManip]     = useState(true)
+  const [budget, setBudget]           = useState<number | ''>(10_000_000)
+  const [maxItems, setMaxItems]       = useState<number | ''>(71_680)
+  const [minVolume, setMinVolume]     = useState<number | ''>(20_000)
+  const [hideManip, setHideManip]     = useState(true)
+  const [showFilter, setShowFilter]   = useState<'all' | 'starred'>('all')
+  const [sortKey, setSortKey]         = useState<SortKey>('estProfit')
 
   const [starred, setStarred] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -176,15 +75,11 @@ export default function FlipFinder() {
   const load = useCallback(async () => {
     try {
       const { rows: data, totalProducts } = await fetchBazaarFlips()
-      setRows(data)
-      setProductCount(totalProducts)
-      setLastUpdated(new Date())
-      setError(null)
+      setRows(data); setProductCount(totalProducts)
+      setLastUpdated(new Date()); setError(null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
@@ -193,25 +88,25 @@ export default function FlipFinder() {
     return () => clearInterval(id)
   }, [load])
 
-  function effectiveQty(row: FlipRow): number {
-    const bq = maxMoney !== '' && maxMoney > 0 ? Math.floor(maxMoney / row.buyOrder) : Infinity
-    const iq = maxItems !== '' && maxItems > 0 ? maxItems : Infinity
-    const mn = Math.min(bq, iq)
-    return Math.max(1, mn === Infinity ? 1 : mn)
-  }
-
-  const filtered = useMemo(() => {
+  const enriched = useMemo(() => {
     return rows
       .filter(r => !blocked.has(r.id))
       .filter(r => !hideManip || !r.manipulationFlag)
-      .filter(r => minWeeklyBuy  === '' || r.weeklyVolume   >= minWeeklyBuy)
-      .filter(r => minWeeklySell === '' || r.sellMovingWeek >= minWeeklySell)
-      .filter(r => minCurBuy     === '' || r.buyOrders      >= minCurBuy)
-      .filter(r => minCurSell    === '' || r.sellOrders     >= minCurSell)
+      .filter(r => minVolume === '' || Math.min(r.weeklyVolume, r.sellMovingWeek) >= minVolume)
       .filter(r => showFilter === 'all' || starred.has(r.id))
-      .sort((a, b) => (b.orderProfit * effectiveQty(b)) - (a.orderProfit * effectiveQty(a)))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, maxMoney, maxItems, minWeeklyBuy, minWeeklySell, minCurBuy, minCurSell, blocked, starred, showFilter, hideManip])
+      .map(r => {
+        const qty = realisticQty(r, budget, maxItems)
+        return { row: r, qty, estProfit: r.orderProfit * qty }
+      })
+      .filter(x => x.qty > 0 && x.estProfit > 0)
+      .sort((a, b) => {
+        if (sortKey === 'margin')     return b.row.orderMargin - a.row.orderMargin
+        if (sortKey === 'profitItem') return b.row.orderProfit - a.row.orderProfit
+        if (sortKey === 'fill')       return b.row.fillProbability - a.row.fillProbability
+        return b.estProfit - a.estProfit
+      })
+      .slice(0, 60)
+  }, [rows, budget, maxItems, minVolume, blocked, starred, showFilter, hideManip, sortKey])
 
   function toggleStar(id: string) {
     setStarred(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); localStorage.setItem('bf_starred', JSON.stringify([...n])); return n })
@@ -220,96 +115,189 @@ export default function FlipFinder() {
     setBlocked(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); localStorage.setItem('bf_blocked', JSON.stringify([...n])); return n })
   }
 
-  const topProfit = filtered[0] ? filtered[0].orderProfit * effectiveQty(filtered[0]) : 0
+  const topEst = enriched[0]?.estProfit ?? 0
+
+  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
+    { label: '#' },
+    { label: 'Item' },
+    { label: 'Buy Order',  align: 'right' },
+    { label: 'Sell Order', align: 'right' },
+    { label: 'Margin',     sort: 'margin', align: 'right' },
+    { label: 'Profit/it',  sort: 'profitItem', align: 'right' },
+    { label: 'Real Qty',   align: 'right' },
+    { label: 'Est Profit', sort: 'estProfit', align: 'right' },
+    { label: 'Fill',       sort: 'fill', align: 'right' },
+    { label: '' },
+  ]
 
   return (
     <div>
+      {/* ── Header ── */}
       <div className="page-header">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             {lastUpdated
               ? <span className="live-badge"><span className="pulse-dot" />Live</span>
-              : <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Loading…</span>}
-            {lastUpdated && <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{lastUpdated.toLocaleTimeString()}</span>}
+              : <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Connecting…</span>}
+            {lastUpdated && <span className="mono" style={{ fontSize: '0.68rem', color: 'var(--text2)' }}>{lastUpdated.toLocaleTimeString()}</span>}
             {error && <span style={{ fontSize: '0.7rem', color: 'var(--red)' }}>⚠ {error}</span>}
           </div>
           <h1 className="page-title">Order Flips</h1>
-          <p className="page-subtitle" style={{ marginTop: 4 }}>
-            Post buy + sell orders to capture the spread.{' '}
-            {productCount > 0 && <span style={{ color: 'var(--text2)' }}>{productCount.toLocaleString()} products tracked.</span>}
+          <p className="page-subtitle">
+            Post buy + sell orders to capture the spread · profit capped at {FLOW_CAPTURE * 100}% of real weekly flow
+            {productCount > 0 && <> · <span className="mono" style={{ color: 'var(--text2)' }}>{productCount.toLocaleString()}</span> products</>}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div className="stat-block" style={{ minWidth: 130 }}>
+            <div className="stat-label">Best Realistic</div>
+            <div className="stat-value" style={{ color: 'var(--green)' }}>
+              {loading ? '—' : <AnimatedNumber value={topEst} format={(n) => `+${coinsShort(n)}`} />}
+            </div>
+          </div>
           <div className="stat-block" style={{ minWidth: 110 }}>
-            <div className="stat-label">Best Profit</div>
-            <div className="stat-value mono" style={{ color: 'var(--green)', marginTop: 4 }}>
-              {loading ? '—' : `+${coins(topProfit)}`}
-            </div>
-          </div>
-          <div className="stat-block" style={{ minWidth: 100 }}>
             <div className="stat-label">Opportunities</div>
-            <div className="stat-value mono" style={{ marginTop: 4 }}>
-              {loading ? '—' : filtered.length}
-            </div>
+            <div className="stat-value">{loading ? '—' : enriched.length}</div>
           </div>
         </div>
       </div>
 
-      <div className="toolbar" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text2)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              className={`tab-btn${hideManip ? ' active-green' : ''}`}
-              onClick={() => setHideManip(v => !v)}
-              style={{ fontSize: '0.72rem', padding: '5px 12px' }}
+      {/* ── Control strip ── */}
+      <div className="toolbar">
+        <div className="control-field">
+          <label>Budget</label>
+          <input type="number" value={budget} min={0}
+            onChange={e => setBudget(e.target.value === '' ? '' : Number(e.target.value))} />
+        </div>
+        <div className="control-field">
+          <label>Max Items</label>
+          <input type="number" value={maxItems} min={0}
+            onChange={e => setMaxItems(e.target.value === '' ? '' : Number(e.target.value))} />
+        </div>
+        <div className="control-field">
+          <label>Min Wk Vol</label>
+          <input type="number" value={minVolume} min={0}
+            onChange={e => setMinVolume(e.target.value === '' ? '' : Number(e.target.value))} />
+        </div>
+        <button
+          className={`tab-btn${hideManip ? ' active-green' : ''}`}
+          onClick={() => setHideManip(v => !v)}
+          title="Filter out manipulated / fake-margin items"
+        >
+          {hideManip ? '✓ Manip filter' : 'Manip filter off'}
+        </button>
+        <button
+          className={`tab-btn${showFilter === 'starred' ? ' active-gold' : ''}`}
+          onClick={() => setShowFilter(f => f === 'all' ? 'starred' : 'all')}
+        >
+          ★ Starred
+        </button>
+        <span style={{ marginLeft: 'auto', fontSize: '0.62rem', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
+          QTY = MIN(BUDGET, MAX ITEMS, {FLOW_CAPTURE * 100}% WK FLOW)
+        </span>
+      </div>
+
+      {/* ── Terminal table ── */}
+      <div className="term-table">
+        <div className="term-head" style={{ gridTemplateColumns: GRID }}>
+          {HEAD.map((h, i) => (
+            <div
+              key={i}
+              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
+              style={{
+                textAlign: h.align ?? 'left',
+                cursor: h.sort ? 'pointer' : 'default',
+                color: h.sort && sortKey === h.sort ? 'var(--cyan)' : undefined,
+                userSelect: 'none',
+              }}
             >
-              {hideManip ? '✓ Manipulation filter ON' : 'Manipulation filter OFF'}
-            </button>
-            <select value={showFilter} onChange={e => setShowFilter(e.target.value as 'all' | 'starred')} className="styled-select" style={{ fontSize: '0.75rem' }}>
-              <option value="all">All Items</option>
-              <option value="starred">Starred Only</option>
-            </select>
+              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
+            </div>
+          ))}
+        </div>
+
+        {loading && Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+            <div className="skeleton" style={{ height: 30 }} />
           </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px 14px' }}>
-          <FilterField label="Max Budget"         value={maxMoney}      onChange={setMaxMoney} />
-          <FilterField label="Max Items / Flip"   value={maxItems}      onChange={setMaxItems} />
-          <FilterField label="Min Weekly Buy Vol"  value={minWeeklyBuy}  onChange={setMinWeeklyBuy} />
-          <FilterField label="Min Weekly Sell Vol" value={minWeeklySell} onChange={setMinWeeklySell} />
-          <FilterField label="Min Buy Orders"      value={minCurBuy}     onChange={setMinCurBuy} />
-          <FilterField label="Min Sell Orders"     value={minCurSell}    onChange={setMinCurSell} />
-        </div>
-      </div>
+        ))}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(268px, 1fr))', gap: 10 }}>
-        {loading && Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
-
-        {!loading && filtered.length === 0 && (
-          <div style={{
-            gridColumn: '1/-1', textAlign: 'center', padding: '60px 0',
-            color: 'var(--muted)', border: '1px dashed var(--border)',
-            borderRadius: 6,
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: 10, opacity: 0.15 }}>⊘</div>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>No flips match your filters</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Try lowering volume requirements or clearing blocked items</div>
+        {!loading && enriched.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '54px 0', color: 'var(--muted)' }}>
+            <div style={{ fontSize: '1.6rem', marginBottom: 8, opacity: 0.2 }}>⊘</div>
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 3, color: 'var(--text2)' }}>No flips match your filters</div>
+            <div style={{ fontSize: '0.72rem', opacity: 0.6 }}>Lower the volume requirement or disable the manipulation filter</div>
           </div>
         )}
 
-        {filtered.map(row => {
-          const qty = effectiveQty(row)
+        {!loading && enriched.map(({ row, qty, estProfit }, i) => {
+          const isOpen = expanded === row.id
+          const marginColor = row.orderMargin >= 8 ? 'var(--green)' : row.orderMargin >= 3 ? 'var(--gold)' : 'var(--text2)'
+          const fillColor   = row.fillProbability > 60 ? 'var(--green)' : row.fillProbability > 30 ? 'var(--gold)' : 'var(--red)'
           return (
-            <FlipCard
-              key={row.id}
-              row={row}
-              qty={qty}
-              profitTotal={row.orderProfit * qty}
-              starred={starred.has(row.id)}
-              blocked={blocked.has(row.id)}
-              onStar={() => toggleStar(row.id)}
-              onBlock={() => toggleBlock(row.id)}
-            />
+            <div key={row.id}>
+              <div
+                className="term-row"
+                style={{ gridTemplateColumns: GRID }}
+                onClick={() => setExpanded(isOpen ? null : row.id)}
+              >
+                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--muted)' }}>{i + 1}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                  <div style={{ width: 30, height: 30, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                    <ItemIcon id={row.id} name={row.name} size={24} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {row.name}
+                      {row.manipulationFlag && <Tag label="⚠" color="var(--red)" />}
+                      {starred.has(row.id) && <span style={{ color: 'var(--gold)', fontSize: '0.65rem' }}>★</span>}
+                    </div>
+                    <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      vol {coinsShort(Math.min(row.weeklyVolume, row.sellMovingWeek))}/wk
+                    </div>
+                  </div>
+                </div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--blue)' }}>{coins(row.buyOrder)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--cyan)' }}>{coins(row.sellOrder)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 700, color: marginColor }}>{row.orderMargin.toFixed(1)}%</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>{coins(row.orderProfit)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--text2)' }}>{qty.toLocaleString()}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.82rem', fontWeight: 800, color: 'var(--green)' }}>+{coinsShort(estProfit)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.74rem', fontWeight: 700, color: fillColor }}>{row.fillProbability}%</div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                  <button className={`icon-btn${starred.has(row.id) ? ' starred' : ''}`} onClick={(e) => { e.stopPropagation(); toggleStar(row.id) }} title="Star">★</button>
+                  <button className="icon-btn" onClick={(e) => { e.stopPropagation(); toggleBlock(row.id) }} title="Hide">✕</button>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="term-expand">
+                  {row.manipulationFlag && (
+                    <div style={{ marginBottom: 10, fontSize: '0.74rem', color: 'var(--red)', fontWeight: 600 }}>
+                      ⚠ {row.manipulationReason}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+                    {[
+                      { label: 'Total Cost',      val: coinsShort(row.buyOrder * qty),       color: 'var(--red)' },
+                      { label: 'Liquidity Score', val: `${row.liquidityScore}/100`,           color: row.liquidityScore > 60 ? 'var(--green)' : 'var(--gold)' },
+                      { label: 'Stability',       val: `${row.stabilityScore}/100`,           color: row.stabilityScore > 60 ? 'var(--green)' : 'var(--gold)' },
+                      { label: 'Hourly Flow',     val: `${coinsShort(row.hourlyThroughput)} items`, color: 'var(--text)' },
+                      { label: 'Weekly Buys',     val: coinsShort(row.weeklyVolume),          color: 'var(--text)' },
+                      { label: 'Weekly Sells',    val: coinsShort(row.sellMovingWeek),        color: 'var(--text)' },
+                      { label: 'Open Buy Orders', val: row.buyOrders.toLocaleString(),        color: 'var(--text2)' },
+                      { label: 'Open Sell Orders', val: row.sellOrders.toLocaleString(),      color: 'var(--text2)' },
+                      { label: 'Insta-flip P/L',  val: coins(row.instantProfit),              color: row.instantProfit > 0 ? 'var(--green)' : 'var(--red)' },
+                    ].map(({ label, val, color }) => (
+                      <div key={label}>
+                        <div style={{ fontSize: '0.56rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3, fontFamily: 'var(--font-mono)' }}>{label}</div>
+                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

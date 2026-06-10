@@ -154,11 +154,11 @@ function ProfitHero({ profit, cost, revenue, accent, label = 'Net Profit' }: {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</div>
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '1.75rem', fontWeight: 800, color: pos ? '#00e5a0' : '#ff5566', lineHeight: 1 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.75rem', fontWeight: 800, color: pos ? '#00e5a0' : '#ff5566', lineHeight: 1 }}>
             {pos ? '+' : ''}{fmt(profit)}
           </div>
           <div style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--text2)' }}>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', color: pos ? '#00e5a0' : '#ff5566', fontWeight: 700 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', color: pos ? '#00e5a0' : '#ff5566', fontWeight: 700 }}>
               {pos ? '+' : ''}{margin.toFixed(1)}%
             </span>
             {' '}margin
@@ -167,11 +167,11 @@ function ProfitHero({ profit, cost, revenue, accent, label = 'Net Profit' }: {
         <div style={{ display: 'flex', gap: 24 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Craft Cost</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.95rem', fontWeight: 700, color: '#ff5566' }}>{fmt(cost)}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 700, color: '#ff5566' }}>{fmt(cost)}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Revenue</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.95rem', fontWeight: 700, color: accent }}>{fmt(revenue)}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 700, color: accent }}>{fmt(revenue)}</div>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@ function ExecSelector({ weapon, mode, setMode, scrollsIncluded, accent }: {
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, color: active ? accent : 'var(--text)' }}>{c.label}</span>
                 {isBest && <span style={{ fontSize: '0.6rem', color: '#00e5a0', fontWeight: 800, letterSpacing: '0.05em' }}>BEST</span>}
               </div>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '1.05rem', fontWeight: 800, color: pnl >= 0 ? '#00e5a0' : '#ff5566', marginBottom: 6 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 800, color: pnl >= 0 ? '#00e5a0' : '#ff5566', marginBottom: 6 }}>
                 {pnl >= 0 ? '+' : ''}{fmtS(pnl)}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text2)', lineHeight: 1.4 }}>{c.desc}</div>
@@ -247,14 +247,14 @@ function ExecSelector({ weapon, mode, setMode, scrollsIncluded, accent }: {
         }}>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#00e5a0', marginBottom: 2 }}>
-              Buy Orders save <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmtS(boSaving)}</span>
+              Buy Orders save <span style={{ fontFamily: 'var(--font-mono)' }}>{fmtS(boSaving)}</span>
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text2)' }}>
               Place buy orders at the weighted avg sell price — sellers fill you for less than insta-buy
             </div>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.72rem', color: '#00e5a0', fontWeight: 700 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#00e5a0', fontWeight: 700 }}>
               {costs.INSTA_BUY > 0 ? ((boSaving / costs.INSTA_BUY) * 100).toFixed(1) : '0'}% cheaper
             </div>
           </div>
@@ -286,9 +286,9 @@ function ExecSelector({ weapon, mode, setMode, scrollsIncluded, accent }: {
                     <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
                     <div style={{ fontSize: '0.65rem', color: 'var(--text2)', marginTop: 1 }}>×{item.qty}</div>
                   </div>
-                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, color: useOrder ? 'var(--text2)' : '#ff5566' }}>{fmtS(item.pricing.instaBuy)}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, color: '#00e5a0' }}>{fmtS(item.pricing.buyOrder)}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, color: saving > 0 ? '#00e5a0' : 'var(--muted)' }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: useOrder ? 'var(--text2)' : '#ff5566' }}>{fmtS(item.pricing.instaBuy)}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: '#00e5a0' }}>{fmtS(item.pricing.buyOrder)}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: saving > 0 ? '#00e5a0' : 'var(--muted)' }}>
                     {saving > 100 ? `-${fmtS(saving)}` : '—'}
                   </div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text2)' }}>{item.pricing.fillTimeEst}</div>
@@ -331,11 +331,11 @@ function VariantPicker({ weapon, selected, setSelected, execMode, setScrolls, ac
               borderRadius: 10, padding: '16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
             }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: active ? accent : 'var(--text)', marginBottom: 8 }}>{v.label}</div>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 800, color: pos ? '#00e5a0' : '#ff5566', marginBottom: 6 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 800, color: pos ? '#00e5a0' : '#ff5566', marginBottom: 6 }}>
                 {pos ? '+' : ''}{fmtS(profit)}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text2)' }}>
-                LBIN <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text)' }}>{fmtS(v.estimatedLbin)}</span>
+                LBIN <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>{fmtS(v.estimatedLbin)}</span>
               </div>
               {v.scrollCount > 0 && (
                 <div style={{ marginTop: 6, fontSize: '0.65rem', color: '#a78bfa' }}>+{v.scrollCount} scroll{v.scrollCount > 1 ? 's' : ''}</div>
@@ -397,7 +397,7 @@ function ProfitEngine({ weapon, execMode, otc, variantIdx, scrolls, accent }: {
         <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
           Best Strategy: {bestLbl}
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 800, color: best >= 0 ? '#00e5a0' : '#ff5566', marginBottom: 8 }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.4rem', fontWeight: 800, color: best >= 0 ? '#00e5a0' : '#ff5566', marginBottom: 8 }}>
           {best >= 0 ? '+' : ''}{fmt(best)}
         </div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text2)' }}>
@@ -420,7 +420,7 @@ function ProfitEngine({ weapon, execMode, otc, variantIdx, scrolls, accent }: {
             borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none',
           }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text2)' }}>{r.label}</span>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, color: r.color }}>{r.val}</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: r.color }}>{r.val}</span>
           </div>
         ))}
       </div>
@@ -464,7 +464,7 @@ function OtcRow({ id, name, qty, marketUnit, source, history, execMode, entry, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginBottom: 2 }}>Market</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{fmtS(marketUnit)}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{fmtS(marketUnit)}</div>
           </div>
           <Sparkline data={history} color="var(--text2)" w={52} h={18} />
           {source === 'AH' && (
@@ -502,7 +502,7 @@ function OtcRow({ id, name, qty, marketUnit, source, history, execMode, entry, o
               <button key={label} onClick={() => onChange({ ...entry, rawInput: val > 0 ? `${(val / 1e6).toFixed(2)}m` : '' })}
                 style={{ background: 'var(--surface)', border: `1px solid ${color}25`, borderRadius: 8, padding: '8px 6px', cursor: 'pointer', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginBottom: 3 }}>{label}</div>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', fontWeight: 700, color }}>{val > 0 ? fmtS(val) : '—'}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 700, color }}>{val > 0 ? fmtS(val) : '—'}</div>
               </button>
             ))}
           </div>
@@ -516,7 +516,7 @@ function OtcRow({ id, name, qty, marketUnit, source, history, execMode, entry, o
               ].map(({ label, val, color }) => (
                 <div key={label} style={{ background: 'var(--surface)', borderRadius: 8, padding: '8px', textAlign: 'center', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: '0.6rem', color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
-                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.82rem', fontWeight: 800, color }}>{val}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 800, color }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -581,7 +581,7 @@ function OtcPanel({ weapon, accent, scrolls, variantIdx, execMode, otc, setOtc }
           ].map(({ label, val, color }) => (
             <div key={label}>
               <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</div>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.95rem', fontWeight: 800, color }}>{val}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.95rem', fontWeight: 800, color }}>{val}</div>
             </div>
           ))}
         </div>
@@ -590,7 +590,7 @@ function OtcPanel({ weapon, accent, scrolls, variantIdx, execMode, otc, setOtc }
       <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: scenColor, flexShrink: 0 }} />
         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: scenColor }}>{scenario}</span>
-        {anyActive && <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--text2)' }}>market base: <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{fmt(mktProfit)}</span></span>}
+        {anyActive && <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--text2)' }}>market base: <span style={{ fontFamily: 'var(--font-mono)' }}>{fmt(mktProfit)}</span></span>}
       </div>
 
       {alerts.map((a, i) => (
@@ -650,7 +650,7 @@ function IngCard({ item, execMode, otc }: { item: CraftIngredient | (ScrollAddon
         </div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.85rem', fontWeight: 700, color: isOtc ? '#00e5a0' : '#ff5566' }}>{fmtS(total)}</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: isOtc ? '#00e5a0' : '#ff5566' }}>{fmtS(total)}</div>
         <div style={{ fontSize: '0.62rem', color: 'var(--text2)', marginTop: 1 }}>{fmtS(eff)} ea</div>
       </div>
       <Sparkline data={item.priceHistory} w={48} h={18} />
@@ -690,7 +690,7 @@ function WeaponCard({ weapon, accent, execMode, otc, variantIdx, scrolls }: {
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>{weapon.name}</div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text2)', marginTop: 3 }}>
               {variant.label} · LBIN{' '}
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', color: accent, fontWeight: 700 }}>{fmtS(variant.estimatedLbin)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: accent, fontWeight: 700 }}>{fmtS(variant.estimatedLbin)}</span>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
@@ -702,7 +702,7 @@ function WeaponCard({ weapon, accent, execMode, otc, variantIdx, scrolls }: {
         <ProfitHero profit={profit} cost={effectiveCost} revenue={netRev} accent={accent} />
         {anyOtc && otcSaving > 0 && (
           <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#00e5a0', fontWeight: 600 }}>
-            OTC saves <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>+{fmtS(otcSaving)}</span> vs market
+            OTC saves <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800 }}>+{fmtS(otcSaving)}</span> vs market
           </div>
         )}
       </div>
@@ -776,10 +776,10 @@ function CompareTable({ hyperion, terminator, execH, execT, otcH, otcT }: {
       {rows.map((row, i) => (
         <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none' }}>
           <div style={{ padding: '11px 16px', fontSize: '0.78rem', color: 'var(--text2)', fontWeight: 500 }}>{row.label}</div>
-          <div style={{ padding: '11px 16px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', color: row.hColor ?? (row.winner === 'h' ? '#00e5a0' : 'var(--text2)'), background: row.winner === 'h' ? 'rgba(0,229,160,0.04)' : 'transparent' }}>
+          <div style={{ padding: '11px 16px', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', color: row.hColor ?? (row.winner === 'h' ? '#00e5a0' : 'var(--text2)'), background: row.winner === 'h' ? 'rgba(0,229,160,0.04)' : 'transparent' }}>
             {row.h}{row.winner === 'h' && <span style={{ marginLeft: 5, fontSize: '0.6rem', color: '#00e5a0' }}>✓</span>}
           </div>
-          <div style={{ padding: '11px 16px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', color: row.tColor ?? (row.winner === 't' ? '#00e5a0' : 'var(--text2)'), background: row.winner === 't' ? 'rgba(167,139,250,0.04)' : 'transparent' }}>
+          <div style={{ padding: '11px 16px', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', color: row.tColor ?? (row.winner === 't' ? '#00e5a0' : 'var(--text2)'), background: row.winner === 't' ? 'rgba(167,139,250,0.04)' : 'transparent' }}>
             {row.t}{row.winner === 't' && <span style={{ marginLeft: 5, fontSize: '0.6rem', color: '#00e5a0' }}>✓</span>}
           </div>
         </div>

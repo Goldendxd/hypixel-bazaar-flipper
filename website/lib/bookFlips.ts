@@ -15,6 +15,7 @@ export interface BookFlipRow {
   sellVolume: number
   buyVolume: number
   iconUrl: string
+  warning: string | null   // exit-price reliability flag — verify in-game when set
 }
 
 export async function fetchBookFlips(): Promise<{ rows: BookFlipRow[]; totalCandidates: number; aiSummary: string | null }> {

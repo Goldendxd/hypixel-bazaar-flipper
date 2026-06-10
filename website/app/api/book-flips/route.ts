@@ -47,6 +47,9 @@ export interface BookFlipRow {
   sellVolume: number
   buyVolume: number
   iconUrl: string
+  // Set when the flip is technically possible but the exit price is unreliable
+  // (phantom T7 bids, near-zero demand). Always verify in-game before executing.
+  warning: string | null
 }
 
 async function askGemini(prompt: string): Promise<string | null> {
@@ -152,6 +155,17 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
 
         const margin = Math.round((profit / inputTotalCost) * 10000) / 100
 
+        // Exit-price reliability: huge margins on drop-tier outputs usually mean
+        // the top bid is a phantom order that vanishes when you try to sell into it.
+        let warning: string | null = null
+        if (outputTier >= 6 && outSellVol < 300) {
+          warning = `Only ${outSellVol} insta-sells/week at T${outputTier} — bid depth likely phantom, verify in-game`
+        } else if (margin > 300) {
+          warning = 'Margin >300% — top bid may be bait; sell order can sit unfilled for days'
+        } else if (outBuyVol < 20) {
+          warning = 'Almost zero buy demand on output tier — slow exit'
+        }
+
         const inputId  = `${base}_${inputTier}`
         const outputId = `${base}_${outputTier}`
 
@@ -172,6 +186,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
           sellVolume:  outSellVol,
           buyVolume:   outBuyVol,
           iconUrl: `https://sky.shiiyu.moe/item/${outputId}`,
+          warning,
         })
       }
     }
@@ -188,7 +203,11 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
   }
 
   const deduped = Array.from(bestByOutput.values())
-  deduped.sort((a, b) => b.profit - a.profit)
+  // Reliable flips first (by profit), then flagged ones (by profit)
+  deduped.sort((a, b) => {
+    if (!!a.warning !== !!b.warning) return a.warning ? 1 : -1
+    return b.profit - a.profit
+  })
 
   // Gemini analysis of top flips
   let aiSummary: string | null = null
