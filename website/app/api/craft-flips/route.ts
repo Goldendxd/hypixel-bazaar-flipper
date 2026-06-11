@@ -2,165 +2,156 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Server-side in-memory cache so we don't re-fetch 1913 items every request
 let cachedResult: object | null = null
 let cacheTime = 0
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = 2 * 60 * 1000
 
-const TAX = 0.0125
-const NEU_BASE = 'https://raw.githubusercontent.com/NotEnoughUpdates/NotEnoughUpdates-REPO/master/items'
+// Sell-side fee. Most craft-flip outputs exit via AH BIN (~2% with claiming
+// tax) — bazaar exits are cheaper (1.25%), so 2% is the conservative bound.
+const SELL_FEE = 0.02
+const MIN_VOLUME = 3          // recent sales of the crafted item
+const MAX_ROWS = 80
 
-function parseIngredients(recipe: Record<string, string>): { id: string; count: number }[] {
-  const counts: Record<string, number> = {}
-  for (const [key, val] of Object.entries(recipe)) {
-    if (key === 'count') continue
-    if (!val || val === '') continue
-    const parts = val.split(':')
-    const id = parts[0].trim().toUpperCase()
-    const cnt = parseInt(parts[1] ?? '1', 10) || 1
-    counts[id] = (counts[id] ?? 0) + cnt
-  }
-  return Object.entries(counts).map(([id, count]) => ({ id, count }))
+export interface CraftIngredientRow {
+  id: string
+  name: string
+  qty: number
+  instaCost: number       // buy instantly
+  orderCost: number       // patient buy order
+  isCrafted: boolean      // cheaper to sub-craft than to buy
+  iconUrl: string
 }
 
-async function fetchNEURecipe(id: string): Promise<Record<string, string> | null> {
-  try {
-    const res = await fetch(`${NEU_BASE}/${id}.json`, {
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.recipe ?? null
-  } catch {
-    return null
-  }
+export interface CraftFlipRow {
+  id: string
+  name: string
+  iconUrl: string
+  sellPrice: number          // live sell price (lbin / bazaar ask)
+  median: number             // median of recent sales — the sanity anchor
+  craftCostInsta: number
+  craftCostOrder: number
+  profitInsta: number        // sell × (1−fee) − insta cost
+  profitOrder: number        // sell × (1−fee) − order cost
+  marginInsta: number
+  marginOrder: number
+  volume: number             // recent sales count
+  reqCollection: { name: string; level: number } | null
+  reqSlayer: { name: string; level: number } | null
+  manipulated: boolean
+  manipulationReason: string | null
+  ingredients: CraftIngredientRow[]
 }
 
-async function computeFlips() {
-  // Fetch bazaar data
-  const bazRes = await fetch('https://api.hypixel.net/skyblock/bazaar', {
-    signal: AbortSignal.timeout(15000),
-  })
-  if (!bazRes.ok) throw new Error('Bazaar fetch failed')
-  const baz = await bazRes.json()
+interface CoflnetCraft {
+  itemId: string
+  itemName: string | null
+  sellPrice: number
+  craftCost: number
+  buyOrderCraftCost: number
+  ingredients: Array<{
+    itemId: string
+    count: number
+    cost: number
+    buyOrderCost: number | null
+    craftCost?: number | null
+    type: string | null
+  }>
+  reqCollection: { name: string; level: number } | null
+  reqSlayer: { name: string; level: number } | null
+  volume: number
+  median: number
+}
 
-  const products: Record<string, { quick_status: { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number; buyOrders: number; sellOrders: number } }> = baz.products
-  const allIds = Object.keys(products)
+function stripCodes(s: string): string {
+  return s.replace(/§[0-9a-fklmnor]/gi, '').trim()
+}
 
-  const buyPrices: Record<string, number> = {}    // lowest ask — cost to buy now
-  const sellBids: Record<string, number> = {}     // highest bid — what you get
-  const weeklyVols: Record<string, number> = {}
-  const sellVols: Record<string, number> = {}
-  const buyOrders: Record<string, number> = {}
-  const sellOrders: Record<string, number> = {}
+function titleCase(id: string): string {
+  return id.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
 
-  for (const [id, p] of Object.entries(products)) {
-    const q = p.quick_status
-    buyPrices[id] = q.buyPrice
-    sellBids[id] = q.sellPrice
-    weeklyVols[id] = q.buyMovingWeek
-    sellVols[id] = q.sellMovingWeek
-    buyOrders[id] = q.buyOrders
-    sellOrders[id] = q.sellOrders
-  }
+async function compute(): Promise<{ rows: CraftFlipRow[]; totalCandidates: number }> {
+  const res = await fetch('https://sky.coflnet.com/api/craft/profit', { signal: AbortSignal.timeout(20000) })
+  if (!res.ok) throw new Error(`Coflnet craft API failed: ${res.status}`)
+  const crafts: CoflnetCraft[] = await res.json()
 
-  const maxVol = Math.max(...Object.values(weeklyVols), 1)
+  const rows: CraftFlipRow[] = []
 
-  // Fetch all recipes in parallel (50 concurrent)
-  const BATCH = 50
-  const recipeMap: Record<string, Record<string, string>> = {}
+  for (const c of crafts) {
+    if (!c.itemId || c.sellPrice <= 0 || c.craftCost <= 0) continue
+    if ((c.volume ?? 0) < MIN_VOLUME) continue
 
-  for (let i = 0; i < allIds.length; i += BATCH) {
-    const batch = allIds.slice(i, i + BATCH)
-    const results = await Promise.allSettled(
-      batch.map(async (id) => ({ id, recipe: await fetchNEURecipe(id) }))
-    )
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.recipe) {
-        recipeMap[r.value.id] = r.value.recipe
-      }
+    const revenue = c.sellPrice * (1 - SELL_FEE)
+    const craftCostInsta = c.craftCost
+    const craftCostOrder = c.buyOrderCraftCost > 0 ? c.buyOrderCraftCost : c.craftCost
+
+    const profitInsta = revenue - craftCostInsta
+    const profitOrder = revenue - craftCostOrder
+    if (profitOrder <= 0) continue
+
+    // Manipulation: live sell price far above what items actually sell for
+    let manipulated = false
+    let manipulationReason: string | null = null
+    if (c.median > 0 && c.sellPrice > c.median * 2.5) {
+      manipulated = true
+      manipulationReason = `Listed at ${Math.round(c.sellPrice / c.median * 10) / 10}× the median sale price — the "profit" likely never fills`
+    } else if (c.median > 0 && c.sellPrice > c.median * 1.6 && (c.volume ?? 0) < 10) {
+      manipulated = true
+      manipulationReason = 'Price well above median on thin volume — verify in-game first'
     }
-  }
 
-  // Compute profitable crafts
-  const rows = []
-
-  for (const [itemId, recipe] of Object.entries(recipeMap)) {
-    const outputCount = parseInt(recipe['count'] ?? '1', 10) || 1
-    const ings = parseIngredients(recipe)
-    if (ings.length === 0) continue
-
-    const sellBid = sellBids[itemId]
-    if (!sellBid || sellBid <= 0) continue
-
-    // Cost: buy all ingredients at instant-buy (lowest ask)
-    let ingredientCost = 0
-    const recipeDetails = []
-    let feasible = true
-
-    for (const { id: ingId, count } of ings) {
-      const price = buyPrices[ingId]
-      if (!price || price <= 0) { feasible = false; break }
-      ingredientCost += price * count
-      recipeDetails.push({ id: ingId, count, unitPrice: Math.round(price * 100) / 100 })
-    }
-    if (!feasible || ingredientCost <= 0) continue
-
-    // Sell via order: just below current lowest ask (buyPrice - 0.1)
-    const sellOrder = Math.round((buyPrices[itemId] ?? sellBid) * 100 - 10) / 100
-    const revenue = sellOrder * (1 - TAX) * outputCount
-    const profitPerCraft = Math.round((revenue - ingredientCost) * 100) / 100
-    if (profitPerCraft <= 0) continue
-
-    const margin = Math.round((profitPerCraft / ingredientCost) * 10000) / 100
-
-    const wVol = weeklyVols[itemId] ?? 0
-    const volScore = Math.min(100, (wVol / maxVol) * 100)
-    const depthPenalty = Math.min(100, (((buyOrders[itemId] ?? 0) + (sellOrders[itemId] ?? 0)) / 200) * 100)
-    const fillScore = Math.round(volScore * 0.7 + (100 - depthPenalty) * 0.3)
-
-    const craftCount = Math.max(1, Math.floor(10_000_000 / ingredientCost))
-    const totalProfit = Math.round(profitPerCraft * craftCount * 100) / 100
+    const ingredients: CraftIngredientRow[] = (c.ingredients ?? []).map(ing => ({
+      id: ing.itemId,
+      name: titleCase(ing.itemId),
+      qty: ing.count,
+      instaCost: Math.round(ing.cost),
+      orderCost: Math.round(ing.buyOrderCost ?? ing.cost),
+      isCrafted: ing.type === 'craft',
+      iconUrl: `https://sky.shiiyu.moe/item/${ing.itemId}`,
+    }))
 
     rows.push({
-      id: itemId,
-      ingredientCost: Math.round(ingredientCost * 100) / 100,
-      sellPrice: sellOrder,
-      profitPerCraft,
-      margin,
-      weeklyVolume: wVol,
-      sellMovingWeek: sellVols[itemId] ?? 0,
-      fillScore,
-      craftCount,
-      totalProfit,
-      outputCount,
-      recipe: recipeDetails,
+      id: c.itemId,
+      name: c.itemName ? stripCodes(c.itemName) : titleCase(c.itemId),
+      iconUrl: `https://sky.shiiyu.moe/item/${c.itemId}`,
+      sellPrice: Math.round(c.sellPrice),
+      median: Math.round(c.median ?? 0),
+      craftCostInsta: Math.round(craftCostInsta),
+      craftCostOrder: Math.round(craftCostOrder),
+      profitInsta: Math.round(profitInsta),
+      profitOrder: Math.round(profitOrder),
+      marginInsta: Math.round((profitInsta / craftCostInsta) * 1000) / 10,
+      marginOrder: Math.round((profitOrder / craftCostOrder) * 1000) / 10,
+      volume: c.volume ?? 0,
+      reqCollection: c.reqCollection,
+      reqSlayer: c.reqSlayer,
+      manipulated,
+      manipulationReason,
+      ingredients,
     })
   }
 
-  rows.sort((a, b) => b.totalProfit - a.totalProfit)
-  return { rows, totalProducts: allIds.length }
+  // Clean rows first by patient-route profit, flagged rows after
+  rows.sort((a, b) => {
+    if (a.manipulated !== b.manipulated) return a.manipulated ? 1 : -1
+    return b.profitOrder - a.profitOrder
+  })
+  const trimmed = rows.slice(0, MAX_ROWS)
+
+  return { rows: trimmed, totalCandidates: crafts.length }
 }
 
 export async function GET() {
   const now = Date.now()
   if (cachedResult && now - cacheTime < CACHE_TTL) {
-    return NextResponse.json(cachedResult, {
-      headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'HIT' },
-    })
+    return NextResponse.json(cachedResult, { headers: { 'Cache-Control': 'public, s-maxage=120', 'X-Cache': 'HIT' } })
   }
-
   try {
-    const result = await computeFlips()
+    const result = await compute()
     cachedResult = result
     cacheTime = Date.now()
-    return NextResponse.json(result, {
-      headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'MISS' },
-    })
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=120', 'X-Cache': 'MISS' } })
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
   }
 }

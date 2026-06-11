@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server'
 
 const BZ_API     = 'https://api.hypixel.net/v2/skyblock/bazaar'
 const ELECTION   = 'https://api.hypixel.net/v2/resources/skyblock/election'
-const GEMINI_KEY = 'AIzaSyDtzLvCVeHYFLsp0DR3ftPyCwA7b_Evr50'
+const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 const TAX        = 0.0125     // bazaar sell tax (1.25% base)
 const CACHE_TTL  = 60_000
 
@@ -129,6 +129,7 @@ async function fetchMayor(): Promise<{ name: string; perks: string[]; impact: st
 // ─── Gemini ───────────────────────────────────────────────────────────────────
 
 async function askGemini(prompt: string): Promise<string | null> {
+  if (!GEMINI_KEY) return null
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,

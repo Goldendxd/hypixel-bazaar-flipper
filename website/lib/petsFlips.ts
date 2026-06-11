@@ -1,22 +1,23 @@
-export type FlipStrategy = 'KAT_UPGRADE' | 'TIER_BOOST'
-
 export interface KatFlipRow {
   tag: string
   name: string
-  strategy: FlipStrategy
   buyRarity: string
   sellRarity: string
   iconUrl: string
   buyPrice: number
-  upgradeCost: number       // coins paid to Kat NPC
-  materialCost: number      // bazaar items cost
-  tierBoostCost: number     // 0 for Kat upgrade strategy
+  upgradeCost: number
+  materialCost: number
   totalCost: number
-  sellPrice: number         // after 2% AH tax
+  sellPrice: number
+  grossSell: number
   profit: number
   roi: number
   upgradeHours: number
-  materials: Array<{ name: string; qty: number; cost: number }>
+  profitPerHour: number
+  weeklySales: number
+  materials: Array<{ id: string; name: string; qty: number }>
+  risk: 'LOW' | 'MEDIUM' | 'HIGH'
+  riskReason: string | null
   aiTip: string | null
 }
 

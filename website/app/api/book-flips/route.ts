@@ -7,28 +7,22 @@ let cacheTime = 0
 const CACHE_TTL = 60_000
 
 const TAX = 0.0125
-const GEMINI_KEY = 'AIzaSyDtzLvCVeHYFLsp0DR3ftPyCwA7b_Evr50'
+const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 
-// Enchantment book combining on the anvil: 2× Tier N → 1× Tier N+1
-// All routes checked: TN→TM where M > N, cost = 2^(M-N) × price(TN)
-// We check every (inputTier, outputTier) pair where both exist on bazaar.
+// ── Enchantment book combining ───────────────────────────────────────────────
+// 2× Tier N combine into 1× Tier N+1 on the anvil, so reaching tier T from
+// tier i costs 2^(T−i) input books.
 //
-// GAME-RULE VALIDITY (critical):
-//  - Tier 6 books of classic enchants (Sharpness VI, Growth VI, Power VI, …)
-//    are DROP-ONLY. 2× Tier V does NOT combine into Tier VI.
-//  - 2× Tier VI → Tier VII IS a legal combine (both books are drop-tier).
-//  - Therefore any route that crosses the T5→T6 boundary is impossible in-game
-//    and must never be shown as a flip.
-//  - Ultimate/Kuudra enchants max at Tier V on the bazaar and combine freely
-//    within 1–5, so the same boundary rule covers them safely.
+// HOUSE RULE: we only surface flips whose OUTPUT is Tier 5 or below
+// (e.g. craft up to Ultimate Wise V). Tier 6/7 classic books are drop-only
+// or phantom-bid traps and are deliberately excluded.
+const MAX_OUTPUT_TIER = 5
 
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+// Liquidity gates
+const MIN_EXIT_INSTABUYS_WEEK = 25   // people insta-buying the output (fills your sell offer)
+const MIN_INPUT_FILL_RATIO    = 8    // input weekly insta-sells must be ≥ 8× the books you need
 
-function isValidCombine(inputTier: number, outputTier: number): boolean {
-  // Block any chain that would have to craft a drop-only Tier 6 book
-  if (inputTier <= 5 && outputTier >= 6) return false
-  return true
-}
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
 
 export interface BookFlipRow {
   outputId: string
@@ -37,22 +31,30 @@ export interface BookFlipRow {
   inputId: string
   inputTier: number
   outputTier: number
-  inputQty: number           // 2^(outputTier - inputTier)
-  inputUnitPrice: number
-  inputTotalCost: number
-  outputSellPrice: number
-  revenue: number
-  profit: number
+  inputQty: number
+
+  // Acquisition: place a buy order just above the top bid
+  inputBuyOrder: number       // per book
+  inputTotalCost: number      // buy order × qty
+  inputInstaCost: number      // insta-buy total (impatient route)
+
+  // Exit: place a sell offer just under the lowest ask
+  outputSellOffer: number
+  revenue: number             // sell offer × (1 − tax)
+  profit: number              // patient route profit
   margin: number
-  sellVolume: number
-  buyVolume: number
+
+  // Safety: what if you have to insta-sell into the top bid instead?
+  instaExitProfit: number
+
+  exitWeeklyInstabuys: number // how fast your sell offer fills
+  inputWeeklyInstasells: number
   iconUrl: string
-  // Set when the flip is technically possible but the exit price is unreliable
-  // (phantom T7 bids, near-zero demand). Always verify in-game before executing.
   warning: string | null
 }
 
 async function askGemini(prompt: string): Promise<string | null> {
+  if (!GEMINI_KEY) return null
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
@@ -69,17 +71,7 @@ async function askGemini(prompt: string): Promise<string | null> {
   } catch { return null }
 }
 
-function enchantDisplayName(base: string, level: number): string {
-  const name = base
-    .replace(/^ENCHANTMENT_/, '')
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(w => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(' ')
-  return `${name} ${ROMAN[level] ?? String(level)}`
-}
-
-function enchantBaseName(base: string): string {
+function baseName(base: string): string {
   return base
     .replace(/^ENCHANTMENT_/, '')
     .replace(/_/g, ' ')
@@ -88,34 +80,23 @@ function enchantBaseName(base: string): string {
     .join(' ')
 }
 
+type QS = { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number }
+
 async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number; aiSummary: string | null }> {
-  const bazRes = await fetch('https://api.hypixel.net/v2/skyblock/bazaar', {
-    signal: AbortSignal.timeout(15000),
-  })
+  const bazRes = await fetch('https://api.hypixel.net/v2/skyblock/bazaar', { signal: AbortSignal.timeout(15000) })
   if (!bazRes.ok) throw new Error(`Bazaar fetch failed: ${bazRes.status}`)
   const baz = await bazRes.json()
+  const products = baz.products as Record<string, { quick_status: QS }>
 
-  const products = baz.products as Record<string, {
-    quick_status: {
-      buyPrice: number
-      sellPrice: number
-      buyMovingWeek: number
-      sellMovingWeek: number
-    }
-  }>
-
-  // Group enchants by base name → map of tier → quick_status
-  const enchants: Record<string, Record<number, typeof products[string]['quick_status']>> = {}
-
+  // Group enchant products by base name → tier → quick_status
+  const enchants: Record<string, Record<number, QS>> = {}
   for (const id of Object.keys(products)) {
     if (!id.startsWith('ENCHANTMENT_')) continue
     const match = id.match(/^(.*?)_(\d+)$/)
     if (!match) continue
-    const base = match[1]
     const tier = parseInt(match[2], 10)
     if (tier < 1 || tier > 7) continue
-    if (!enchants[base]) enchants[base] = {}
-    enchants[base][tier] = products[id].quick_status
+    ;(enchants[match[1]] ??= {})[tier] = products[id].quick_status
   }
 
   const rows: BookFlipRow[] = []
@@ -123,128 +104,107 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
 
   for (const [base, tiers] of Object.entries(enchants)) {
     const tierNums = Object.keys(tiers).map(Number).sort((a, b) => a - b)
-    if (tierNums.length < 2) continue
 
-    // Check every (inputTier → outputTier) pair where output > input
-    for (let inIdx = 0; inIdx < tierNums.length - 1; inIdx++) {
-      for (let outIdx = inIdx + 1; outIdx < tierNums.length; outIdx++) {
-        const inputTier  = tierNums[inIdx]
-        const outputTier = tierNums[outIdx]
-        if (!isValidCombine(inputTier, outputTier)) continue  // skip impossible in-game routes
-        const steps      = outputTier - inputTier
-        const inputQty   = Math.pow(2, steps)  // 2^steps books needed
+    for (const outputTier of tierNums) {
+      if (outputTier < 2 || outputTier > MAX_OUTPUT_TIER) continue
+      const out = tiers[outputTier]
 
-        const inStatus  = tiers[inputTier]
-        const outStatus = tiers[outputTier]
+      // Exit liquidity: your sell offer is consumed by insta-buyers
+      const exitVol = out.buyMovingWeek
+      if (out.buyPrice <= 0 || exitVol < MIN_EXIT_INSTABUYS_WEEK) continue
 
-        const inBuy      = inStatus.buyPrice
-        const outSell    = outStatus.sellPrice
-        const outSellVol = outStatus.sellMovingWeek
-        const outBuyVol  = outStatus.buyMovingWeek
+      const outputSellOffer = Math.round((out.buyPrice - 0.1) * 100) / 100
+      const revenue = Math.round(outputSellOffer * (1 - TAX) * 100) / 100
+      const instaExitRevenue = Math.round(out.sellPrice * (1 - TAX) * 100) / 100
 
-        if (inBuy <= 0) continue      // not buyable at this tier
-        if (outSellVol < 50) continue // no real exit liquidity
+      let best: BookFlipRow | null = null
+
+      for (const inputTier of tierNums) {
+        if (inputTier >= outputTier) break
+        const inp = tiers[inputTier]
+        const qty = Math.pow(2, outputTier - inputTier)
+        if (qty > 64) continue  // 6+ combine steps is not a realistic session
+
+        // Acquisition: buy order at top bid + 0.1; needs insta-sellers to fill
+        if (inp.sellPrice <= 0 && inp.buyPrice <= 0) continue
+        const unitOrder = inp.sellPrice > 0 ? inp.sellPrice + 0.1 : inp.buyPrice
+        if (inp.sellMovingWeek < qty * MIN_INPUT_FILL_RATIO) continue
 
         totalCandidates++
 
-        const inputTotalCost = Math.round(inBuy * inputQty * 100) / 100
-        const sellOrder      = Math.round((outSell - 0.1) * 100) / 100
-        const revenue        = Math.round(sellOrder * (1 - TAX) * 100) / 100
-        const profit         = Math.round((revenue - inputTotalCost) * 100) / 100
+        const inputBuyOrder = Math.round(unitOrder * 100) / 100
+        const inputTotalCost = Math.round(unitOrder * qty * 100) / 100
+        const inputInstaCost = Math.round(inp.buyPrice * qty * 100) / 100
+
+        const profit = Math.round((revenue - inputTotalCost) * 100) / 100
         if (profit <= 0) continue
-
         const margin = Math.round((profit / inputTotalCost) * 10000) / 100
+        const instaExitProfit = Math.round((instaExitRevenue - inputTotalCost) * 100) / 100
 
-        // Exit-price reliability: huge margins on drop-tier outputs usually mean
-        // the top bid is a phantom order that vanishes when you try to sell into it.
         let warning: string | null = null
-        if (outputTier >= 6 && outSellVol < 300) {
-          warning = `Only ${outSellVol} insta-sells/week at T${outputTier} — bid depth likely phantom, verify in-game`
-        } else if (margin > 300) {
-          warning = 'Margin >300% — top bid may be bait; sell order can sit unfilled for days'
-        } else if (outBuyVol < 20) {
-          warning = 'Almost zero buy demand on output tier — slow exit'
+        if (margin > 200) {
+          warning = 'Margin >200% — the ask is probably a bait listing; your offer may sit for days'
+        } else if (instaExitProfit < 0 && profit > 0) {
+          warning = 'Profit depends entirely on a patient sell offer — insta-sell exit is a loss'
+        } else if (exitVol < 80) {
+          warning = `Only ${exitVol} insta-buys/week on the output — slow exit`
         }
 
-        const inputId  = `${base}_${inputTier}`
-        const outputId = `${base}_${outputTier}`
-
-        rows.push({
-          outputId,
-          outputName:     enchantDisplayName(base, outputTier),
-          enchantName:    enchantBaseName(base),
-          inputId,
-          inputTier,
-          outputTier,
-          inputQty,
-          inputUnitPrice:  Math.round(inBuy * 100) / 100,
-          inputTotalCost,
-          outputSellPrice: sellOrder,
-          revenue,
-          profit,
-          margin,
-          sellVolume:  outSellVol,
-          buyVolume:   outBuyVol,
-          iconUrl: `https://sky.shiiyu.moe/item/${outputId}`,
+        const candidate: BookFlipRow = {
+          outputId: `${base}_${outputTier}`,
+          outputName: `${baseName(base)} ${ROMAN[outputTier]}`,
+          enchantName: baseName(base),
+          inputId: `${base}_${inputTier}`,
+          inputTier, outputTier, inputQty: qty,
+          inputBuyOrder, inputTotalCost, inputInstaCost,
+          outputSellOffer, revenue, profit, margin,
+          instaExitProfit,
+          exitWeeklyInstabuys: exitVol,
+          inputWeeklyInstasells: inp.sellMovingWeek,
+          iconUrl: `https://sky.shiiyu.moe/item/ENCHANTED_BOOK`,
           warning,
-        })
+        }
+        if (!best || candidate.profit > best.profit) best = candidate
       }
+
+      if (best) rows.push(best)
     }
   }
 
-  // Deduplicate: for same (enchantBase, outputTier), keep only the best-profit input route
-  const bestByOutput = new Map<string, BookFlipRow>()
-  for (const row of rows) {
-    const key = `${row.enchantName}__${row.outputTier}`
-    const existing = bestByOutput.get(key)
-    if (!existing || row.profit > existing.profit) {
-      bestByOutput.set(key, row)
-    }
-  }
-
-  const deduped = Array.from(bestByOutput.values())
-  // Reliable flips first (by profit), then flagged ones (by profit)
-  deduped.sort((a, b) => {
+  // Clean flips first (by profit), flagged ones after
+  rows.sort((a, b) => {
     if (!!a.warning !== !!b.warning) return a.warning ? 1 : -1
     return b.profit - a.profit
   })
 
-  // Gemini analysis of top flips
   let aiSummary: string | null = null
-  const top5 = deduped.slice(0, 5)
+  const top5 = rows.slice(0, 5)
   if (top5.length > 0) {
-    const prompt = `You are a Hypixel SkyBlock bazaar expert. Here are the top 5 enchantment book combine flips right now:
+    aiSummary = await askGemini(
+      `You are a Hypixel SkyBlock bazaar expert. Top 5 enchanted book combine flips right now (all outputs are Tier 5 or lower, crafted by combining lower-tier books):
 
 ${top5.map((r, i) =>
-  `${i + 1}. Buy ${r.inputQty}× ${r.enchantName} ${ROMAN[r.inputTier]} at ${r.inputUnitPrice.toLocaleString()} each (total ${r.inputTotalCost.toLocaleString()}), combine to ${r.enchantName} ${ROMAN[r.outputTier]}, sell ~${r.outputSellPrice.toLocaleString()} → profit ${r.profit.toLocaleString()} coins (${r.margin.toFixed(1)}% margin). Weekly sell vol: ${r.sellVolume.toLocaleString()}`
+  `${i + 1}. Buy-order ${r.inputQty}× ${r.enchantName} ${ROMAN[r.inputTier]} @ ${r.inputBuyOrder.toLocaleString()} (total ${r.inputTotalCost.toLocaleString()}), combine to ${r.outputName}, sell-offer ${r.outputSellOffer.toLocaleString()} → profit ${r.profit.toLocaleString()} (${r.margin.toFixed(0)}%). Output insta-buys/wk: ${r.exitWeeklyInstabuys.toLocaleString()}`
 ).join('\n')}
 
-For each, give ONE short tip (max 15 words): is the volume real, is the price likely manipulated, or is it genuinely good? Format: numbered list 1-5 only.`
-
-    aiSummary = await askGemini(prompt)
+For each give ONE short tip (max 15 words): real volume, manipulation risk, or genuinely good? Numbered list 1-5 only.`
+    )
   }
 
-  return { rows: deduped, totalCandidates, aiSummary }
+  return { rows, totalCandidates, aiSummary }
 }
 
 export async function GET() {
   const now = Date.now()
   if (cachedResult && now - cacheTime < CACHE_TTL) {
-    return NextResponse.json(cachedResult, {
-      headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'HIT' },
-    })
+    return NextResponse.json(cachedResult, { headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'HIT' } })
   }
   try {
     const result = await compute()
     cachedResult = result
     cacheTime = Date.now()
-    return NextResponse.json(result, {
-      headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'MISS' },
-    })
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=60', 'X-Cache': 'MISS' } })
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Unknown error' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 })
   }
 }

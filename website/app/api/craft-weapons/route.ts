@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 const COFL       = 'https://sky.coflnet.com/api/item/price'
 const BZ_API     = 'https://api.hypixel.net/v2/skyblock/bazaar'
-const GEMINI_KEY = 'AIzaSyDtzLvCVeHYFLsp0DR3ftPyCwA7b_Evr50'
+const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 const AH_TAX     = 0.02
 const CACHE_TTL  = 3 * 60 * 1000
 
@@ -332,6 +332,7 @@ async function buildWeapon(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function askGemini(prompt: string): Promise<string | null> {
+  if (!GEMINI_KEY) return null
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,

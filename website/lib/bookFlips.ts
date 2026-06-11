@@ -5,17 +5,19 @@ export interface BookFlipRow {
   inputId: string
   inputTier: number
   outputTier: number
-  inputQty: number           // 2^(outputTier - inputTier)
-  inputUnitPrice: number
+  inputQty: number
+  inputBuyOrder: number
   inputTotalCost: number
-  outputSellPrice: number
+  inputInstaCost: number
+  outputSellOffer: number
   revenue: number
   profit: number
   margin: number
-  sellVolume: number
-  buyVolume: number
+  instaExitProfit: number
+  exitWeeklyInstabuys: number
+  inputWeeklyInstasells: number
   iconUrl: string
-  warning: string | null   // exit-price reliability flag — verify in-game when set
+  warning: string | null
 }
 
 export async function fetchBookFlips(): Promise<{ rows: BookFlipRow[]; totalCandidates: number; aiSummary: string | null }> {

@@ -60,6 +60,7 @@ async function computeFlips(): Promise<{ rows: FusionFlipRow[]; totalShards: num
   const [fusionRes, bazRes] = await Promise.all([
     fetch('https://raw.githubusercontent.com/Campionnn/SkyShards/master/public/fusion-data.json', {
       signal: AbortSignal.timeout(15000),
+      cache: 'no-store', // 2.8MB file exceeds Next's 2MB fetch-cache limit
     }),
     fetch('https://api.hypixel.net/skyblock/bazaar', {
       signal: AbortSignal.timeout(15000),

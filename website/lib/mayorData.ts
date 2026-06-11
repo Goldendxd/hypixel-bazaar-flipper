@@ -32,7 +32,8 @@ export interface MayorData {
   mayorName: string
   mayorKey: string
   perks: MayorPerk[]
-  isDerpy: boolean
+  minister: { name: string; perk: MayorPerk } | null
+  isSpecial: boolean
   currentYear: number
   nextElectionYear: number
   msUntilElection: number

@@ -1,239 +1,174 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchFusionFlips, FusionFlipRow } from '@/lib/fusionFlips'
-import Sidebar from '@/components/Sidebar'
+import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
+import { fetchFusionFlips, FusionFlipRow } from '@/lib/fusionFlips'
+import { ItemIcon, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
 
-function coins(n: number): string {
-  if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
-  if (Math.abs(n) >= 1_000_000)     return `${(n / 1_000_000).toFixed(2)}M`
-  if (Math.abs(n) >= 1_000)         return `${(n / 1_000).toFixed(1)}K`
-  return n.toFixed(1)
-}
+const GRID = '30px minmax(190px, 1.6fr) 120px 110px 110px 84px 90px'
 
-const RARITY_COLOR: Record<string, string> = {
-  common:    '#888888',
-  uncommon:  '#55cc55',
-  rare:      '#4d9fff',
-  epic:      '#9d6fff',
-  legendary: '#ffb700',
-  mythic:    '#ff55ff',
-  special:   '#ff4d4d',
-}
-
-function rarityColor(r: string) {
-  return RARITY_COLOR[r.toLowerCase()] ?? '#888888'
-}
-
-function ShardIcon({ id, name, size = 36 }: { id: string; name: string; size?: number }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`https://sky.shiiyu.moe/api/item/${id}`}
-      alt={name}
-      width={size}
-      height={size}
-      style={{ objectFit: 'contain', imageRendering: 'pixelated' }}
-      onError={(e) => {
-        const img = e.target as HTMLImageElement
-        if (!img.dataset.fb) {
-          img.dataset.fb = '1'
-          img.src = `https://sky.lea.moe/api/item/${id}`
-        } else { img.style.display = 'none' }
-      }}
-    />
-  )
-}
-
-function SkeletonCard() {
-  return (
-    <div className="flip-card" style={{ padding: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 4, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div className="skeleton" style={{ height: 11, width: '55%', marginBottom: 6 }} />
-          <div className="skeleton" style={{ height: 9, width: '35%' }} />
-        </div>
-      </div>
-      <div className="skeleton" style={{ height: 52, borderRadius: 4, marginBottom: 10 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 10px', marginBottom: 10 }}>
-        {[0,1,2,3].map(i => (
-          <div key={i}>
-            <div className="skeleton" style={{ height: 8, width: 52, marginBottom: 4 }} />
-            <div className="skeleton" style={{ height: 12, width: 44 }} />
-          </div>
-        ))}
-      </div>
-      <div className="skeleton" style={{ height: 36, borderRadius: 4 }} />
-    </div>
-  )
-}
-
-function FusionCard({ row }: { row: FusionFlipRow }) {
-  const rc = rarityColor(row.rarity)
-
-  return (
-    <div className="flip-card">
-      <div className="card-accent" style={{ background: 'linear-gradient(90deg, var(--purple), #c084fc)' }} />
-      <div className="card-header">
-        <div className="icon-box" style={{ borderColor: `${rc}40` }}>
-          <ShardIcon id={row.id} name={row.name} size={36} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="card-name">{row.name}</div>
-          <div className="card-sub">
-            <span style={{ color: rc, textTransform: 'capitalize' }}>{row.rarity}</span>
-            <span style={{ margin: '0 4px', color: 'var(--border2)' }}>·</span>
-            <span>Galatea Shard</span>
-          </div>
-        </div>
-        <span className="badge badge-green mono">{row.margin.toFixed(1)}%</span>
-      </div>
-
-      <div className="recipe-box">
-        <div className="recipe-label">Fuse Together</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {[row.input1, row.input2].map((inp, idx) => (
-            <div key={idx} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {idx === 1 && <span style={{ color: 'var(--purple)', fontWeight: 800, flexShrink: 0 }}>+</span>}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 4, background: 'var(--surface)', border: `1px solid ${rarityColor(inp.rarity)}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <ShardIcon id={inp.id} name={inp.name} size={26} />
-                </div>
-                {inp.qty > 1 && (
-                  <div style={{ position: 'absolute', bottom: -4, right: -4, fontSize: '0.5rem', fontWeight: 800, color: '#fff', background: 'var(--purple)', borderRadius: 99, padding: '0 3px', lineHeight: '13px' }}>×{inp.qty}</div>
-                )}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inp.name}</div>
-                <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>{inp.qty > 1 ? `${inp.qty}× ` : ''}{coins(inp.unitPrice)}</div>
-              </div>
-            </div>
-          ))}
-          {row.outputQty > 1 && (
-            <span className="badge badge-green" style={{ flexShrink: 0, marginLeft: 4 }}>→{row.outputQty}x</span>
-          )}
-        </div>
-      </div>
-
-      <div className="divider" />
-
-      <div className="card-stats">
-        <div>
-          <div className="stat-label">Input Cost</div>
-          <div className="stat-value mono" style={{ color: 'var(--red)', fontSize: '0.9rem' }}>{coins(row.inputCost)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Sell ({row.outputQty}x)</div>
-          <div className="stat-value mono" style={{ color: 'var(--purple)', fontSize: '0.9rem' }}>{coins(row.sellPrice * row.outputQty)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Profit / Fuse</div>
-          <div className="stat-value mono" style={{ color: 'var(--green)', fontSize: '0.9rem' }}>{coins(row.profitPerFusion)}</div>
-        </div>
-        <div>
-          <div className="stat-label">Fusions (10M)</div>
-          <div className="stat-value mono" style={{ fontSize: '0.9rem' }}>{row.fusesIn10M.toLocaleString()}</div>
-        </div>
-      </div>
-
-      <div className="profit-row">
-        <div>
-          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Total Profit</div>
-          <div className="mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--purple)', letterSpacing: '-0.02em' }}>+{coins(row.totalProfit)}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--muted)', textTransform: 'uppercase' }}>Fill</div>
-          <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text2)' }}>{row.fillScore}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
+type SortKey = 'total' | 'perFusion' | 'margin'
 
 export default function FusionFlipPage() {
-  const [rows, setRows]               = useState<FusionFlipRow[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [rows, setRows] = useState<FusionFlipRow[]>([])
   const [totalShards, setTotalShards] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [minMargin, setMinMargin] = useState<number | ''>('')
+  const [sortKey, setSortKey] = useState<SortKey>('total')
 
   const load = useCallback(async () => {
     try {
-      const { rows: data, totalShards: ts } = await fetchFusionFlips()
-      setRows(data)
-      setTotalShards(ts)
-      setLastUpdated(new Date())
-      setError(null)
+      const data = await fetchFusionFlips()
+      setRows(data.rows)
+      setTotalShards(data.totalShards)
+      setLastUpdated(new Date()); setError(null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
     load()
-    const id = window.setInterval(load, 60_000)
-    return () => window.clearInterval(id)
+    const id = setInterval(load, 60_000)
+    return () => clearInterval(id)
   }, [load])
 
-  const top = rows[0]
-  const visibleRows = useMemo(() => rows.slice(0, 24), [rows])
+  const filtered = useMemo(() => {
+    return rows
+      .filter(r => search === '' || r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r => minMargin === '' || r.margin >= minMargin)
+      .sort((a, b) => {
+        if (sortKey === 'perFusion') return b.profitPerFusion - a.profitPerFusion
+        if (sortKey === 'margin') return b.margin - a.margin
+        return b.totalProfit - a.totalProfit
+      })
+      .slice(0, 60)
+  }, [rows, search, minMargin, sortKey])
+
+  const best = filtered[0]?.profitPerFusion ?? 0
+
+  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
+    { label: '#' },
+    { label: 'Output shard' },
+    { label: 'Input cost', align: 'right' },
+    { label: 'Sell offer', align: 'right' },
+    { label: 'Per fusion', sort: 'perFusion', align: 'right' },
+    { label: 'Margin', sort: 'margin', align: 'right' },
+    { label: '10M scale', sort: 'total', align: 'right' },
+  ]
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="main-scroll">
-        <div className="page-header">
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              {lastUpdated
-                ? <span className="live-badge"><span className="pulse-dot" style={{ background: 'var(--purple)' }} />Live</span>
-                : <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Loading…</span>}
-              {lastUpdated && <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{lastUpdated.toLocaleTimeString()}</span>}
-              {error && <span style={{ fontSize: '0.7rem', color: 'var(--red)' }}>⚠ {error}</span>}
+    <Shell>
+      <PageHead
+        title="Shard"
+        highlight="Fusion"
+        sub={`Fuse two attribute shards into a pricier one — ${totalShards || '…'} Galatea shards scanned, best input combo auto-selected per output`}
+        live
+        lastUpdated={lastUpdated}
+        error={error}
+      >
+        <StatCard label="Best fusion" value={best} format={(n) => `+${coinsShort(n)}`} accent="var(--green)" sub="Per fusion" />
+        <StatCard label="Profitable fusions" value={filtered.length} accent="var(--gold)" sub="Live recipes" />
+      </PageHead>
+
+      <div className="bar">
+        <input className="search" placeholder="Search shard…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="field">
+          <label>Min margin %</label>
+          <input type="number" value={minMargin} min={0} placeholder="any"
+            onChange={e => setMinMargin(e.target.value === '' ? '' : Number(e.target.value))} />
+        </div>
+        <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.6rem', color: 'var(--faint)' }}>
+          FUSION MACHINE · GALATEA
+        </span>
+      </div>
+
+      <div className="grid-table">
+        <div className="gt-head" style={{ gridTemplateColumns: GRID }}>
+          {HEAD.map((h, i) => (
+            <div
+              key={i}
+              className={h.sort ? `sortable${sortKey === h.sort ? ' sorted' : ''}` : undefined}
+              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
+              style={{ textAlign: h.align ?? 'left' }}
+            >
+              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
             </div>
-            <h1 className="page-title">Fusion Flips</h1>
-            <p className="page-subtitle" style={{ marginTop: 4 }}>
-              Buy 2 attribute shards → fuse via Kysha in Galatea → sell output.{' '}
-              {totalShards > 0 && <span style={{ color: 'var(--text2)' }}>{totalShards} shards tracked.</span>}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div className="stat-block" style={{ minWidth: 110 }}>
-              <div className="stat-label">Best Profit</div>
-              <div className="stat-value mono" style={{ color: 'var(--purple)', marginTop: 4 }}>{top ? `+${coins(top.totalProfit)}` : '—'}</div>
-            </div>
-            <div className="stat-block" style={{ minWidth: 100 }}>
-              <div className="stat-label">Best Margin</div>
-              <div className="stat-value mono" style={{ color: 'var(--green)', marginTop: 4 }}>{top ? `${top.margin.toFixed(1)}%` : '—'}</div>
-            </div>
-            <div className="stat-block" style={{ minWidth: 90 }}>
-              <div className="stat-label">Opportunities</div>
-              <div className="stat-value mono" style={{ marginTop: 4 }}>{rows.length}</div>
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="info-callout">
-          <div className="info-callout-label" style={{ color: 'var(--purple)' }}>How it works</div>
-          Buy both input shards at instant-buy. Go to <strong style={{ color: 'var(--text)' }}>Kysha at the Fusion House in Tangleburg, Galatea</strong> and fuse. Sell the output shard via sell order. Profit after 1.25% tax.
-        </div>
+        {loading && <SkelRows n={10} />}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
-          {loading && Array.from({ length: 9 }).map((_, i) => <SkeletonCard key={i} />)}
-          {!loading && visibleRows.length === 0 && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 6 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>No profitable fusions right now</div>
-              <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>Shard prices may be too tight. Try again shortly.</div>
+        {!loading && filtered.length === 0 && (
+          <Void glyph="❖" title="No profitable fusions right now" sub="Shard prices move fast — check back in a minute" />
+        )}
+
+        {!loading && filtered.map((r, i) => {
+          const isOpen = expanded === r.id
+          return (
+            <div key={r.id}>
+              <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : r.id)}>
+                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.id} src={r.iconUrl} size={24} /></div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.83rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {r.name}
+                      {r.outputQty > 1 && <span className="mono" style={{ color: 'var(--gold-hi)', marginLeft: 6, fontSize: '0.7rem' }}>×{r.outputQty}</span>}
+                    </div>
+                    <div className={`mono rar-${r.rarity?.toUpperCase()}`} style={{ fontSize: '0.62rem' }}>{r.rarity}</div>
+                  </div>
+                </div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--blue)' }}>{coinsShort(r.inputCost)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--gold-hi)' }}>{coinsShort(r.sellPrice)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--green)' }}>+{coinsShort(r.profitPerFusion)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: r.margin > 30 ? 'var(--green)' : 'var(--dim)' }}>{r.margin.toFixed(0)}%</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--purple)' }}>+{coinsShort(r.totalProfit)}</div>
+              </div>
+
+              {isOpen && (
+                <div className="gt-expand">
+                  <div className="recipe-strip" style={{ marginBottom: 12 }}>
+                    <span className="mini-label" style={{ marginBottom: 0 }}>Fuse</span>
+                    {[r.input1, r.input2].map((inp, k) => (
+                      <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}>
+                        <ItemIcon id={inp.id} src={inp.iconUrl} size={18} />
+                        <span className="mono" style={{ color: 'var(--text)' }}>{inp.qty}×</span>
+                        <span className={`rar-${inp.rarity?.toUpperCase()}`}>{inp.name}</span>
+                        <span className="mono" style={{ color: 'var(--faint)' }}>({coinsShort(inp.unitPrice)} ea)</span>
+                        {k === 0 && <span style={{ color: 'var(--gold)', margin: '0 4px' }}>+</span>}
+                      </span>
+                    ))}
+                    <span style={{ color: 'var(--gold)' }}>→</span>
+                    <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold-hi)' }}>{r.outputQty}× {r.name}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                    {[
+                      { label: 'Input cost', val: coins(r.inputCost), color: 'var(--blue)' },
+                      { label: 'Sell offer / shard', val: coins(r.sellPrice), color: 'var(--gold-hi)' },
+                      { label: 'Fusions in 10M', val: r.fusesIn10M.toLocaleString(), color: 'var(--text)' },
+                      { label: 'Weekly volume', val: coinsShort(r.weeklyVolume), color: 'var(--text)' },
+                      { label: 'Fill score', val: `${r.fillScore}/100`, color: r.fillScore > 50 ? 'var(--green)' : 'var(--gold)' },
+                    ].map(({ label, val, color }) => (
+                      <div key={label}>
+                        <div className="mini-label">{label}</div>
+                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          {!loading && visibleRows.map(row => <FusionCard key={row.id} row={row} />)}
-        </div>
-      </main>
+          )
+        })}
+      </div>
+
       <RefreshTimer intervalMs={60_000} lastUpdated={lastUpdated} />
-    </div>
+    </Shell>
   )
 }

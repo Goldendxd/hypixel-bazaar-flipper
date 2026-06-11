@@ -1,13 +1,12 @@
-export interface IngredientDetail {
+export interface ForgeIngredient {
   id: string
   name: string
   qty: number
   unitPrice: number
   totalPrice: number
+  source: 'BZ' | 'AH' | 'FORGE' | 'COIN'
   iconUrl: string
-  isForged: boolean
-  forgeTime?: number
-  subIngredients?: IngredientDetail[]
+  subForgeTime?: number
 }
 
 export interface ForgeFlipRow {
@@ -16,19 +15,18 @@ export interface ForgeFlipRow {
   iconUrl: string
   duration: number
   totalDuration: number
-  isShort: boolean
-  chainDepth: number
-  requiresHotM?: string
+  hotm: number | null
+  outputCount: number
+  sellSource: 'BZ' | 'AH'
   sellPrice: number
+  revenue: number
   ingredientCost: number
-  profitPerForge: number
+  profit: number
   margin: number
-  totalProfit: number
-  forgesIn10M: number
+  coinsPerHour: number
   weeklyVolume: number
-  sellMovingWeek: number
-  isChained: boolean
-  ingredients: IngredientDetail[]
+  ingredients: ForgeIngredient[]
+  warning: string | null
 }
 
 export async function fetchForgeFlips(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number; aiSummary: string | null }> {
