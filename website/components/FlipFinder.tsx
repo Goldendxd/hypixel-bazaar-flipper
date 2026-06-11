@@ -3,16 +3,36 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchBazaarFlips, FlipRow } from '@/lib/api'
 import RefreshTimer from '@/components/RefreshTimer'
-import { AnimatedNumber, Chip, ItemIcon, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Chip, ItemIcon, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { STRATEGIES, StrategyMode } from '@/lib/strategy'
+import { useDebounced } from '@/components/hooks'
 
 // Realistic execution: cap quantity at 5% of the thinner side's weekly flow —
 // beyond that you ARE the market.
 const FLOW_CAPTURE = 0.05
 
-function realisticQty(row: FlipRow, budget: number | '', maxItems: number | ''): number {
-  const byBudget = budget !== '' && budget > 0 ? Math.floor(budget / row.buyOrder) : Infinity
+// ── Execution modes ──────────────────────────────────────────────────────────
+// Conservative: buy order in → sell offer out (max margin, slowest)
+// Fast:         instant buy → instant sell (immediate, usually negative)
+// Hybrid:       buy order in → instant sell out (patient entry, instant exit)
+type ExecMode = 'CONSERVATIVE' | 'FAST' | 'HYBRID'
+
+const MODES: Array<{ key: ExecMode; label: string; hint: string }> = [
+  { key: 'CONSERVATIVE', label: '⏳ Conservative', hint: 'Buy order → sell offer' },
+  { key: 'HYBRID',       label: '⚡ Hybrid',       hint: 'Buy order → insta-sell' },
+  { key: 'FAST',         label: '🔥 Fast',         hint: 'Insta-buy → insta-sell' },
+]
+
+function modeNumbers(r: FlipRow, mode: ExecMode) {
+  if (mode === 'FAST') return { buy: r.instantBuyPrice, sell: r.instantSellPrice, profit: r.instantProfit, margin: r.instantMargin }
+  if (mode === 'HYBRID') return { buy: r.buyOrder, sell: r.instantSellPrice, profit: r.hybridProfit, margin: r.hybridMargin }
+  return { buy: r.buyOrder, sell: r.sellOrder, profit: r.orderProfit, margin: r.orderMargin }
+}
+
+function realisticQty(r: FlipRow, buyPrice: number, budget: number | '', maxItems: number | ''): number {
+  const byBudget = budget !== '' && budget > 0 ? Math.floor(budget / buyPrice) : Infinity
   const byItems = maxItems !== '' && maxItems > 0 ? maxItems : Infinity
-  const byMarket = Math.max(1, Math.floor(Math.min(row.weeklyVolume, row.sellMovingWeek) * FLOW_CAPTURE))
+  const byMarket = Math.max(1, Math.floor(Math.min(r.weeklyVolume, r.sellMovingWeek) * FLOW_CAPTURE))
   const q = Math.min(byBudget, byItems, byMarket)
   return Math.max(0, q === Infinity ? 1 : q)
 }
@@ -29,11 +49,12 @@ export default function FlipFinder() {
   const [productCount, setProductCount] = useState(0)
   const [expanded, setExpanded] = useState<string | null>(null)
 
+  const [mode, setMode] = useState<ExecMode>('CONSERVATIVE')
+  const [strategy, setStrategy] = useState<StrategyMode>('BALANCED')
   const [budget, setBudget] = useState<number | ''>(10_000_000)
   const [maxItems, setMaxItems] = useState<number | ''>(71_680)
-  const [minVolume, setMinVolume] = useState<number | ''>(20_000)
-  const [hideManip, setHideManip] = useState(true)
-  const [showFilter, setShowFilter] = useState<'all' | 'starred'>('all')
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
   const [sortKey, setSortKey] = useState<SortKey>('estProfit')
 
   const [starred, setStarred] = useState<Set<string>>(() => {
@@ -44,6 +65,7 @@ export default function FlipFinder() {
     if (typeof window === 'undefined') return new Set()
     try { return new Set(JSON.parse(localStorage.getItem('bf_blocked') ?? '[]')) } catch { return new Set() }
   })
+  const [showFilter, setShowFilter] = useState<'all' | 'starred'>('all')
 
   const load = useCallback(async () => {
     try {
@@ -61,25 +83,30 @@ export default function FlipFinder() {
     return () => clearInterval(id)
   }, [load])
 
+  const preset = STRATEGIES[strategy]
+
   const enriched = useMemo(() => {
     return rows
       .filter(r => !blocked.has(r.id))
-      .filter(r => !hideManip || !r.manipulationFlag)
-      .filter(r => minVolume === '' || Math.min(r.weeklyVolume, r.sellMovingWeek) >= minVolume)
+      .filter(r => search === '' || r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r => !preset.hideManipulated || !r.manipulationFlag)
+      .filter(r => Math.min(r.weeklyVolume, r.sellMovingWeek) >= preset.minVolume)
       .filter(r => showFilter === 'all' || starred.has(r.id))
       .map(r => {
-        const qty = realisticQty(r, budget, maxItems)
-        return { row: r, qty, estProfit: r.orderProfit * qty }
+        const nums = modeNumbers(r, mode)
+        const qty = realisticQty(r, nums.buy, budget, maxItems)
+        return { row: r, nums, qty, estProfit: nums.profit * qty }
       })
+      .filter(x => x.nums.margin <= preset.maxMargin)
       .filter(x => x.qty > 0 && x.estProfit > 0)
       .sort((a, b) => {
-        if (sortKey === 'margin') return b.row.orderMargin - a.row.orderMargin
-        if (sortKey === 'profitItem') return b.row.orderProfit - a.row.orderProfit
+        if (sortKey === 'margin') return b.nums.margin - a.nums.margin
+        if (sortKey === 'profitItem') return b.nums.profit - a.nums.profit
         if (sortKey === 'fill') return b.row.fillProbability - a.row.fillProbability
         return b.estProfit - a.estProfit
       })
       .slice(0, 60)
-  }, [rows, budget, maxItems, minVolume, blocked, starred, showFilter, hideManip, sortKey])
+  }, [rows, mode, preset, budget, maxItems, blocked, starred, showFilter, search, sortKey])
 
   function toggleStar(id: string) {
     setStarred(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); localStorage.setItem('bf_starred', JSON.stringify([...n])); return n })
@@ -89,16 +116,17 @@ export default function FlipFinder() {
   }
 
   const topEst = enriched[0]?.estProfit ?? 0
+  const modeDef = MODES.find(m => m.key === mode)!
 
   const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
     { label: '#' },
     { label: 'Item' },
-    { label: 'Buy Order', align: 'right' },
-    { label: 'Sell Order', align: 'right' },
+    { label: mode === 'FAST' ? 'Insta Buy' : 'Buy Order', align: 'right' },
+    { label: mode === 'CONSERVATIVE' ? 'Sell Offer' : 'Insta Sell', align: 'right' },
     { label: 'Margin', sort: 'margin', align: 'right' },
-    { label: 'Profit/it', sort: 'profitItem', align: 'right' },
+    { label: 'Net/item', sort: 'profitItem', align: 'right' },
     { label: 'Real Qty', align: 'right' },
-    { label: 'Est Profit', sort: 'estProfit', align: 'right' },
+    { label: 'Est Net', sort: 'estProfit', align: 'right' },
     { label: 'Fill', sort: 'fill', align: 'right' },
     { label: '' },
   ]
@@ -106,18 +134,38 @@ export default function FlipFinder() {
   return (
     <div>
       <PageHead
-        title="Order"
-        highlight="Flips"
-        sub={<>Post paired buy + sell orders to capture the spread — quantity capped at {FLOW_CAPTURE * 100}% of real weekly flow{productCount > 0 && <> · <span className="mono">{productCount.toLocaleString()}</span> products scanned</>}</>}
+        title="Bazaar"
+        highlight="Spreads"
+        sub={<>{modeDef.hint} — all profits net of 1.25% bazaar tax, quantity capped at {FLOW_CAPTURE * 100}% of real weekly flow{productCount > 0 && <> · <span className="mono">{productCount.toLocaleString()}</span> products scanned</>}</>}
         live
         lastUpdated={lastUpdated}
         error={error}
       >
-        <StatCard label="Best realistic" value={topEst} format={(n) => `+${coinsShort(n)}`} accent="var(--green)" sub="Top opportunity" />
-        <StatCard label="Opportunities" value={enriched.length} accent="var(--gold)" sub="Passing filters" />
+        <StatCard label="Best realistic" value={topEst} format={(n) => `+${coinsShort(n)}`} accent="var(--up)" sub="Net estimate" />
+        <StatCard label="Opportunities" value={enriched.length} accent="var(--accent)" sub={`${preset.label} preset`} />
       </PageHead>
 
       <div className="bar">
+        {MODES.map(m => (
+          <button key={m.key} className={`pill${mode === m.key ? ' on' : ''}`} onClick={() => setMode(m.key)} title={m.hint}>
+            {m.label}
+          </button>
+        ))}
+        <span className="divider-v" />
+        {(Object.keys(STRATEGIES) as StrategyMode[]).map(k => (
+          <button
+            key={k}
+            className={`pill${strategy === k ? (k === 'SAFE' ? ' on-green' : k === 'RISK' ? ' on-red' : ' on-blue') : ''}`}
+            onClick={() => setStrategy(k)}
+            title={STRATEGIES[k].blurb}
+          >
+            {STRATEGIES[k].label}
+          </button>
+        ))}
+      </div>
+
+      <div className="bar" style={{ animationDelay: '0.12s' }}>
+        <input className="search" placeholder="Search item…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
         <div className="field">
           <label>Budget</label>
           <input type="number" value={budget} min={0}
@@ -128,14 +176,6 @@ export default function FlipFinder() {
           <input type="number" value={maxItems} min={0}
             onChange={e => setMaxItems(e.target.value === '' ? '' : Number(e.target.value))} />
         </div>
-        <div className="field">
-          <label>Min wk vol</label>
-          <input type="number" value={minVolume} min={0}
-            onChange={e => setMinVolume(e.target.value === '' ? '' : Number(e.target.value))} />
-        </div>
-        <button className={`pill${hideManip ? ' on-green' : ''}`} onClick={() => setHideManip(v => !v)}>
-          {hideManip ? '✓ Manip filter' : 'Manip filter off'}
-        </button>
         <button className={`pill${showFilter === 'starred' ? ' on' : ''}`} onClick={() => setShowFilter(f => f === 'all' ? 'starred' : 'all')}>
           ★ Starred
         </button>
@@ -161,15 +201,15 @@ export default function FlipFinder() {
         {loading && <SkelRows n={10} />}
 
         {!loading && enriched.length === 0 && (
-          <Void glyph="⊘" title="No flips match your filters" sub="Lower the volume requirement or disable the manipulation filter" />
+          <Void glyph="⊘" title="No flips match your filters" sub={mode === 'FAST' ? 'Fast mode is rarely profitable — spreads must exceed double tax' : 'Try the Balanced or High Risk preset'} />
         )}
 
-        {!loading && enriched.map(({ row, qty, estProfit }, i) => {
+        {!loading && enriched.map(({ row, nums, qty, estProfit }, i) => {
           const isOpen = expanded === row.id
-          const marginColor = row.orderMargin >= 8 ? 'var(--green)' : row.orderMargin >= 3 ? 'var(--gold)' : 'var(--dim)'
-          const fillColor = row.fillProbability > 60 ? 'var(--green)' : row.fillProbability > 30 ? 'var(--gold)' : 'var(--red)'
+          const marginColor = nums.margin >= 8 ? 'var(--up)' : nums.margin >= 3 ? 'var(--accent)' : 'var(--dim)'
+          const fillColor = row.fillProbability > 60 ? 'var(--up)' : row.fillProbability > 30 ? 'var(--accent)' : 'var(--down)'
           return (
-            <div key={row.id}>
+            <div key={row.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 52px' } as React.CSSProperties}>
               <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : row.id)}>
                 <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -178,19 +218,19 @@ export default function FlipFinder() {
                     <div style={{ fontSize: '0.81rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
                       {row.name}
                       {row.manipulationFlag && <Chip label="⚠" tone="red" />}
-                      {starred.has(row.id) && <span style={{ color: 'var(--gold-hi)', fontSize: '0.65rem' }}>★</span>}
+                      {starred.has(row.id) && <span style={{ color: 'var(--accent)', fontSize: '0.65rem' }}>★</span>}
                     </div>
                     <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--faint)' }}>
                       vol {coinsShort(Math.min(row.weeklyVolume, row.sellMovingWeek))}/wk
                     </div>
                   </div>
                 </div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--blue)' }}>{coins(row.buyOrder)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--gold-hi)' }}>{coins(row.sellOrder)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 700, color: marginColor }}>{row.orderMargin.toFixed(1)}%</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600 }}>{coins(row.orderProfit)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--info)' }}>{coins(nums.buy)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>{coins(nums.sell)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 700, color: marginColor }}>{nums.margin.toFixed(1)}%</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: nums.profit > 0 ? 'var(--text)' : 'var(--down)' }}>{coins(nums.profit)}</div>
                 <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--dim)' }}>{qty.toLocaleString()}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--green)' }}>+{coinsShort(estProfit)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--up)' }}>+{coinsShort(estProfit)}</div>
                 <div className="mono" style={{ textAlign: 'right', fontSize: '0.74rem', fontWeight: 700, color: fillColor }}>{row.fillProbability}%</div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                   <button className={`iconbtn${starred.has(row.id) ? ' lit' : ''}`} onClick={(e) => { e.stopPropagation(); toggleStar(row.id) }} title="Star">★</button>
@@ -201,21 +241,21 @@ export default function FlipFinder() {
               {isOpen && (
                 <div className="gt-expand">
                   {row.manipulationFlag && (
-                    <div style={{ marginBottom: 10, fontSize: '0.76rem', color: 'var(--red)', fontWeight: 700 }}>
+                    <div style={{ marginBottom: 10, fontSize: '0.76rem', color: 'var(--down)', fontWeight: 700 }}>
                       ⚠ {row.manipulationReason}
                     </div>
                   )}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
                     {[
-                      { label: 'Total cost', val: coinsShort(row.buyOrder * qty), color: 'var(--red)' },
-                      { label: 'Liquidity score', val: `${row.liquidityScore}/100`, color: row.liquidityScore > 60 ? 'var(--green)' : 'var(--gold)' },
-                      { label: 'Stability', val: `${row.stabilityScore}/100`, color: row.stabilityScore > 60 ? 'var(--green)' : 'var(--gold)' },
+                      { label: 'Total cost', val: coinsShort(nums.buy * qty), color: 'var(--down)' },
+                      { label: 'Conservative net', val: coins(row.orderProfit), color: row.orderProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                      { label: 'Hybrid net', val: coins(row.hybridProfit), color: row.hybridProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                      { label: 'Fast net', val: coins(row.instantProfit), color: row.instantProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                      { label: 'Liquidity score', val: `${row.liquidityScore}/100`, color: row.liquidityScore > 60 ? 'var(--up)' : 'var(--accent)' },
+                      { label: 'Stability', val: `${row.stabilityScore}/100`, color: row.stabilityScore > 60 ? 'var(--up)' : 'var(--accent)' },
                       { label: 'Hourly flow', val: `${coinsShort(row.hourlyThroughput)} items`, color: 'var(--text)' },
-                      { label: 'Weekly buys', val: coinsShort(row.weeklyVolume), color: 'var(--text)' },
-                      { label: 'Weekly sells', val: coinsShort(row.sellMovingWeek), color: 'var(--text)' },
                       { label: 'Open buy orders', val: row.buyOrders.toLocaleString(), color: 'var(--dim)' },
                       { label: 'Open sell orders', val: row.sellOrders.toLocaleString(), color: 'var(--dim)' },
-                      { label: 'Insta-flip P/L', val: coins(row.instantProfit), color: row.instantProfit > 0 ? 'var(--green)' : 'var(--red)' },
                     ].map(({ label, val, color }) => (
                       <div key={label}>
                         <div className="mini-label">{label}</div>

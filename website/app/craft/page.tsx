@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import CraftFlipPage from '@/components/CraftFlipPage'
 
 export const metadata: Metadata = {
-  title: 'Craft Flips — AURUM',
+  title: 'Craft Flips — GoldenFlipper',
   description: 'Buy bazaar ingredients, craft items, and sell for profit on Hypixel SkyBlock',
 }
 

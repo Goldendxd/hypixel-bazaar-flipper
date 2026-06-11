@@ -68,19 +68,48 @@ export function AnimatedNumber({ value, format = coins, duration = 650, classNam
   return <span className={className} style={style}>{format(display)}</span>
 }
 
-// ─── ItemIcon with fallback chain ────────────────────────────────────────────
+// ─── ItemIcon — fallback chain + session cache + generic placeholder ─────────
+// Resolution order: explicit src → shiiyu → lea.moe → generic coin glyph.
+// Successful sources are remembered per item id for the session so repeat
+// renders skip the broken hops.
+
+const GENERIC_ICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#5a6473" stroke-width="1.6"/><text x="12" y="16" text-anchor="middle" font-size="10" fill="#5a6473" font-family="monospace">?</text></svg>`
+  )
+
+function iconCacheGet(id: string): string | null {
+  try { return sessionStorage.getItem(`gf_icon:${id}`) } catch { return null }
+}
+function iconCacheSet(id: string, src: string) {
+  try { sessionStorage.setItem(`gf_icon:${id}`, src) } catch { /* quota */ }
+}
 
 export function ItemIcon({ id, size = 28, alt, src }: { id: string; size?: number; alt?: string; src?: string }) {
+  const fallbacks = [
+    ...(src ? [src] : []),
+    `https://sky.shiiyu.moe/item/${id}`,
+    `https://sky.lea.moe/item/${id}`,
+    GENERIC_ICON,
+  ]
+  const cached = typeof window !== 'undefined' ? iconCacheGet(id) : null
+  const initial = cached ?? fallbacks[0]
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src ?? `https://sky.shiiyu.moe/item/${id}`} alt={alt ?? id} width={size} height={size}
+      src={initial} alt={alt ?? id} width={size} height={size}
       style={{ objectFit: 'contain', imageRendering: 'pixelated', display: 'block' }}
       loading="lazy"
+      onLoad={(e) => {
+        const img = e.target as HTMLImageElement
+        if (!img.src.startsWith('data:')) iconCacheSet(id, img.src)
+      }}
       onError={(e) => {
         const img = e.target as HTMLImageElement
-        if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = `https://sky.lea.moe/item/${id}` }
-        else img.style.visibility = 'hidden'
+        const idx = fallbacks.findIndex(f => img.src === f || img.src.endsWith(f))
+        const next = fallbacks[Math.max(0, idx) + 1] ?? GENERIC_ICON
+        if (img.src !== next) img.src = next
       }}
     />
   )
@@ -211,6 +240,62 @@ export function Spark({ values, color = 'var(--gold)', w = 64, h = 20, fill = fa
       {fill && <polygon points={`0,${h} ${line} ${w},${h}`} fill={color} opacity={0.12} />}
       <polyline points={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
+  )
+}
+
+// ─── PriceChart — interactive SVG line chart with hover crosshair ────────────
+
+export function PriceChart({ points, w = 560, h = 140, color = 'var(--up)' }: {
+  points: Array<{ label: string; value: number }>
+  w?: number
+  h?: number
+  color?: string
+}) {
+  const [hover, setHover] = useState<number | null>(null)
+  const vals = points.map(p => p.value).filter(v => isFinite(v) && v > 0)
+  if (vals.length < 2) return <div style={{ height: h, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--faint)', fontSize: '0.74rem' }}>Not enough history</div>
+
+  const mn = Math.min(...vals), mx = Math.max(...vals), range = mx - mn || 1
+  const pad = 6
+  const xs = (i: number) => pad + (i / (points.length - 1)) * (w - pad * 2)
+  const ys = (v: number) => h - pad - ((v - mn) / range) * (h - pad * 2)
+  const line = points.map((p, i) => `${xs(i).toFixed(1)},${ys(p.value).toFixed(1)}`).join(' ')
+  const hovered = hover != null ? points[hover] : null
+
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: w }}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        style={{ width: '100%', height: 'auto', display: 'block', cursor: 'crosshair' }}
+        onMouseMove={(e) => {
+          const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
+          const x = ((e.clientX - rect.left) / rect.width) * w
+          const i = Math.round(((x - pad) / (w - pad * 2)) * (points.length - 1))
+          setHover(Math.max(0, Math.min(points.length - 1, i)))
+        }}
+        onMouseLeave={() => setHover(null)}
+      >
+        <polygon points={`${pad},${h - pad} ${line} ${w - pad},${h - pad}`} fill={color} opacity={0.08} />
+        <polyline points={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+        {hover != null && (
+          <>
+            <line x1={xs(hover)} y1={pad} x2={xs(hover)} y2={h - pad} stroke="var(--line2)" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx={xs(hover)} cy={ys(points[hover].value)} r="3.5" fill={color} stroke="var(--bg)" strokeWidth="1.5" />
+          </>
+        )}
+      </svg>
+      {hovered && (
+        <div style={{
+          position: 'absolute', top: 0, left: `${(xs(hover!) / w) * 100}%`,
+          transform: `translateX(${hover! > points.length / 2 ? '-105%' : '8px'})`,
+          background: 'var(--panel3)', border: '1px solid var(--line2)', borderRadius: 8,
+          padding: '5px 10px', pointerEvents: 'none', whiteSpace: 'nowrap', zIndex: 3,
+        }}>
+          <div className="mono" style={{ fontSize: '0.76rem', fontWeight: 700, color }}>{coins(hovered.value)}</div>
+          <div style={{ fontSize: '0.6rem', color: 'var(--faint)' }}>{hovered.label}</div>
+        </div>
+      )}
+    </div>
   )
 }
 

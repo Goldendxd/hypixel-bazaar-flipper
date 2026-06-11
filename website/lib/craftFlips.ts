@@ -14,6 +14,8 @@ export interface CraftFlipRow {
   iconUrl: string
   sellPrice: number
   median: number
+  ahListingFee: number
+  ahClaimingTax: number
   craftCostInsta: number
   craftCostOrder: number
   profitInsta: number

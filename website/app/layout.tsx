@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'AURUM — SkyBlock Profit Terminal',
+  title: 'GoldenFlipper — SkyBlock Trading Intelligence',
   description:
-    'Live Hypixel SkyBlock profit engine: order flips, craft & forge arbitrage, book combining, Kat pet flips, shard fusion and mayor speculation.',
+    'Hypixel SkyBlock trading terminal: tax-true bazaar arbitrage, forge dependency-chain costing, enchantment compounding math, weapon market analytics and mayor speculation.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

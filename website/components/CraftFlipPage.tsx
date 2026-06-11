@@ -5,6 +5,7 @@ import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchCraftFlips, CraftFlipRow } from '@/lib/craftFlips'
 import { Chip, ItemIcon, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { useDebounced } from '@/components/hooks'
 
 const GRID = '30px minmax(190px, 1.6fr) 110px 110px 104px 84px 80px'
 
@@ -17,7 +18,8 @@ export default function CraftFlipPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
   const [mode, setMode] = useState<CostMode>('order')
   const [hideManip, setHideManip] = useState(true)
   const [minVolume, setMinVolume] = useState<number | ''>(5)
@@ -83,7 +85,7 @@ export default function CraftFlipPage() {
       </PageHead>
 
       <div className="bar">
-        <input className="search" placeholder="Search item…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="search" placeholder="Search item…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
         <button className={`pill${mode === 'order' ? ' on-blue' : ''}`} onClick={() => setMode('order')} title="Buy materials with patient buy orders (cheaper, slower)">
           ⏳ Buy orders
         </button>
@@ -155,6 +157,9 @@ export default function CraftFlipPage() {
                   )}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
                     {[
+                      { label: 'Gross sale', val: coins(r.sellPrice), color: 'var(--accent)' },
+                      { label: 'AH listing fee', val: `−${coins(r.ahListingFee)}`, color: 'var(--down)' },
+                      { label: 'AH claiming tax', val: `−${coins(r.ahClaimingTax)}`, color: 'var(--down)' },
                       { label: 'Median sale', val: r.median > 0 ? coins(r.median) : '—', color: 'var(--text)' },
                       { label: 'Cost (buy orders)', val: coins(r.craftCostOrder), color: 'var(--blue)' },
                       { label: 'Cost (insta)', val: coins(r.craftCostInsta), color: 'var(--orange)' },

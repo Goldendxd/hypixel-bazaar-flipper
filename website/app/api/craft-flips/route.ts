@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { ahFees } from '@/lib/economy'
 
 export const dynamic = 'force-dynamic'
 
@@ -6,9 +7,6 @@ let cachedResult: object | null = null
 let cacheTime = 0
 const CACHE_TTL = 2 * 60 * 1000
 
-// Sell-side fee. Most craft-flip outputs exit via AH BIN (~2% with claiming
-// tax) — bazaar exits are cheaper (1.25%), so 2% is the conservative bound.
-const SELL_FEE = 0.02
 const MIN_VOLUME = 3          // recent sales of the crafted item
 const MAX_ROWS = 80
 
@@ -28,6 +26,8 @@ export interface CraftFlipRow {
   iconUrl: string
   sellPrice: number          // live sell price (lbin / bazaar ask)
   median: number             // median of recent sales — the sanity anchor
+  ahListingFee: number       // AH exit fees (most craft outputs sell on AH)
+  ahClaimingTax: number
   craftCostInsta: number
   craftCostOrder: number
   profitInsta: number        // sell × (1−fee) − insta cost
@@ -81,7 +81,8 @@ async function compute(): Promise<{ rows: CraftFlipRow[]; totalCandidates: numbe
     if (!c.itemId || c.sellPrice <= 0 || c.craftCost <= 0) continue
     if ((c.volume ?? 0) < MIN_VOLUME) continue
 
-    const revenue = c.sellPrice * (1 - SELL_FEE)
+    const fees = ahFees(c.sellPrice)
+    const revenue = fees.net
     const craftCostInsta = c.craftCost
     const craftCostOrder = c.buyOrderCraftCost > 0 ? c.buyOrderCraftCost : c.craftCost
 
@@ -116,6 +117,8 @@ async function compute(): Promise<{ rows: CraftFlipRow[]; totalCandidates: numbe
       iconUrl: `https://sky.shiiyu.moe/item/${c.itemId}`,
       sellPrice: Math.round(c.sellPrice),
       median: Math.round(c.median ?? 0),
+      ahListingFee: fees.listingFee,
+      ahClaimingTax: fees.claimingTax,
       craftCostInsta: Math.round(craftCostInsta),
       craftCostOrder: Math.round(craftCostOrder),
       profitInsta: Math.round(profitInsta),

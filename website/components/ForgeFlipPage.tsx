@@ -5,6 +5,7 @@ import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchForgeFlips, ForgeFlipRow } from '@/lib/forgeFlips'
 import { Chip, ItemIcon, Oracle, PageHead, SkelRows, StatCard, Void, coins, coinsShort, fmtDuration } from '@/components/ui'
+import { useDebounced } from '@/components/hooks'
 
 const GRID = '30px minmax(190px, 1.6fr) 90px 110px 110px 104px 100px 70px'
 
@@ -21,7 +22,8 @@ export default function ForgeFlipPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
   const [maxHotm, setMaxHotm] = useState<number | ''>('')
   const [maxHours, setMaxHours] = useState<number | ''>('')
   const [quickForge, setQuickForge] = useState(false)
@@ -92,7 +94,7 @@ export default function ForgeFlipPage() {
       <Oracle text={aiSummary} />
 
       <div className="bar">
-        <input className="search" placeholder="Search recipe…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="search" placeholder="Search recipe…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
         <div className="field">
           <label>Max HotM</label>
           <input type="number" value={maxHotm} min={1} max={10} placeholder="any"
@@ -144,6 +146,7 @@ export default function ForgeFlipPage() {
                     <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--faint)', display: 'flex', gap: 8 }}>
                       {r.hotm && <span>HotM {r.hotm}</span>}
                       <span>exit: {r.sellSource}</span>
+                      {r.chainDepth > 1 && <span style={{ color: 'var(--warn)' }}>{r.chainDepth}-deep chain</span>}
                       {r.outputCount > 1 && <span>×{r.outputCount}</span>}
                     </div>
                   </div>
@@ -165,7 +168,12 @@ export default function ForgeFlipPage() {
                     {[
                       { label: 'Forge step', val: fmtDuration(r.duration * timeMult), color: 'var(--text)' },
                       { label: 'Full chain', val: fmtDuration(r.effDuration), color: 'var(--text)' },
-                      { label: 'Revenue after fees', val: coins(r.revenue), color: 'var(--gold-hi)' },
+                      { label: 'Gross sale', val: coins(r.sellPrice * r.outputCount), color: 'var(--accent)' },
+                      { label: r.sellSource === 'BZ' ? 'Bazaar tax (1.25%)' : 'AH fees', val: `−${coins(r.fees)}`, color: 'var(--down)' },
+                      { label: 'Net revenue', val: coins(r.revenue), color: 'var(--accent)' },
+                      { label: 'Tree cost (optimal)', val: coins(r.ingredientCost), color: 'var(--info)' },
+                      { label: 'Buy-everything cost', val: coins(r.naiveCost), color: 'var(--dim)' },
+                      { label: 'Chain savings', val: r.naiveCost > r.ingredientCost ? coins(r.naiveCost - r.ingredientCost) : '—', color: 'var(--up)' },
                       { label: 'Exit market', val: r.sellSource === 'BZ' ? 'Bazaar sell offer' : 'AH lowest BIN', color: 'var(--dim)' },
                       { label: 'Weekly demand', val: r.weeklyVolume > 0 ? r.weeklyVolume.toLocaleString() : 'AH — unknown', color: 'var(--text)' },
                       { label: 'HotM required', val: r.hotm ? `Tier ${r.hotm}` : 'None', color: 'var(--dim)' },
@@ -179,11 +187,12 @@ export default function ForgeFlipPage() {
                   <div className="recipe-strip">
                     <span className="mini-label" style={{ marginBottom: 0 }}>Inputs</span>
                     {r.ingredients.map(ing => (
-                      <span key={ing.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}>
+                      <span key={ing.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}
+                        title={ing.forgeCheaper ? `Sub-forging beats buying (market: ${coinsShort(ing.marketPrice)})` : undefined}>
                         <ItemIcon id={ing.id} size={18} />
                         <span className="mono" style={{ color: 'var(--text)' }}>{ing.qty.toLocaleString()}×</span>
                         {ing.name}
-                        <Chip label={ing.source} tone={SOURCE_TONE[ing.source]} />
+                        <Chip label={ing.forgeCheaper ? 'FORGE ↓' : ing.source} tone={SOURCE_TONE[ing.source]} />
                         <span className="mono" style={{ color: 'var(--faint)' }}>({coinsShort(ing.totalPrice)})</span>
                       </span>
                     ))}

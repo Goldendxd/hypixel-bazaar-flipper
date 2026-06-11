@@ -5,6 +5,7 @@ import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchBookFlips, BookFlipRow } from '@/lib/bookFlips'
 import { Chip, ItemIcon, Oracle, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { useDebounced } from '@/components/hooks'
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V']
 const GRID = '30px minmax(190px, 1.6fr) 120px 100px 100px 84px 96px 90px'
@@ -18,7 +19,8 @@ export default function BookFlipPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
   const [minProfit, setMinProfit] = useState<number | ''>(10_000)
   const [hideWarned, setHideWarned] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('profit')
@@ -83,7 +85,7 @@ export default function BookFlipPage() {
       <Oracle text={aiSummary} />
 
       <div className="bar">
-        <input className="search" placeholder="Search enchant…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="search" placeholder="Search enchant…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
         <div className="field">
           <label>Min profit</label>
           <input type="number" value={minProfit} min={0}
@@ -133,7 +135,7 @@ export default function BookFlipPage() {
                       {r.warning && <Chip label="⚠" tone="orange" />}
                     </div>
                     <div className="mono" style={{ fontSize: '0.62rem', color: 'var(--faint)' }}>
-                      {r.inputQty}× {ROMAN[r.inputTier]} → {ROMAN[r.outputTier]}
+                      {r.inputQty}× {ROMAN[r.inputTier]} → {ROMAN[r.outputTier]} · {r.combineSteps} combine{r.combineSteps !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
@@ -163,10 +165,14 @@ export default function BookFlipPage() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
                     {[
-                      { label: 'Buy order / book', val: coins(r.inputBuyOrder), color: 'var(--blue)' },
+                      { label: 'Base-tier equivalent', val: `${r.t1Equivalent}× T${r.baseTier}`, color: 'var(--text)' },
+                      { label: 'Anvil combines', val: String(r.combineSteps), color: 'var(--text)' },
+                      { label: 'Buy order / book', val: coins(r.inputBuyOrder), color: 'var(--info)' },
                       { label: 'Insta-buy total', val: coins(r.inputInstaCost), color: 'var(--dim)' },
-                      { label: 'Revenue after tax', val: coins(r.revenue), color: 'var(--gold-hi)' },
-                      { label: 'Insta-exit P/L', val: coins(r.instaExitProfit), color: r.instaExitProfit > 0 ? 'var(--green)' : 'var(--red)' },
+                      { label: 'Gross sale', val: coins(r.grossRevenue), color: 'var(--accent)' },
+                      { label: 'Bazaar tax (1.25%)', val: `−${coins(r.bazaarTax)}`, color: 'var(--down)' },
+                      { label: 'Net revenue', val: coins(r.revenue), color: 'var(--accent)' },
+                      { label: 'Insta-exit net P/L', val: coins(r.instaExitProfit), color: r.instaExitProfit > 0 ? 'var(--up)' : 'var(--down)' },
                       { label: 'Input fills/wk', val: r.inputWeeklyInstasells.toLocaleString(), color: 'var(--text)' },
                       { label: 'Exit insta-buys/wk', val: r.exitWeeklyInstabuys.toLocaleString(), color: 'var(--text)' },
                     ].map(({ label, val, color }) => (

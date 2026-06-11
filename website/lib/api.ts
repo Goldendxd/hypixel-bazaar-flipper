@@ -35,11 +35,15 @@ export interface FlipRow {
   orderProfit: number     // per item after 1.25% sell tax
   orderMargin: number     // %
 
-  // Instant flip: pay ask, get bid immediately
+  // Fast flip: pay ask, get bid immediately
   instantBuyPrice: number   // = buyPrice  (lowest ask)
   instantSellPrice: number  // = sellPrice (highest bid)
   instantProfit: number
   instantMargin: number
+
+  // Hybrid arbitrage: patient buy order in, instant-sell out (quick exit)
+  hybridProfit: number
+  hybridMargin: number
 
   weeklyVolume: number      // buyMovingWeek
   sellMovingWeek: number
@@ -112,9 +116,13 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
     const orderMargin = fmt((orderProfit / buyOrder) * 100)
     if (orderProfit <= 0) continue
 
-    // Instant flip: pay ask, receive bid immediately (almost always negative — shown for reference)
+    // Fast flip: pay ask, receive bid immediately (almost always negative — shown for reference)
     const instantProfit = fmt(q.sellPrice * (1 - TAX) - q.buyPrice)
     const instantMargin = fmt((instantProfit / q.buyPrice) * 100)
+
+    // Hybrid: patient buy order in, instant-sell out — fast liquidation exit
+    const hybridProfit = fmt(q.sellPrice * (1 - TAX) - buyOrder)
+    const hybridMargin = fmt((hybridProfit / buyOrder) * 100)
 
     // ── Liquidity: log-scaled on the THINNER side of the market ──
     // You must both buy AND sell — the slower side bounds your real throughput.
@@ -161,6 +169,8 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
       instantSellPrice: q.sellPrice,
       instantProfit,
       instantMargin,
+      hybridProfit,
+      hybridMargin,
       weeklyVolume: q.buyMovingWeek,
       sellMovingWeek: q.sellMovingWeek,
       buyOrders: q.buyOrders,

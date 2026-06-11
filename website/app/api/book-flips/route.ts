@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { BAZAAR_TAX, bazaarNet } from '@/lib/economy'
 
 export const dynamic = 'force-dynamic'
 
@@ -6,21 +7,33 @@ let cachedResult: object | null = null
 let cacheTime = 0
 const CACHE_TTL = 60_000
 
-const TAX = 0.0125
 const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 
-// ── Enchantment book combining ───────────────────────────────────────────────
-// 2× Tier N combine into 1× Tier N+1 on the anvil, so reaching tier T from
-// tier i costs 2^(T−i) input books.
+// ── Enchantment combining model ──────────────────────────────────────────────
+// Anvil combining is a strict binary tree: 2× Tier N → 1× Tier N+1.
+// Reaching tier T from base tier B therefore costs 2^(T−B) base books and
+// 2^(T−B) − 1 anvil combines (exponential compounding, not linear).
 //
-// HOUSE RULE: we only surface flips whose OUTPUT is Tier 5 or below
-// (e.g. craft up to Ultimate Wise V). Tier 6/7 classic books are drop-only
-// or phantom-bid traps and are deliberately excluded.
+// HOUSE RULES:
+//  • Output is capped at Tier V (e.g. Ultimate Wise V). Classic T6/T7 books
+//    are drop-only and their bids are routinely phantom.
+//  • Stacking enchants (Expertise, Compact, …) level through gameplay, not
+//    anvil combining — they are excluded entirely.
 const MAX_OUTPUT_TIER = 5
 
+const NON_COMBINABLE = new Set([
+  'ENCHANTMENT_EXPERTISE',
+  'ENCHANTMENT_COMPACT',
+  'ENCHANTMENT_CULTIVATING',
+  'ENCHANTMENT_CHAMPION',
+  'ENCHANTMENT_HECATOMB',
+  'ENCHANTMENT_TOXOPHILITE',
+  'ENCHANTMENT_LAPIDARY',
+])
+
 // Liquidity gates
-const MIN_EXIT_INSTABUYS_WEEK = 25   // people insta-buying the output (fills your sell offer)
-const MIN_INPUT_FILL_RATIO    = 8    // input weekly insta-sells must be ≥ 8× the books you need
+const MIN_EXIT_INSTABUYS_WEEK = 25   // insta-buys consuming your sell offer
+const MIN_INPUT_FILL_RATIO    = 8    // input insta-sells must cover your order 8×
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII']
 
@@ -29,25 +42,31 @@ export interface BookFlipRow {
   outputName: string
   enchantName: string
   inputId: string
-  inputTier: number
+  inputTier: number          // entry tier you actually buy
   outputTier: number
-  inputQty: number
+  inputQty: number           // books bought at entry tier
+  baseTier: number           // lowest tier listed on the bazaar for this enchant
+  t1Equivalent: number       // how many base-tier books this route represents
+  combineSteps: number       // anvil operations required (2^k − 1)
 
-  // Acquisition: place a buy order just above the top bid
-  inputBuyOrder: number       // per book
-  inputTotalCost: number      // buy order × qty
-  inputInstaCost: number      // insta-buy total (impatient route)
+  // Acquisition — both execution styles
+  inputBuyOrder: number      // per book, patient buy order
+  inputTotalCost: number     // buy-order route total (primary)
+  inputInstaCost: number     // instant-buy route total
 
-  // Exit: place a sell offer just under the lowest ask
-  outputSellOffer: number
-  revenue: number             // sell offer × (1 − tax)
-  profit: number              // patient route profit
-  margin: number
+  // Exit — both execution styles
+  outputSellOffer: number    // patient sell offer (ask − 0.1)
+  outputInstaSell: number    // instant sell into the top bid
 
-  // Safety: what if you have to insta-sell into the top bid instead?
-  instaExitProfit: number
+  // Tax-aware results (buy-order in → sell-offer out is the primary route)
+  grossRevenue: number
+  bazaarTax: number
+  revenue: number            // net of tax
+  profit: number             // NET profit, primary metric
+  margin: number             // ROI %
+  instaExitProfit: number    // net if you must insta-sell instead
 
-  exitWeeklyInstabuys: number // how fast your sell offer fills
+  exitWeeklyInstabuys: number
   inputWeeklyInstasells: number
   iconUrl: string
   warning: string | null
@@ -94,6 +113,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
     if (!id.startsWith('ENCHANTMENT_')) continue
     const match = id.match(/^(.*?)_(\d+)$/)
     if (!match) continue
+    if (NON_COMBINABLE.has(match[1])) continue
     const tier = parseInt(match[2], 10)
     if (tier < 1 || tier > 7) continue
     ;(enchants[match[1]] ??= {})[tier] = products[id].quick_status
@@ -104,9 +124,11 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
 
   for (const [base, tiers] of Object.entries(enchants)) {
     const tierNums = Object.keys(tiers).map(Number).sort((a, b) => a - b)
+    if (tierNums.length < 2) continue       // stacking/single-tier books can't be combined upward
+    const baseTier = tierNums[0]
 
     for (const outputTier of tierNums) {
-      if (outputTier < 2 || outputTier > MAX_OUTPUT_TIER) continue
+      if (outputTier <= baseTier || outputTier > MAX_OUTPUT_TIER) continue
       const out = tiers[outputTier]
 
       // Exit liquidity: your sell offer is consumed by insta-buyers
@@ -114,18 +136,22 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
       if (out.buyPrice <= 0 || exitVol < MIN_EXIT_INSTABUYS_WEEK) continue
 
       const outputSellOffer = Math.round((out.buyPrice - 0.1) * 100) / 100
-      const revenue = Math.round(outputSellOffer * (1 - TAX) * 100) / 100
-      const instaExitRevenue = Math.round(out.sellPrice * (1 - TAX) * 100) / 100
+      const outputInstaSell = Math.round(out.sellPrice * 100) / 100
+      const revenue = Math.round(bazaarNet(outputSellOffer) * 100) / 100
+      const instaExitRevenue = Math.round(bazaarNet(outputInstaSell) * 100) / 100
 
+      // Default entry is the base tier (the spec model: buy T1s, compound up).
+      // A higher listed tier is allowed as entry only when it is strictly
+      // cheaper per base-equivalent — buying pre-combined books is still
+      // "crafting upward", just with fewer anvil steps.
       let best: BookFlipRow | null = null
 
       for (const inputTier of tierNums) {
         if (inputTier >= outputTier) break
         const inp = tiers[inputTier]
         const qty = Math.pow(2, outputTier - inputTier)
-        if (qty > 64) continue  // 6+ combine steps is not a realistic session
+        if (qty > 64) continue   // > 6 combine levels isn't a realistic session
 
-        // Acquisition: buy order at top bid + 0.1; needs insta-sellers to fill
         if (inp.sellPrice <= 0 && inp.buyPrice <= 0) continue
         const unitOrder = inp.sellPrice > 0 ? inp.sellPrice + 0.1 : inp.buyPrice
         if (inp.sellMovingWeek < qty * MIN_INPUT_FILL_RATIO) continue
@@ -156,8 +182,14 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
           enchantName: baseName(base),
           inputId: `${base}_${inputTier}`,
           inputTier, outputTier, inputQty: qty,
+          baseTier,
+          t1Equivalent: Math.pow(2, outputTier - baseTier),
+          combineSteps: qty - 1,
           inputBuyOrder, inputTotalCost, inputInstaCost,
-          outputSellOffer, revenue, profit, margin,
+          outputSellOffer, outputInstaSell,
+          grossRevenue: outputSellOffer,
+          bazaarTax: Math.round(outputSellOffer * BAZAAR_TAX * 100) / 100,
+          revenue, profit, margin,
           instaExitProfit,
           exitWeeklyInstabuys: exitVol,
           inputWeeklyInstasells: inp.sellMovingWeek,
@@ -171,7 +203,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
     }
   }
 
-  // Clean flips first (by profit), flagged ones after
+  // Clean flips first (by net profit), flagged ones after
   rows.sort((a, b) => {
     if (!!a.warning !== !!b.warning) return a.warning ? 1 : -1
     return b.profit - a.profit
@@ -181,10 +213,10 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
   const top5 = rows.slice(0, 5)
   if (top5.length > 0) {
     aiSummary = await askGemini(
-      `You are a Hypixel SkyBlock bazaar expert. Top 5 enchanted book combine flips right now (all outputs are Tier 5 or lower, crafted by combining lower-tier books):
+      `You are a Hypixel SkyBlock bazaar expert. Top 5 enchanted book combine flips right now (all Tier 5 or lower, crafted by anvil-combining lower tiers — 2^k compounding):
 
 ${top5.map((r, i) =>
-  `${i + 1}. Buy-order ${r.inputQty}× ${r.enchantName} ${ROMAN[r.inputTier]} @ ${r.inputBuyOrder.toLocaleString()} (total ${r.inputTotalCost.toLocaleString()}), combine to ${r.outputName}, sell-offer ${r.outputSellOffer.toLocaleString()} → profit ${r.profit.toLocaleString()} (${r.margin.toFixed(0)}%). Output insta-buys/wk: ${r.exitWeeklyInstabuys.toLocaleString()}`
+  `${i + 1}. Buy-order ${r.inputQty}× ${r.enchantName} ${ROMAN[r.inputTier]} @ ${r.inputBuyOrder.toLocaleString()} (total ${r.inputTotalCost.toLocaleString()}), ${r.combineSteps} combines to ${r.outputName}, sell-offer ${r.outputSellOffer.toLocaleString()} → NET profit ${r.profit.toLocaleString()} (${r.margin.toFixed(0)}% ROI). Output insta-buys/wk: ${r.exitWeeklyInstabuys.toLocaleString()}`
 ).join('\n')}
 
 For each give ONE short tip (max 15 words): real volume, manipulation risk, or genuinely good? Numbered list 1-5 only.`

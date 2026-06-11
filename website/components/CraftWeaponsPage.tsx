@@ -1,162 +1,221 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
-import { fetchCraftWeapons, CraftWeaponsResponse, WeaponFlip } from '@/lib/craftWeapons'
-import { Chip, ItemIcon, Oracle, PageHead, Spark, StatCard, coins, coinsShort } from '@/components/ui'
+import { fetchWeaponFlips, fetchWeaponHistory, WeaponRow, PricePoint } from '@/lib/weaponFlips'
+import { WEAPON_CATEGORIES, WeaponCategory } from '@/lib/weaponCatalog'
+import { Chip, ItemIcon, PageHead, PriceChart, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { useDebounced } from '@/components/hooks'
 
-const RISK_TONE = { LOW: 'green', MEDIUM: 'orange', HIGH: 'red' } as const
+const GRID = '30px minmax(190px, 1.6fr) 90px 110px 110px 110px 84px 80px'
 
-function WeaponCard({ w }: { w: WeaponFlip }) {
-  const [tab, setTab] = useState<'clean' | 'scrolled'>('clean')
-  const isScrolled = tab === 'scrolled' && w.scrollAddons.length > 0
-  const profit = isScrolled ? w.profitWithScrolls : w.profitNoScrolls
-  const margin = isScrolled ? w.marginWithScrolls : w.marginNoScrolls
-  const cost = isScrolled ? w.craftCostWithScrolls : w.craftCost
-  const spark = w.priceHistory.map(p => p.avg)
+type SortKey = 'profit' | 'roi' | 'price' | 'demand'
+const DEMAND_RANK = { HIGH: 3, MEDIUM: 2, LOW: 1, UNKNOWN: 0 } as const
+const DEMAND_TONE = { HIGH: 'green', MEDIUM: 'blue', LOW: 'orange', UNKNOWN: 'dim' } as const
+const TIER_TONE = { EARLY: 'dim', MID: 'blue', LATE: 'purple', END: 'gold' } as const
 
+function HistoryChart({ id }: { id: string }) {
+  const [points, setPoints] = useState<PricePoint[] | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetchWeaponHistory(id).then(p => { if (alive) setPoints(p) }).catch(() => { if (alive) setPoints([]) })
+    return () => { alive = false }
+  }, [id])
+  if (points === null) return <div className="skel" style={{ height: 120, borderRadius: 10 }} />
   return (
-    <div className="card rise" style={{ padding: '20px 22px', marginBottom: 18 }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 15, flexWrap: 'wrap', marginBottom: 16 }}>
-        <div className="ifr" style={{ width: 52, height: 52, borderRadius: 14 }}>
-          <ItemIcon id={w.id} size={40} />
-        </div>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.15rem' }}>{w.name}</span>
-            <Chip label={`${w.manipulationRisk} RISK`} tone={RISK_TONE[w.manipulationRisk]} />
-          </div>
-          <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--dim)', marginTop: 3 }}>
-            LBIN {coinsShort(w.cleanLbin)} · ~{w.estimatedSellDays.toFixed(1)}d to sell · vol {coinsShort(w.weeklyVolume)}/wk
-          </div>
-        </div>
-        <Spark values={spark} color="var(--gold)" w={120} h={34} fill />
-        <div style={{ textAlign: 'right' }}>
-          <div className="mini-label">Profit ({isScrolled ? 'scrolled' : 'clean'})</div>
-          <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 800, color: profit > 0 ? 'var(--green)' : 'var(--red)' }}>
-            {profit > 0 ? '+' : ''}{coinsShort(profit)}
-          </div>
-          <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--dim)' }}>{margin.toFixed(1)}% margin</div>
-        </div>
-      </div>
-
-      {w.manipulationReason && (
-        <div style={{ fontSize: '0.76rem', color: 'var(--orange)', fontWeight: 700, marginBottom: 12 }}>⚠ {w.manipulationReason}</div>
-      )}
-
-      {/* mode tabs */}
-      {w.scrollAddons.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <button className={`pill${tab === 'clean' ? ' on' : ''}`} onClick={() => setTab('clean')}>Clean craft</button>
-          <button className={`pill${tab === 'scrolled' ? ' on-purple' : ''}`} onClick={() => setTab('scrolled')}>Fully scrolled</button>
-        </div>
-      )}
-
-      {/* cost summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
-        {[
-          { label: 'Craft cost', val: coins(cost), color: 'var(--blue)' },
-          { label: 'Sells for (LBIN)', val: coins(isScrolled ? (w.variants[w.variants.length - 1]?.estimatedLbin ?? w.cleanLbin) : w.cleanLbin), color: 'var(--gold-hi)' },
-          { label: 'AH tax', val: coins(w.ahTax), color: 'var(--red)' },
-          { label: 'Est. days to sell', val: `${w.estimatedSellDays.toFixed(1)}d`, color: 'var(--text)' },
-        ].map(({ label, val, color }) => (
-          <div key={label}>
-            <div className="mini-label">{label}</div>
-            <div className="mono" style={{ fontSize: '0.92rem', fontWeight: 700, color }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ingredients */}
-      <div className="sect" style={{ padding: '6px 0 10px' }}>Ingredients</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: w.variants.length > 0 ? 16 : 0 }}>
-        {[...w.ingredients, ...(isScrolled ? w.scrollAddons.map(s => ({ id: s.id, name: s.name, qty: 1, pricing: s.pricing, unitPrice: s.unitPrice, totalCost: s.unitPrice, source: s.source, iconUrl: s.iconUrl })) : [])].map(ing => (
-          <div key={ing.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 12px', background: 'rgba(10,8,6,0.4)', border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}>
-            <ItemIcon id={ing.id} size={22} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, flex: 1, minWidth: 0 }}>
-              <span className="mono" style={{ color: 'var(--gold-hi)' }}>{ing.qty}×</span> {ing.name}
-            </span>
-            <Chip label={ing.source} tone={ing.source === 'BZ' ? 'blue' : 'purple'} />
-            <Chip label={ing.pricing.fillTimeEst} tone="dim" />
-            <span className="mono" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)', minWidth: 76, textAlign: 'right' }}>
-              {coinsShort(ing.totalCost)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* variants */}
-      {w.variants.length > 0 && (
-        <>
-          <div className="sect" style={{ padding: '6px 0 10px' }}>Sell variants</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 9 }}>
-            {w.variants.map(v => (
-              <div key={v.label} className="card lift" style={{ padding: '11px 14px' }}>
-                <div className="mini-label">{v.label}</div>
-                <div className="mono" style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--gold-hi)' }}>{coinsShort(v.estimatedLbin)}</div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--faint)', marginTop: 3 }}>{v.note}</div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+    <PriceChart
+      points={points.map(p => ({ label: new Date(p.time).toLocaleString(), value: p.avg }))}
+      color="var(--up)"
+    />
   )
 }
 
 export default function CraftWeaponsPage() {
-  const [data, setData] = useState<CraftWeaponsResponse | null>(null)
+  const [rows, setRows] = useState<WeaponRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
+  const [category, setCategory] = useState<WeaponCategory | 'ALL'>('ALL')
+  const [craftableOnly, setCraftableOnly] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('profit')
 
   const load = useCallback(async () => {
     try {
-      const j = await fetchCraftWeapons()
-      setData(j); setLastUpdated(new Date()); setError(null)
+      const data = await fetchWeaponFlips()
+      setRows(data.rows)
+      setLastUpdated(new Date()); setError(null)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
-    }
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
     load()
-    const t = setInterval(load, 180_000)
-    return () => clearInterval(t)
+    const id = setInterval(load, 300_000)
+    return () => clearInterval(id)
   }, [load])
+
+  const filtered = useMemo(() => {
+    return rows
+      .filter(r => category === 'ALL' || r.category === category)
+      .filter(r => search === '' || r.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(r => !craftableOnly || (r.craftable && r.netProfit > 0))
+      .sort((a, b) => {
+        if (sortKey === 'roi') return b.roi - a.roi
+        if (sortKey === 'price') return b.marketPrice - a.marketPrice
+        if (sortKey === 'demand') return DEMAND_RANK[b.demand] - DEMAND_RANK[a.demand]
+        const ap = a.craftable ? a.netProfit : -Infinity
+        const bp = b.craftable ? b.netProfit : -Infinity
+        return bp - ap
+      })
+  }, [rows, category, search, craftableOnly, sortKey])
+
+  const bestProfit = rows.filter(r => r.craftable).reduce((m, r) => Math.max(m, r.netProfit), 0)
+  const craftableCount = rows.filter(r => r.craftable && r.netProfit > 0).length
+
+  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
+    { label: '#' },
+    { label: 'Weapon' },
+    { label: 'Demand', sort: 'demand', align: 'right' },
+    { label: 'Market (LBIN)', sort: 'price', align: 'right' },
+    { label: 'Craft cost', align: 'right' },
+    { label: 'Net profit', sort: 'profit', align: 'right' },
+    { label: 'ROI', sort: 'roi', align: 'right' },
+    { label: 'Sales', align: 'right' },
+  ]
 
   return (
     <Shell>
       <PageHead
-        title="Endgame"
-        highlight="Weapons"
-        sub="Hyperion & Terminator craft calculators — live ingredient pricing on both markets, scroll variants and manipulation checks"
+        title="Weapon"
+        highlight="Market"
+        sub="The SkyBlock weapon economy by category — live BIN pricing, full crafting-tree costs and AH-tax-true net profit. Rift gear excluded (trades in motes, not coins)."
         live
         lastUpdated={lastUpdated}
         error={error}
       >
-        <StatCard label="Hyperion profit" value={data?.hyperion.profitNoScrolls ?? 0} format={(n) => `${n > 0 ? '+' : ''}${coinsShort(n)}`} accent={(data?.hyperion.profitNoScrolls ?? 0) > 0 ? 'var(--green)' : 'var(--red)'} sub="Clean craft" />
-        <StatCard label="Terminator profit" value={data?.terminator.profitNoScrolls ?? 0} format={(n) => `${n > 0 ? '+' : ''}${coinsShort(n)}`} accent={(data?.terminator.profitNoScrolls ?? 0) > 0 ? 'var(--green)' : 'var(--red)'} sub="Clean craft" />
+        <StatCard label="Best craft flip" value={bestProfit} format={(n) => `+${coinsShort(n)}`} accent="var(--up)" sub="Net after AH fees" />
+        <StatCard label="Craft-flippable" value={craftableCount} accent="var(--accent)" sub={`of ${rows.length} tracked weapons`} />
       </PageHead>
 
-      <Oracle text={data?.aiSummary} />
+      <div className="bar">
+        <input className="search" placeholder="Search weapon…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
+        <div className="field">
+          <label>Category</label>
+          <select value={category} onChange={e => setCategory(e.target.value as WeaponCategory | 'ALL')}>
+            <option value="ALL">All</option>
+            {WEAPON_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+        </div>
+        <button className={`pill${craftableOnly ? ' on-green' : ''}`} onClick={() => setCraftableOnly(v => !v)}>
+          {craftableOnly ? '✓ Profitable crafts' : 'All weapons'}
+        </button>
+      </div>
 
-      {!data && (
-        <>
-          <div className="skel" style={{ height: 320, borderRadius: 'var(--r-lg)', marginBottom: 18 }} />
-          <div className="skel" style={{ height: 320, borderRadius: 'var(--r-lg)' }} />
-        </>
-      )}
+      <div className="grid-table">
+        <div className="gt-head" style={{ gridTemplateColumns: GRID }}>
+          {HEAD.map((h, i) => (
+            <div
+              key={i}
+              className={h.sort ? `sortable${sortKey === h.sort ? ' sorted' : ''}` : undefined}
+              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
+              style={{ textAlign: h.align ?? 'left' }}
+            >
+              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
+            </div>
+          ))}
+        </div>
 
-      {data && (
-        <>
-          <WeaponCard w={data.hyperion} />
-          <WeaponCard w={data.terminator} />
-        </>
-      )}
+        {loading && <SkelRows n={12} />}
 
-      <RefreshTimer intervalMs={180_000} lastUpdated={lastUpdated} />
+        {!loading && filtered.length === 0 && (
+          <Void glyph="⚔" title="No weapons match" sub="Clear the search or switch category" />
+        )}
+
+        {!loading && filtered.map((r, i) => {
+          const isOpen = expanded === r.id
+          const catLabel = WEAPON_CATEGORIES.find(c => c.key === r.category)?.label ?? r.category
+          return (
+            <div key={r.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 56px' } as React.CSSProperties}>
+              <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : r.id)}>
+                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.id} size={26} /></div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.83rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {r.name}
+                      {r.manipulated && <Chip label="⚠" tone="red" />}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                      <Chip label={catLabel} tone="dim" />
+                      <Chip label={r.tier} tone={TIER_TONE[r.tier]} />
+                    </div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}><Chip label={r.demand} tone={DEMAND_TONE[r.demand]} /></div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--accent)' }}>{coinsShort(r.marketPrice)}</div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: r.craftable ? 'var(--info)' : 'var(--faint)' }}>
+                  {r.craftable ? coinsShort(r.craftCostOrder) : 'drop only'}
+                </div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: !r.craftable ? 'var(--faint)' : r.netProfit > 0 ? 'var(--up)' : 'var(--down)' }}>
+                  {r.craftable ? `${r.netProfit > 0 ? '+' : ''}${coinsShort(r.netProfit)}` : '—'}
+                </div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: r.roi > 15 ? 'var(--up)' : 'var(--dim)' }}>
+                  {r.craftable ? `${r.roi.toFixed(0)}%` : '—'}
+                </div>
+                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', color: 'var(--dim)' }}>{r.volume || '—'}</div>
+              </div>
+
+              {isOpen && (
+                <div className="gt-expand">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 14 }}>
+                    {[
+                      { label: 'Gross sale (LBIN)', val: coins(r.grossSale), color: 'var(--accent)' },
+                      { label: 'AH listing fee', val: `−${coins(r.ahListingFee)}`, color: 'var(--down)' },
+                      { label: 'AH claiming tax', val: `−${coins(r.ahClaimingTax)}`, color: 'var(--down)' },
+                      { label: 'Median sale', val: r.median > 0 ? coins(r.median) : '—', color: 'var(--text)' },
+                      ...(r.craftable ? [
+                        { label: 'Craft (buy orders)', val: coins(r.craftCostOrder), color: 'var(--info)' },
+                        { label: 'Craft (insta-buy)', val: coins(r.craftCostInsta), color: 'var(--warn)' },
+                        { label: 'NET profit (orders)', val: `${r.netProfit > 0 ? '+' : ''}${coins(r.netProfit)}`, color: r.netProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                        { label: 'NET profit (insta)', val: `${r.netProfitInsta > 0 ? '+' : ''}${coins(r.netProfitInsta)}`, color: r.netProfitInsta > 0 ? 'var(--up)' : 'var(--down)' },
+                      ] : []),
+                    ].map(({ label, val, color }) => (
+                      <div key={label}>
+                        <div className="mini-label">{label}</div>
+                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {r.ingredients.length > 0 && (
+                    <div className="recipe-strip" style={{ marginBottom: 14 }}>
+                      <span className="mini-label" style={{ marginBottom: 0 }}>Crafting tree</span>
+                      {r.ingredients.map(ing => (
+                        <span key={ing.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}>
+                          <ItemIcon id={ing.id} size={18} />
+                          <span className="mono" style={{ color: 'var(--text)' }}>{ing.qty}×</span>
+                          {ing.name}
+                          <span className="mono" style={{ color: 'var(--faint)' }}>({coinsShort(ing.orderCost)})</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mini-label" style={{ marginBottom: 8 }}>Price trend — 24h</div>
+                  <HistoryChart id={r.id} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <RefreshTimer intervalMs={300_000} lastUpdated={lastUpdated} />
     </Shell>
   )
 }

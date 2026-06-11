@@ -5,6 +5,7 @@ import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
 import { Chip, ItemIcon, Oracle, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { useDebounced } from '@/components/hooks'
 
 const GRID = '30px minmax(180px, 1.5fr) 110px 100px 100px 84px 90px 80px'
 
@@ -23,7 +24,8 @@ export default function PetsFlipPage() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [searchRaw, setSearchRaw] = useState('')
+  const search = useDebounced(searchRaw)
   const [maxHours, setMaxHours] = useState<number | ''>('')
   const [budget, setBudget] = useState<number | ''>('')
   const [riskFilter, setRiskFilter] = useState<'ALL' | 'LOW'>('ALL')
@@ -90,7 +92,7 @@ export default function PetsFlipPage() {
       <Oracle text={aiSummary} />
 
       <div className="bar">
-        <input className="search" placeholder="Search pet…" value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="search" placeholder="Search pet…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
         <div className="field">
           <label>Budget</label>
           <input type="number" value={budget} min={0} placeholder="any"
@@ -171,8 +173,9 @@ export default function PetsFlipPage() {
                       { label: 'Pet purchase', val: coins(r.buyPrice), color: 'var(--blue)' },
                       { label: 'Kat fee', val: coins(r.upgradeCost), color: 'var(--orange)' },
                       { label: 'Materials', val: r.materialCost > 0 ? coins(r.materialCost) : '—', color: 'var(--orange)' },
-                      { label: 'Gross sale (median)', val: coins(r.grossSell), color: 'var(--gold-hi)' },
-                      { label: 'Net after fees', val: coins(r.sellPrice), color: 'var(--gold-hi)' },
+                      { label: 'Gross sale (median)', val: coins(r.grossSell), color: 'var(--accent)' },
+                      { label: 'AH fees', val: `−${coins(r.grossSell - r.sellPrice)}`, color: 'var(--down)' },
+                      { label: 'Net after fees', val: coins(r.sellPrice), color: 'var(--accent)' },
                       { label: 'Upgrade time', val: fmtHours(r.upgradeHours), color: 'var(--text)' },
                     ].map(({ label, val, color }) => (
                       <div key={label}>

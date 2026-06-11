@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { FORGE_RECIPES, ForgeRecipe } from '@/lib/forgeRecipes'
+import { ahFees, bazaarNet } from '@/lib/economy'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,15 +8,8 @@ let cachedResult: object | null = null
 let cacheTime = 0
 const CACHE_TTL = 5 * 60 * 1000
 
-const BZ_TAX = 0.0125
 const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 const MIN_BZ_EXIT_VOL = 40       // weekly insta-buys consuming your sell offer
-
-// AH fees: 1% claiming + tiered listing fee
-function ahNet(price: number): number {
-  const listing = price < 10_000_000 ? 0.01 : price < 100_000_000 ? 0.02 : 0.025
-  return price * (1 - listing - 0.01)
-}
 
 export interface ForgeIngredient {
   id: string
@@ -24,6 +18,8 @@ export interface ForgeIngredient {
   unitPrice: number
   totalPrice: number
   source: 'BZ' | 'AH' | 'FORGE' | 'COIN'
+  forgeCheaper: boolean      // sub-forging beats buying on the market
+  marketPrice: number        // what buying outright would cost (0 = unlisted)
   iconUrl: string
   subForgeTime?: number
 }
@@ -33,17 +29,20 @@ export interface ForgeFlipRow {
   name: string
   iconUrl: string
   duration: number           // final forge step, seconds
-  totalDuration: number      // including forced sub-forges
+  totalDuration: number      // including cheapest-route sub-forges
   hotm: number | null
   outputCount: number
   sellSource: 'BZ' | 'AH'
   sellPrice: number          // gross exit price
-  revenue: number            // after fees
-  ingredientCost: number
-  profit: number
+  fees: number               // bazaar tax or AH listing+claiming
+  revenue: number            // net of fees
+  ingredientCost: number     // min-cost dependency tree total
+  naiveCost: number          // buying every input outright (for comparison)
+  profit: number             // NET profit
   margin: number
-  coinsPerHour: number       // profit ÷ total forge hours (per slot)
+  coinsPerHour: number       // net profit ÷ forge hours (per slot)
   weeklyVolume: number       // 0 when AH (unknown)
+  chainDepth: number         // how many forge layers the cheapest route uses
   ingredients: ForgeIngredient[]
   warning: string | null
 }
@@ -72,13 +71,25 @@ async function askGemini(prompt: string): Promise<string | null> {
   } catch { return null }
 }
 
-async function fetchLbin(tag: string): Promise<number> {
+async function fetchLbin(tag: string, attempt = 0): Promise<number> {
   try {
-    const r = await fetch(`https://sky.coflnet.com/api/item/price/${tag}/bin`, { signal: AbortSignal.timeout(8000) })
-    if (!r.ok) return 0
+    const r = await fetch(`https://sky.coflnet.com/api/item/price/${tag}/bin`, { signal: AbortSignal.timeout(10000), cache: 'no-store' })
+    if (!r.ok) {
+      if (attempt < 3) {
+        await new Promise(res => setTimeout(res, 600 * (attempt + 1)))
+        return fetchLbin(tag, attempt + 1)
+      }
+      return 0
+    }
     const j = await r.json()
     return j?.lowest ?? 0
-  } catch { return 0 }
+  } catch {
+    if (attempt < 3) {
+      await new Promise(res => setTimeout(res, 600 * (attempt + 1)))
+      return fetchLbin(tag, attempt + 1)
+    }
+    return 0
+  }
 }
 
 async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: number; aiSummary: string | null }> {
@@ -91,7 +102,7 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
   const recipes = FORGE_RECIPES.filter(r => !r.id.includes(';'))
   const recipeMap = new Map<string, ForgeRecipe>(recipes.map(r => [r.id, r]))
 
-  // Collect every id that needs a price and isn't on the bazaar → coflnet lbin
+  // Every id that may need an AH price (outputs + all inputs not on bazaar)
   const needsAh = new Set<string>()
   for (const r of recipes) {
     if (!products[r.id]) needsAh.add(r.id)
@@ -100,109 +111,139 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
     }
   }
 
-  // Batched LBIN fetches (concurrency 15)
   const lbin = new Map<string, number>()
   const ahIds = Array.from(needsAh)
-  for (let i = 0; i < ahIds.length; i += 15) {
-    const batch = ahIds.slice(i, i + 15)
+  for (let i = 0; i < ahIds.length; i += 5) {
+    const batch = ahIds.slice(i, i + 5)
     const results = await Promise.allSettled(batch.map(async id => ({ id, price: await fetchLbin(id) })))
     for (const res of results) {
       if (res.status === 'fulfilled') lbin.set(res.value.id, res.value.price)
     }
+    if (i + 5 < ahIds.length) await new Promise(res => setTimeout(res, 250))
   }
 
-  // Acquisition price for an ingredient (0 = unobtainable on the market)
   function marketBuy(id: string): { price: number; source: 'BZ' | 'AH' } {
     const p = products[id]
     if (p && p.quick_status.buyPrice > 0) return { price: p.quick_status.buyPrice, source: 'BZ' }
     return { price: lbin.get(id) ?? 0, source: 'AH' }
   }
 
-  // Forge cost of an item, used when an ingredient has no market listing.
-  // Returns cost and the extra forge time forced into the chain.
-  const memo = new Map<string, { cost: number; time: number } | null>()
-  function forgeCost(id: string, stack: Set<string>): { cost: number; time: number } | null {
+  // ── Min-cost dependency resolution ─────────────────────────────────────────
+  // The Forge is a dependency-chain system: drills, gemstone chains and
+  // upgrade items consume previous-tier items. For every node we take
+  // min(market price, recursive forge cost) — never just the flat recipe.
+  interface CostNode { cost: number; time: number; depth: number; viaForge: boolean }
+  const memo = new Map<string, CostNode | null>()
+
+  function bestCost(id: string, stack: Set<string>): CostNode | null {
     if (memo.has(id)) return memo.get(id) ?? null
+    const market = marketBuy(id)
     const recipe = recipeMap.get(id)
-    if (!recipe || stack.has(id)) return null
-    stack.add(id)
-    let cost = 0
-    let time = recipe.duration
-    for (const inp of recipe.inputs) {
-      if (inp.id === 'SKYBLOCK_COIN') { cost += inp.qty; continue }
-      const m = marketBuy(inp.id)
-      if (m.price > 0) { cost += m.price * inp.qty; continue }
-      const sub = forgeCost(inp.id, stack)
-      if (!sub) { stack.delete(id); memo.set(id, null); return null }
-      cost += sub.cost * inp.qty
-      time += sub.time
+
+    let forged: CostNode | null = null
+    if (recipe && !stack.has(id)) {
+      stack.add(id)
+      let cost = 0
+      let time = recipe.duration
+      let depth = 1
+      let ok = true
+      for (const inp of recipe.inputs) {
+        if (inp.id === 'SKYBLOCK_COIN') { cost += inp.qty; continue }
+        const sub = bestCost(inp.id, stack)
+        if (!sub) { ok = false; break }
+        cost += sub.cost * inp.qty
+        if (sub.viaForge) {
+          time += sub.time
+          depth = Math.max(depth, sub.depth + 1)
+        }
+      }
+      stack.delete(id)
+      if (ok) forged = { cost: cost / Math.max(1, recipe.count), time, depth, viaForge: true }
     }
-    stack.delete(id)
-    const out = { cost: cost / Math.max(1, recipe.count), time }
-    memo.set(id, out)
-    return out
+
+    let result: CostNode | null = null
+    if (market.price > 0 && forged) {
+      result = market.price <= forged.cost
+        ? { cost: market.price, time: 0, depth: 0, viaForge: false }
+        : forged
+    } else if (market.price > 0) {
+      result = { cost: market.price, time: 0, depth: 0, viaForge: false }
+    } else {
+      result = forged
+    }
+    // Only memoize outside of an active recursion stack to keep cycles safe
+    if (stack.size === 0) memo.set(id, result)
+    return result
   }
 
   const rows: ForgeFlipRow[] = []
 
   for (const recipe of recipes) {
-    // ── Exit pricing ──
+    // ── Exit pricing (tax-aware) ──
     const bzOut = products[recipe.id]
     let sellSource: 'BZ' | 'AH'
     let sellPrice = 0
     let revenue = 0
+    let fees = 0
     let weeklyVolume = 0
 
     if (bzOut && bzOut.quick_status.buyPrice > 0) {
       sellSource = 'BZ'
       sellPrice = Math.round((bzOut.quick_status.buyPrice - 0.1) * 100) / 100
-      revenue = sellPrice * (1 - BZ_TAX)
+      revenue = bazaarNet(sellPrice)
+      fees = sellPrice - revenue
       weeklyVolume = bzOut.quick_status.buyMovingWeek
       if (weeklyVolume < MIN_BZ_EXIT_VOL) continue
     } else {
       sellSource = 'AH'
       sellPrice = lbin.get(recipe.id) ?? 0
       if (sellPrice <= 0) continue
-      revenue = ahNet(sellPrice)
+      const f = ahFees(sellPrice)
+      revenue = f.net
+      fees = f.listingFee + f.claimingTax
     }
     revenue *= recipe.count
+    fees *= recipe.count
 
-    // ── Ingredient costs ──
+    // ── Ingredient costs via min-cost trees ──
     let ingredientCost = 0
+    let naiveCost = 0
     let extraTime = 0
+    let chainDepth = 0
     let feasible = true
     const ingredients: ForgeIngredient[] = []
 
     for (const inp of recipe.inputs) {
       if (inp.id === 'SKYBLOCK_COIN') {
         ingredientCost += inp.qty
+        naiveCost += inp.qty
         ingredients.push({
           id: inp.id, name: 'Coins (forge fee)', qty: inp.qty, unitPrice: 1,
-          totalPrice: inp.qty, source: 'COIN', iconUrl: 'https://sky.shiiyu.moe/item/GOLD_INGOT',
+          totalPrice: inp.qty, source: 'COIN', forgeCheaper: false, marketPrice: inp.qty,
+          iconUrl: 'https://sky.shiiyu.moe/item/GOLD_INGOT',
         })
         continue
       }
-      const m = marketBuy(inp.id)
-      if (m.price > 0) {
-        ingredientCost += m.price * inp.qty
-        ingredients.push({
-          id: inp.id, name: titleCase(inp.id), qty: inp.qty,
-          unitPrice: Math.round(m.price * 100) / 100,
-          totalPrice: Math.round(m.price * inp.qty * 100) / 100,
-          source: m.source, iconUrl: `https://sky.shiiyu.moe/item/${inp.id}`,
-        })
-        continue
+      const node = bestCost(inp.id, new Set())
+      if (!node || node.cost <= 0) { feasible = false; break }
+      const market = marketBuy(inp.id)
+
+      ingredientCost += node.cost * inp.qty
+      naiveCost += (market.price > 0 ? market.price : node.cost) * inp.qty
+      if (node.viaForge) {
+        extraTime += node.time
+        chainDepth = Math.max(chainDepth, node.depth)
       }
-      const sub = forgeCost(inp.id, new Set())
-      if (!sub || sub.cost <= 0) { feasible = false; break }
-      ingredientCost += sub.cost * inp.qty
-      extraTime += sub.time
+
       ingredients.push({
         id: inp.id, name: titleCase(inp.id), qty: inp.qty,
-        unitPrice: Math.round(sub.cost * 100) / 100,
-        totalPrice: Math.round(sub.cost * inp.qty * 100) / 100,
-        source: 'FORGE', iconUrl: `https://sky.shiiyu.moe/item/${inp.id}`,
-        subForgeTime: sub.time,
+        unitPrice: Math.round(node.cost * 100) / 100,
+        totalPrice: Math.round(node.cost * inp.qty * 100) / 100,
+        source: node.viaForge ? 'FORGE' : market.source,
+        forgeCheaper: node.viaForge && market.price > 0,
+        marketPrice: Math.round(market.price * 100) / 100,
+        iconUrl: `https://sky.shiiyu.moe/item/${inp.id}`,
+        subForgeTime: node.viaForge ? node.time : undefined,
       })
     }
     if (!feasible || ingredientCost <= 0) continue
@@ -234,12 +275,15 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
       outputCount: recipe.count,
       sellSource,
       sellPrice: Math.round(sellPrice),
+      fees: Math.round(fees),
       revenue: Math.round(revenue),
       ingredientCost: Math.round(ingredientCost),
+      naiveCost: Math.round(naiveCost),
       profit: Math.round(profit),
       margin,
       coinsPerHour,
       weeklyVolume,
+      chainDepth,
       ingredients,
       warning,
     })
@@ -255,10 +299,10 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
       return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`
     }
     aiSummary = await askGemini(
-      `You are a Hypixel SkyBlock forge expert. Top 5 forge flips by coins/hour right now:
+      `You are a Hypixel SkyBlock forge expert. Top 5 forge flips by coins/hour (full dependency-chain costs, taxes included):
 
 ${top5.map((r, i) =>
-  `${i + 1}. ${r.name}: cost ${r.ingredientCost.toLocaleString()}, sells ${r.sellPrice.toLocaleString()} (${r.sellSource}), profit ${r.profit.toLocaleString()} in ${fmtDur(r.totalDuration)} = ${r.coinsPerHour.toLocaleString()}/h per slot${r.hotm ? `, needs HotM ${r.hotm}` : ''}`
+  `${i + 1}. ${r.name}: tree cost ${r.ingredientCost.toLocaleString()}, sells ${r.sellPrice.toLocaleString()} (${r.sellSource}), NET ${r.profit.toLocaleString()} in ${fmtDur(r.totalDuration)} = ${r.coinsPerHour.toLocaleString()}/h per slot${r.hotm ? `, HotM ${r.hotm}` : ''}${r.chainDepth > 1 ? `, ${r.chainDepth}-deep chain` : ''}`
 ).join('\n')}
 
 For each give ONE short tip (max 15 words): volume reality, manipulation risk, or genuinely good. Numbered list 1-5 only.`

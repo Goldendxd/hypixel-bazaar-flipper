@@ -1,37 +1,21 @@
 'use client'
 
-// App shell: fixed left rail navigation + content area.
-// Every page wraps its content in <Shell>.
+// App shell: sticky glass top bar (trading-terminal style) + centered content.
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-const NAV: Array<{ section: string; links: Array<{ href: string; ico: string; label: string }> }> = [
-  {
-    section: 'Market',
-    links: [
-      { href: '/',       ico: '◈', label: 'Overview' },
-      { href: '/orders', ico: '⇅', label: 'Order Flips' },
-    ],
-  },
-  {
-    section: 'Production',
-    links: [
-      { href: '/craft',         ico: '⚒', label: 'Craft Flips' },
-      { href: '/forge',         ico: '♨', label: 'Forge' },
-      { href: '/fusion',        ico: '❖', label: 'Shard Fusion' },
-      { href: '/craft-weapons', ico: '⚔', label: 'Weapons' },
-    ],
-  },
-  {
-    section: 'Speculation',
-    links: [
-      { href: '/books', ico: '✦', label: 'Book Combines' },
-      { href: '/pets',  ico: '♟', label: 'Kat Flips' },
-      { href: '/mayor', ico: '♛', label: 'Mayor Plays' },
-    ],
-  },
+const NAV: Array<{ href: string; ico: string; label: string }> = [
+  { href: '/',              ico: '◧', label: 'Overview' },
+  { href: '/orders',        ico: '⇅', label: 'Bazaar' },
+  { href: '/craft',         ico: '⚒', label: 'Crafts' },
+  { href: '/forge',         ico: '♨', label: 'Forge' },
+  { href: '/fusion',        ico: '❖', label: 'Fusion' },
+  { href: '/craft-weapons', ico: '⚔', label: 'Weapons' },
+  { href: '/books',         ico: '✦', label: 'Books' },
+  { href: '/pets',          ico: '♟', label: 'Kat' },
+  { href: '/mayor',         ico: '♛', label: 'Mayor' },
 ]
 
 function Clock() {
@@ -47,47 +31,38 @@ function Clock() {
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
-  const allLinks = NAV.flatMap(g => g.links)
 
   return (
-    <div className="shell">
-      <aside className="rail">
-        <Link href="/" className="rail-logo">
-          <div className="coin-mark">A</div>
+    <>
+      <header className="topbar">
+        <Link href="/" className="tb-logo">
+          <div className="coin-mark">GF</div>
           <div>
-            <div className="rail-logo-name">AURUM</div>
-            <div className="rail-logo-tag">profit terminal</div>
+            <div className="tb-name">Golden<span>Flipper</span></div>
+            <div className="tb-tag">trading intelligence</div>
           </div>
         </Link>
 
-        {NAV.map(group => (
-          <div key={group.section}>
-            <div className="rail-section">{group.section}</div>
-            {group.links.map(({ href, ico, label }) => (
-              <Link key={href} href={href} className={`rail-link${path === href ? ' on' : ''}`}>
-                <span className="rl-ico">{ico}</span>
-                {label}
-              </Link>
-            ))}
-          </div>
-        ))}
+        <nav className="tb-nav">
+          {NAV.map(({ href, ico, label }) => (
+            <Link key={href} href={href} className={`tb-link${path === href ? ' on' : ''}`}>
+              <span className="tb-ico">{ico}</span>
+              {label}
+            </Link>
+          ))}
+        </nav>
 
-        <div className="rail-foot">
+        <div className="tb-status">
           <span className="live-dot" />
           <span>LIVE</span>
           <span style={{ color: 'var(--faint)' }}>·</span>
           <Clock />
         </div>
-      </aside>
+      </header>
 
-      <main className="content">
-        <nav className="mobilebar">
-          {allLinks.map(({ href, label }) => (
-            <Link key={href} href={href} className={path === href ? 'on' : ''}>{label}</Link>
-          ))}
-        </nav>
+      <main className="content page-anim">
         {children}
       </main>
-    </div>
+    </>
   )
 }

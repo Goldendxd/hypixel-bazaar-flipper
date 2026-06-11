@@ -6,10 +6,16 @@ export interface BookFlipRow {
   inputTier: number
   outputTier: number
   inputQty: number
+  baseTier: number
+  t1Equivalent: number
+  combineSteps: number
   inputBuyOrder: number
   inputTotalCost: number
   inputInstaCost: number
   outputSellOffer: number
+  outputInstaSell: number
+  grossRevenue: number
+  bazaarTax: number
   revenue: number
   profit: number
   margin: number
