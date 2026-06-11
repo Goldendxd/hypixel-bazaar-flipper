@@ -35,7 +35,7 @@ export default function RefreshTimer({
   return (
     <div className="refresh-pod">
       <svg width="30" height="30" viewBox="0 0 30 30">
-        <circle cx="15" cy="15" r={r} fill="none" stroke="rgba(255,217,122,0.1)" strokeWidth="2.5" />
+        <circle cx="15" cy="15" r={r} fill="none" stroke="rgba(28,37,54,0.1)" strokeWidth="2.5" />
         <circle
           cx="15" cy="15" r={r}
           fill="none"

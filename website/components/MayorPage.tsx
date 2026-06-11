@@ -66,7 +66,7 @@ function PrepBlock({ prep }: { prep: NextMayorPrep }) {
         <span style={{ color: 'var(--faint)', fontSize: '0.8rem' }}>{open ? '▾' : '▸'}</span>
       </button>
       {open && (
-        <div style={{ borderTop: '1px solid var(--line)', padding: '14px 18px', background: 'rgba(10,8,6,0.4)' }}>
+        <div style={{ borderTop: '1px solid var(--line)', padding: '14px 18px', background: 'var(--bg2)' }}>
           {prep.aiRecommendation && (
             <div style={{ fontSize: '0.78rem', color: 'var(--purple)', marginBottom: 12, lineHeight: 1.6 }}>✦ {prep.aiRecommendation}</div>
           )}

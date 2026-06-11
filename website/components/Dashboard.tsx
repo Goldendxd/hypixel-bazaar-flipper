@@ -1,10 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
 import Shell from '@/components/Shell'
 import Ticker from '@/components/Ticker'
 import RefreshTimer from '@/components/RefreshTimer'
-import { AnimatedNumber, Chip, ItemIcon, Oracle, PageHead, Spark, StatCard, coins, coinsShort, heatColor } from '@/components/ui'
+import { AnimatedNumber, Chip, ItemIcon, PriceChart, coins, coinsShort, heatColor } from '@/components/ui'
+import { fetchBookFlips, BookFlipRow } from '@/lib/bookFlips'
+import { fetchCraftFlips, CraftFlipRow } from '@/lib/craftFlips'
+import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
+import { fetchForgeFlips, ForgeFlipRow } from '@/lib/forgeFlips'
+import { fetchMayorData, MayorData } from '@/lib/mayorData'
 
 // ─── Types (mirror /api/market-intel) ────────────────────────────────────────
 
@@ -45,99 +51,83 @@ interface IntelResponse {
   aiSummary: string | null
 }
 
-function AlertCard({ alert }: { alert: MarketAlert }) {
-  const isCrash = alert.type === 'CRASH'
-  const color = isCrash ? 'var(--red)' : 'var(--green)'
-  return (
-    <div className={`alarm${isCrash ? '' : ' up'}`}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div className="ifr"><ItemIcon id={alert.itemId} size={28} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.88rem' }}>{alert.itemName}</span>
-            <Chip label={isCrash ? `▼ CRASH ${alert.changePct}%` : `▲ SPIKE +${alert.changePct}%`} tone={isCrash ? 'red' : 'green'} />
-          </div>
-          <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--dim)', marginTop: 3 }}>
-            {coinsShort(alert.prevAvg)} → <span style={{ color, fontWeight: 700 }}>{coinsShort(alert.current)}</span>
-            {' · '}{coinsShort(alert.weeklyVolume)}/wk
-          </div>
-        </div>
-      </div>
-      <div style={{ fontSize: '0.74rem', color: 'var(--dim)', marginTop: 10, lineHeight: 1.55, paddingTop: 10, borderTop: '1px solid var(--line)' }}>
-        {alert.note}
-      </div>
-    </div>
-  )
-}
+// ─── Metric card (reference style: dot + label + corner link, number, delta, spark) ──
 
-function FlipCard({ flip, rank }: { flip: IntelFlip; rank: number }) {
-  const [open, setOpen] = useState(false)
+function MetricCard({ label, value, format = coinsShort, delta, deltaGood, sub, spark, color, href }: {
+  label: string
+  value: number | null
+  format?: (n: number) => string
+  delta?: string
+  deltaGood?: boolean
+  sub?: string
+  spark?: number[]
+  color: string          // 'up' | 'down' | css color
+  href: string
+}) {
+  const c = color === 'up' ? 'var(--up)' : color === 'down' ? 'var(--down)' : color
   return (
-    <div
-      className="card lift"
-      style={{ padding: '13px 17px', cursor: 'pointer' }}
-      onClick={() => setOpen(o => !o)}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-        <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--faint)', width: 20, flexShrink: 0 }}>{rank}</span>
-        <div className="ifr"><ItemIcon id={flip.id} size={28} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: '0.87rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{flip.name}</span>
-            <Chip label={flip.riskClass} tone={flip.riskClass === 'SAFE' ? 'green' : 'orange'} />
-            {flip.manipulationFlag && <Chip label="⚠ MANIP" tone="red" />}
-          </div>
-          <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--dim)', marginTop: 2 }}>
-            buy <span style={{ color: 'var(--blue)' }}>{coinsShort(flip.buyOrder)}</span>
-            {' · sell '}<span style={{ color: 'var(--gold-hi)' }}>{coinsShort(flip.sellOrder)}</span>
-            {' · '}<span style={{ color: 'var(--green)' }}>+{flip.marginPct.toFixed(1)}%</span>
-          </div>
-        </div>
-        <Spark values={flip.spark} color={flip.volatility > 12 ? 'var(--red)' : 'var(--gold)'} w={64} h={22} fill />
-        <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 86 }}>
-          <div className="mono" style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--green)' }}>
-            {coinsShort(flip.hourlyPotential)}/h
-          </div>
-          <div style={{ fontSize: '0.62rem', color: 'var(--faint)', marginTop: 1 }}>fill {flip.fillProbability}%</div>
-        </div>
+    <div className="card lift" style={{ padding: '14px 16px 8px', display: 'flex', flexDirection: 'column', minHeight: 138 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span className="dot" style={{ background: c }} />
+        <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--dim)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <Link href={href} className="corner-btn" title="Open">↗</Link>
       </div>
-
-      {open && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12, animation: 'fadeIn 0.25s ease both' }}>
-          {[
-            { label: 'Profit / item', val: `+${coins(flip.profitPerItem)}`, color: 'var(--green)' },
-            { label: 'Liquidity', val: `${flip.liquidityScore}/100`, color: flip.liquidityScore > 60 ? 'var(--green)' : 'var(--gold)' },
-            { label: 'Volatility', val: `${flip.volatility.toFixed(1)}%`, color: flip.volatility > 12 ? 'var(--red)' : 'var(--text)' },
-            { label: 'Weekly buys', val: coinsShort(flip.weeklyBuyVol), color: 'var(--text)' },
-            { label: 'Weekly sells', val: coinsShort(flip.weeklySellVol), color: 'var(--text)' },
-            { label: 'Risk-adj score', val: coinsShort(flip.riskAdjusted), color: 'var(--purple)' },
-          ].map(({ label, val, color }) => (
-            <div key={label}>
-              <div className="mini-label">{label}</div>
-              <div className="mono" style={{ fontSize: '0.82rem', fontWeight: 700, color }}>{val}</div>
-            </div>
-          ))}
-        </div>
+      {value === null ? (
+        <div className="skel" style={{ height: 26, width: 90, marginBottom: 8 }} />
+      ) : (
+        <AnimatedNumber value={value} format={format} className="mono" style={{ fontSize: '1.45rem', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }} />
       )}
+      <div style={{ fontSize: '0.66rem', marginTop: 5, minHeight: 14 }}>
+        {delta && <span style={{ color: deltaGood ? 'var(--up)' : 'var(--down)', fontWeight: 700 }}>{delta} </span>}
+        <span style={{ color: 'var(--faint)' }}>{sub}</span>
+      </div>
+      <div style={{ marginTop: 'auto' }}>
+        {spark && spark.length > 1
+          ? <PriceChart points={spark.map((v, i) => ({ label: `#${i + 1}`, value: v }))} h={46} color={c} />
+          : <div style={{ height: 46 }} />}
+      </div>
     </div>
   )
 }
+
+// ─── Recommendation row ──────────────────────────────────────────────────────
+
+function RecRow({ ico, text, chip, chipTone, href }: {
+  ico: string; text: React.ReactNode; chip: string | null
+  chipTone: 'green' | 'blue' | 'purple' | 'orange' | 'gold'
+  href: string
+}) {
+  return (
+    <Link href={href} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 4px', borderBottom: '1px solid var(--line)', textDecoration: 'none', color: 'inherit' }}>
+      <span style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--panel3)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0, color: 'var(--dim)' }}>{ico}</span>
+      <span style={{ fontSize: '0.78rem', color: 'var(--text)', flex: 1, minWidth: 0 }}>{text}</span>
+      {chip ? <Chip label={chip} tone={chipTone} /> : <span className="skel" style={{ width: 56, height: 16, borderRadius: 99 }} />}
+    </Link>
+  )
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [data, setData] = useState<IntelResponse | null>(null)
+  const [intel, setIntel] = useState<IntelResponse | null>(null)
+  const [books, setBooks] = useState<BookFlipRow[] | null>(null)
+  const [crafts, setCrafts] = useState<CraftFlipRow[] | null>(null)
+  const [kats, setKats] = useState<KatFlipRow[] | null>(null)
+  const [forge, setForge] = useState<ForgeFlipRow[] | null>(null)
+  const [mayor, setMayor] = useState<MayorData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [riskTab, setRiskTab] = useState<'ALL' | 'SAFE' | 'RISKY'>('ALL')
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch('/api/market-intel', { cache: 'no-store' })
-      if (!res.ok) throw new Error(`API ${res.status}`)
-      const j: IntelResponse = await res.json()
-      setData(j); setLastUpdated(new Date()); setError(null)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
-    }
+  const load = useCallback(() => {
+    fetch('/api/market-intel', { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw new Error(`API ${r.status}`); return r.json() })
+      .then((j: IntelResponse) => { setIntel(j); setLastUpdated(new Date()); setError(null) })
+      .catch(e => setError(e instanceof Error ? e.message : 'Failed to load'))
+    fetchBookFlips().then(d => setBooks(d.rows)).catch(() => setBooks([]))
+    fetchCraftFlips().then(d => setCrafts(d.rows)).catch(() => setCrafts([]))
+    fetchKatFlips().then(d => setKats(d.rows)).catch(() => setKats([]))
+    fetchForgeFlips().then(d => setForge(d.rows)).catch(() => setForge([]))
+    fetchMayorData().then(setMayor).catch(() => null)
   }, [])
 
   useEffect(() => {
@@ -146,109 +136,220 @@ export default function Dashboard() {
     return () => clearInterval(t)
   }, [load])
 
-  const filteredFlips = useMemo(() => {
-    if (!data) return []
-    const rows = data.flips.filter(f => !f.manipulationFlag || riskTab === 'RISKY')
-    if (riskTab === 'ALL') return rows.slice(0, 15)
-    return rows.filter(f => f.riskClass === riskTab).slice(0, 15)
-  }, [data, riskTab])
+  const topFlip = intel?.flips[0]
+  const second = intel?.flips[1]
+  const third = intel?.flips[2]
+  const crashes = intel?.alerts.filter(a => a.type === 'CRASH') ?? []
+  const spikes = intel?.alerts.filter(a => a.type === 'SPIKE') ?? []
 
-  const topHourly = data?.flips[0]?.hourlyPotential ?? 0
-  const crashes = data?.alerts.filter(a => a.type === 'CRASH') ?? []
-  const spikes = data?.alerts.filter(a => a.type === 'SPIKE') ?? []
+  const topCraft = crafts?.find(c => !c.manipulated)
+  const topBook = books?.find(b => !b.warning)
+  const topKat = kats?.[0]
+  const topForge = forge?.[0]
+  const leader = mayor?.nextMayorPreps?.[0]
+  const leaderBuy = leader?.items.find(i => i.action === 'BUY')
+
+  const hour = new Date().getHours()
+  const greeting = hour < 6 ? 'Up late' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
     <Shell>
-      <Ticker />
-
-      <PageHead
-        title="Market"
-        highlight="Overview"
-        sub="Live SkyBlock economy radar — crash detection, risk-adjusted flips and mayor impact at a glance"
-        live
-        lastUpdated={lastUpdated}
-        error={error}
-      />
-
-      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 13, marginBottom: 22 }}>
-        <StatCard label="Products tracked" value={data?.totalTracked ?? 0} accent="var(--blue)" sub="Live bazaar feed" />
-        <StatCard label="Top flip potential" value={topHourly} format={coinsShort} suffix="/hour" accent="var(--green)" sub="Risk-adjusted #1 opportunity" />
-        <StatCard label="Volatility index" value={data?.marketVolatilityIndex ?? 0} format={(n) => n.toFixed(2)} suffix="%" accent={(data?.marketVolatilityIndex ?? 0) > 8 ? 'var(--red)' : 'var(--gold)'} sub="Avg rolling deviation" />
-        <StatCard label="Active alerts" value={data?.alerts.length ?? 0} accent={crashes.length > 0 ? 'var(--red)' : 'var(--purple)'} sub={`${crashes.length} crashes · ${spikes.length} spikes`} />
+      {/* ── Welcome header ── */}
+      <div className="pagehead" style={{ marginBottom: 16 }}>
+        <div>
+          <h1 className="ph-title">{greeting}, Flipper 👋</h1>
+          <p className="ph-sub">Your SkyBlock market briefing — every number is net of taxes and fees.</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {error && <span style={{ fontSize: '0.72rem', color: 'var(--down)', fontWeight: 700 }}>⚠ {error}</span>}
+          <span className="ph-status" style={{ marginBottom: 0 }}>
+            <span className="live-dot" />
+            {lastUpdated ? <span suppressHydrationWarning>updated {lastUpdated.toLocaleTimeString()}</span> : 'connecting…'}
+          </span>
+        </div>
       </div>
 
-      <Oracle text={data?.aiSummary} />
+      <Ticker />
 
-      {data && data.alerts.length > 0 && (
+      {/* ── Top row: recommendations + featured chart ── */}
+      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 14, marginBottom: 6 }}>
+        {/* Recommendations */}
+        <div className="card" style={{ padding: '14px 16px 6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 13 }}>✦</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>Recommendations</span>
+          </div>
+          <RecRow
+            ico="⚒" href="/craft"
+            text={topCraft ? <>Craft <strong>{topCraft.name}</strong> with buy-order materials</> : 'Scanning craft flips…'}
+            chip={topCraft ? `+${coinsShort(topCraft.profitOrder)}` : null}
+            chipTone="green"
+          />
+          <RecRow
+            ico="✦" href="/books"
+            text={topBook ? <>Combine <strong>{topBook.inputQty}× {topBook.enchantName} {['', 'I', 'II', 'III', 'IV', 'V'][topBook.inputTier]}</strong> into {topBook.outputName}</> : 'Scanning book combines…'}
+            chip={topBook ? `+${coinsShort(topBook.profit)}` : null}
+            chipTone="green"
+          />
+          <RecRow
+            ico="♟" href="/pets"
+            text={topKat ? <>Kat-upgrade <strong>{topKat.name}</strong> ({topKat.buyRarity.toLowerCase()} → {topKat.sellRarity.toLowerCase()}, {Math.round(topKat.upgradeHours)}h)</> : 'Scanning Kat flips…'}
+            chip={topKat ? `+${coinsShort(topKat.profit)}` : null}
+            chipTone="green"
+          />
+          <div style={{ borderBottom: 'none' }}>
+            <RecRow
+              ico="♛" href="/mayor"
+              text={leader ? <>Position for <strong>{leader.candidateName}</strong>{leaderBuy ? <> — stock {leaderBuy.name}</> : null} before the election closes</> : 'Reading election data…'}
+              chip={leader ? `${leader.voteShare}% lead` : null}
+              chipTone="purple"
+            />
+          </div>
+        </div>
+
+        {/* Featured chart */}
+        <div className="card" style={{ padding: '14px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span className="dot" style={{ background: 'var(--down)' }} />
+            <span style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--dim)', flex: 1 }}>Top spread — risk-adjusted #1</span>
+            <Link href="/orders" className="corner-btn" title="Open bazaar spreads">↗</Link>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span className="chip chip-red" style={{ fontSize: '0.72rem' }}>↝</span>
+            {topFlip
+              ? <AnimatedNumber value={topFlip.hourlyPotential} format={(n) => `${coinsShort(n)}/h`} className="mono" style={{ fontSize: '1.7rem', fontWeight: 800, letterSpacing: '-0.02em' }} />
+              : <div className="skel" style={{ height: 30, width: 130 }} />}
+          </div>
+          <div style={{ fontSize: '0.76rem', color: 'var(--dim)', lineHeight: 1.6, marginBottom: 8 }}>
+            {topFlip ? (
+              <>
+                <strong style={{ color: 'var(--text)' }}>{topFlip.name}</strong> nets{' '}
+                <strong style={{ color: 'var(--up)' }}>{topFlip.marginPct.toFixed(1)}% margin</strong> at{' '}
+                {topFlip.fillProbability}% fill probability.
+                {second && third && <> Also worth a look: <strong style={{ color: 'var(--down)' }}>{second.name}</strong> and <strong style={{ color: 'var(--down)' }}>{third.name}</strong>.</>}
+              </>
+            ) : 'Crunching the order books…'}
+          </div>
+          {topFlip && topFlip.spark.length > 1
+            ? <PriceChart points={topFlip.spark.map((v, i) => ({ label: `snapshot ${i + 1}`, value: v }))} h={110} color="var(--down)" />
+            : <div className="skel" style={{ height: 110 }} />}
+        </div>
+      </div>
+
+      {/* ── Bazaar metrics ── */}
+      <div className="sect">Bazaar</div>
+      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
+        <MetricCard
+          label="Products tracked" value={intel?.totalTracked ?? null} format={(n) => Math.round(n).toLocaleString()}
+          sub="live bazaar feed" spark={intel?.flips.slice(0, 14).map(f => f.weeklyBuyVol)} color="var(--info)" href="/orders"
+        />
+        <MetricCard
+          label="Top flip potential" value={topFlip?.hourlyPotential ?? null} format={(n) => `${coinsShort(n)}/h`}
+          delta={topFlip ? `${topFlip.marginPct.toFixed(1)}%` : undefined} deltaGood sub="margin on #1 spread"
+          spark={topFlip?.spark} color="up" href="/orders"
+        />
+        <MetricCard
+          label="Volatility index" value={intel?.marketVolatilityIndex ?? null} format={(n) => `${n.toFixed(2)}%`}
+          delta={intel ? (intel.marketVolatilityIndex > 8 ? 'turbulent' : 'calm') : undefined}
+          deltaGood={(intel?.marketVolatilityIndex ?? 0) <= 8} sub="rolling deviation"
+          spark={intel?.heatmap.slice(0, 14).map(h => h.volatility)} color={(intel?.marketVolatilityIndex ?? 0) > 8 ? 'down' : 'up'} href="/orders"
+        />
+        <MetricCard
+          label="Active alerts" value={intel ? intel.alerts.length : null} format={(n) => String(Math.round(n))}
+          delta={crashes.length > 0 ? `${crashes.length} crashes` : undefined} deltaGood={false}
+          sub={`${spikes.length} spikes detected`} spark={intel?.flips.slice(0, 14).map(f => f.volatility)}
+          color={crashes.length > 0 ? 'down' : 'var(--purple)'} href="/orders"
+        />
+      </div>
+
+      {/* ── Engine metrics ── */}
+      <div className="sect">Profit engines</div>
+      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
+        <MetricCard
+          label="Best craft flip" value={topCraft?.profitOrder ?? (crafts ? 0 : null)} format={(n) => `+${coinsShort(n)}`}
+          delta={topCraft ? `${topCraft.marginOrder.toFixed(0)}%` : undefined} deltaGood sub={topCraft?.name ?? 'no clean flips'}
+          spark={crafts?.slice(0, 12).map(c => c.profitOrder)} color="up" href="/craft"
+        />
+        <MetricCard
+          label="Best book combine" value={topBook?.profit ?? (books ? 0 : null)} format={(n) => `+${coinsShort(n)}`}
+          delta={topBook ? `${topBook.margin.toFixed(0)}%` : undefined} deltaGood sub={topBook?.outputName ?? 'no clean routes'}
+          spark={books?.slice(0, 12).map(b => b.profit)} color="up" href="/books"
+        />
+        <MetricCard
+          label="Best Kat flip" value={topKat?.profit ?? (kats ? 0 : null)} format={(n) => `+${coinsShort(n)}`}
+          delta={topKat ? `${topKat.roi.toFixed(0)}% ROI` : undefined} deltaGood sub={topKat ? `${topKat.name} · ${Math.round(topKat.upgradeHours)}h` : 'no routes'}
+          spark={kats?.slice(0, 12).map(k => k.profit)} color="up" href="/pets"
+        />
+        <MetricCard
+          label="Best forge slot" value={topForge?.coinsPerHour ?? (forge ? 0 : null)} format={(n) => `${coinsShort(n)}/h`}
+          delta={topForge ? `${topForge.margin.toFixed(0)}%` : undefined} deltaGood sub={topForge?.name ?? 'computing chains…'}
+          spark={forge?.slice(0, 12).map(f => f.coinsPerHour)} color="var(--purple)" href="/forge"
+        />
+      </div>
+
+      {/* ── Alerts ── */}
+      {intel && intel.alerts.length > 0 && (
         <>
-          <div className="sect">Anomaly alerts — crash &amp; spike detection</div>
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: 12, marginBottom: 22 }}>
-            {data.alerts.map((a, i) => <AlertCard key={`${a.itemId}-${i}`} alert={a} />)}
+          <div className="sect">Anomaly alerts</div>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+            {intel.alerts.map((a, i) => {
+              const isCrash = a.type === 'CRASH'
+              return (
+                <div key={`${a.itemId}-${i}`} className={`alarm${isCrash ? '' : ' up'}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="ifr"><ItemIcon id={a.itemId} size={26} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{a.itemName}</span>
+                        <Chip label={isCrash ? `▼ ${a.changePct}%` : `▲ +${a.changePct}%`} tone={isCrash ? 'red' : 'green'} />
+                      </div>
+                      <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--dim)', marginTop: 2 }}>
+                        {coinsShort(a.prevAvg)} → <span style={{ color: isCrash ? 'var(--down)' : 'var(--up)', fontWeight: 700 }}>{coinsShort(a.current)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </>
       )}
 
-      {data && data.alerts.length === 0 && (
-        <div className="note success">
-          <strong style={{ color: 'var(--text)' }}>No market anomalies detected.</strong>{' '}
-          Crash detection needs ~10 min of rolling history{data.historyDepth < 10 ? ` (warming up: ${data.historyDepth}/10 snapshots)` : ''} — alerts trigger on sustained ±40% moves with live volume on 100K+ items.
-        </div>
-      )}
-
-      {data?.mayor && (
-        <div className="card rise-1" style={{ padding: '17px 21px', marginBottom: 22, display: 'flex', alignItems: 'center', gap: 17, flexWrap: 'wrap' }}>
-          <div className="coin-mark" style={{ width: 44, height: 44, fontSize: 19 }}>♛</div>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem' }}>Mayor {data.mayor.name}</span>
-              {data.mayor.perks.slice(0, 3).map(p => <Chip key={p} label={p} tone="gold" />)}
-            </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--dim)', lineHeight: 1.55 }}>{data.mayor.impact}</div>
-          </div>
-        </div>
-      )}
-
-      <div className="sect">Top flips — risk-adjusted ranking</div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        {(['ALL', 'SAFE', 'RISKY'] as const).map(tab => (
-          <button
-            key={tab}
-            className={`pill${riskTab === tab ? (tab === 'SAFE' ? ' on-green' : tab === 'RISKY' ? ' on-orange' : ' on') : ''}`}
-            onClick={() => setRiskTab(tab)}
-          >
-            {tab === 'ALL' ? 'All' : tab === 'SAFE' ? '● Safe' : '◆ Risky'}
-          </button>
-        ))}
-        <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--faint)', alignSelf: 'center' }}>
-          profit/hour × fill probability ÷ risk
-        </span>
-      </div>
-      <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
-        {!data && [0, 1, 2, 3, 4].map(i => <div key={i} className="skel" style={{ height: 62, borderRadius: 'var(--r-lg)' }} />)}
-        {data && filteredFlips.length === 0 && (
-          <div className="card" style={{ padding: '34px 0', textAlign: 'center', color: 'var(--faint)', fontSize: '0.85rem' }}>
-            No {riskTab.toLowerCase()} flips right now — the spread is tight
-          </div>
-        )}
-        {filteredFlips.map((f, i) => <FlipCard key={f.id} flip={f} rank={i + 1} />)}
-      </div>
-
-      {data && data.heatmap.length > 0 && (
+      {/* ── Mayor strip ── */}
+      {mayor && (
         <>
-          <div className="sect">Market heatmap — volatility × spread</div>
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 9, marginBottom: 22 }}>
-            {data.heatmap.map(cell => (
+          <div className="sect">Mayor watch</div>
+          <Link href="/mayor" className="card lift" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 15, flexWrap: 'wrap', textDecoration: 'none', color: 'inherit' }}>
+            <div className="coin-mark" style={{ width: 40, height: 40, fontSize: 17 }}>♛</div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.92rem' }}>Mayor {mayor.mayorName}</span>
+                {mayor.minister && <Chip label={`Minister ${mayor.minister.name}`} tone="blue" />}
+                {leader && <Chip label={`${leader.candidateName} leads next — ${leader.voteShare}%`} tone="purple" />}
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--dim)' }}>
+                {mayor.items.filter(i => i.action === 'BUY').length} buy plays · {mayor.items.filter(i => i.action === 'SELL').length} sell plays ·
+                election closes in {Math.max(0, Math.round(mayor.msUntilElection / 3600000))}h
+              </div>
+            </div>
+            <span className="corner-btn">↗</span>
+          </Link>
+        </>
+      )}
+
+      {/* ── Heatmap ── */}
+      {intel && intel.heatmap.length > 0 && (
+        <>
+          <div className="sect">Market heatmap</div>
+          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 9 }}>
+            {intel.heatmap.map(cell => (
               <div key={cell.id} className="card lift" style={{ padding: '10px 12px', background: heatColor(cell.intensity) }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                  <ItemIcon id={cell.id} size={20} />
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {cell.name}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                  <ItemIcon id={cell.id} size={18} />
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cell.name}</span>
                 </div>
-                <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--gold-hi)' }}>
-                  <AnimatedNumber value={cell.price} format={coinsShort} />
-                </div>
-                <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--dim)', marginTop: 2 }}>
+                <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700 }}>{coins(cell.price)}</div>
+                <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--dim)', marginTop: 1 }}>
                   σ {cell.volatility.toFixed(1)}% · spr {cell.spreadPct.toFixed(1)}%
                 </div>
               </div>
