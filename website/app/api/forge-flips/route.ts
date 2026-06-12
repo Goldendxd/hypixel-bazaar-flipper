@@ -48,6 +48,11 @@ export interface ForgeFlipRow {
 }
 
 type QS = { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number }
+type BzProduct = {
+  quick_status: QS
+  sell_summary?: Array<{ pricePerUnit: number }>
+  buy_summary?: Array<{ pricePerUnit: number }>
+}
 
 function titleCase(id: string): string {
   return id.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
@@ -96,7 +101,7 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
   const bazRes = await fetch('https://api.hypixel.net/v2/skyblock/bazaar', { signal: AbortSignal.timeout(15000) })
   if (!bazRes.ok) throw new Error('Bazaar fetch failed')
   const baz = await bazRes.json()
-  const products = baz.products as Record<string, { quick_status: QS }>
+  const products = baz.products as Record<string, BzProduct>
 
   // Skip pet recipes (AMMONITE;4 etc) — their value depends on level/candy
   const recipes = FORGE_RECIPES.filter(r => !r.id.includes(';'))
@@ -124,7 +129,9 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
 
   function marketBuy(id: string): { price: number; source: 'BZ' | 'AH' } {
     const p = products[id]
-    if (p && p.quick_status.buyPrice > 0) return { price: p.quick_status.buyPrice, source: 'BZ' }
+    // Real insta-buy cost = lowest ask (buy_summary side) in the live book
+    const ask = p?.buy_summary?.[0]?.pricePerUnit ?? p?.quick_status.buyPrice ?? 0
+    if (ask > 0) return { price: ask, source: 'BZ' }
     return { price: lbin.get(id) ?? 0, source: 'AH' }
   }
 
@@ -187,9 +194,10 @@ async function compute(): Promise<{ rows: ForgeFlipRow[]; totalForgeItems: numbe
     let fees = 0
     let weeklyVolume = 0
 
-    if (bzOut && bzOut.quick_status.buyPrice > 0) {
+    const bzAsk = bzOut ? (bzOut.buy_summary?.[0]?.pricePerUnit ?? bzOut.quick_status.buyPrice) : 0
+    if (bzOut && bzAsk > 0) {
       sellSource = 'BZ'
-      sellPrice = Math.round((bzOut.quick_status.buyPrice - 0.1) * 100) / 100
+      sellPrice = Math.round((bzAsk - 0.1) * 100) / 100
       revenue = bazaarNet(sellPrice)
       fees = sellPrice - revenue
       weeklyVolume = bzOut.quick_status.buyMovingWeek

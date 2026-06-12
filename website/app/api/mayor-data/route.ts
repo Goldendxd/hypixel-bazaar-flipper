@@ -226,19 +226,27 @@ async function askGemini(prompt: string): Promise<string | null> {
 }
 
 type QuickStatus = { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number }
+type BzProduct = {
+  quick_status: QuickStatus
+  sell_summary?: Array<{ pricePerUnit: number }>
+  buy_summary?: Array<{ pricePerUnit: number }>
+}
 
-function buildItems(name: string, key: string, products: Record<string, { quick_status: QuickStatus }>): MayorFlipItem[] {
+function buildItems(name: string, key: string, products: Record<string, BzProduct>): MayorFlipItem[] {
   const items: MayorFlipItem[] = []
   for (const def of mayorLookup(name, key)) {
     const p = products[def.id]
     if (!p) continue
     const q = p.quick_status
-    const price = Math.round(q.buyPrice * 100) / 100
+    // Real top-of-book: buy_summary[0] = lowest ask, sell_summary[0] = highest bid
+    const ask = p.buy_summary?.[0]?.pricePerUnit ?? q.buyPrice
+    const bid = p.sell_summary?.[0]?.pricePerUnit ?? q.sellPrice
+    const price = Math.round(ask * 100) / 100
     if (price <= 0) continue
-    const sellPrice = Math.round((q.buyPrice - 0.1) * 100) / 100
+    const sellPrice = Math.round((ask - 0.1) * 100) / 100
 
     // Spread sanity: ask far above bid on a thin book = unreliable pricing
-    const spread = q.sellPrice > 0 ? q.buyPrice / q.sellPrice : 99
+    const spread = bid > 0 ? ask / bid : 99
     const isPotentiallyManipulated = spread > 8 && q.sellMovingWeek < 5000
 
     items.push({
@@ -295,7 +303,7 @@ async function compute(): Promise<MayorData> {
   }
   const currentYear = Math.floor((nowMs - SB_EPOCH_MS) / SB_YEAR_MS) + 1
 
-  const products = baz.products as Record<string, { quick_status: QuickStatus }>
+  const products = baz.products as Record<string, BzProduct>
 
   const items = buildItems(mayorName, mayorKey, products)
 

@@ -100,15 +100,35 @@ function baseName(base: string): string {
 }
 
 type QS = { buyPrice: number; sellPrice: number; buyMovingWeek: number; sellMovingWeek: number }
+type Summary = Array<{ pricePerUnit: number }>
+
+// Real top-of-book. Hypixel names summaries from the player's action:
+// buy_summary[0] = lowest ask (insta-buy), sell_summary[0] = highest bid.
+// quick_status is a weighted average and drifts from the live book.
+interface BookSide {
+  ask: number          // insta-buy cost / price to undercut with a sell offer
+  bid: number          // insta-sell receive / price to outbid with a buy order
+  buyMovingWeek: number
+  sellMovingWeek: number
+}
+
+function side(p: { quick_status: QS; sell_summary?: Summary; buy_summary?: Summary }): BookSide {
+  return {
+    ask: p.buy_summary?.[0]?.pricePerUnit ?? p.quick_status.buyPrice,
+    bid: p.sell_summary?.[0]?.pricePerUnit ?? p.quick_status.sellPrice,
+    buyMovingWeek: p.quick_status.buyMovingWeek,
+    sellMovingWeek: p.quick_status.sellMovingWeek,
+  }
+}
 
 async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number; aiSummary: string | null }> {
   const bazRes = await fetch('https://api.hypixel.net/v2/skyblock/bazaar', { signal: AbortSignal.timeout(15000) })
   if (!bazRes.ok) throw new Error(`Bazaar fetch failed: ${bazRes.status}`)
   const baz = await bazRes.json()
-  const products = baz.products as Record<string, { quick_status: QS }>
+  const products = baz.products as Record<string, { quick_status: QS; sell_summary?: Summary; buy_summary?: Summary }>
 
-  // Group enchant products by base name → tier → quick_status
-  const enchants: Record<string, Record<number, QS>> = {}
+  // Group enchant products by base name → tier → live order-book sides
+  const enchants: Record<string, Record<number, BookSide>> = {}
   for (const id of Object.keys(products)) {
     if (!id.startsWith('ENCHANTMENT_')) continue
     const match = id.match(/^(.*?)_(\d+)$/)
@@ -116,7 +136,7 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
     if (NON_COMBINABLE.has(match[1])) continue
     const tier = parseInt(match[2], 10)
     if (tier < 1 || tier > 7) continue
-    ;(enchants[match[1]] ??= {})[tier] = products[id].quick_status
+    ;(enchants[match[1]] ??= {})[tier] = side(products[id])
   }
 
   const rows: BookFlipRow[] = []
@@ -133,10 +153,10 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
 
       // Exit liquidity: your sell offer is consumed by insta-buyers
       const exitVol = out.buyMovingWeek
-      if (out.buyPrice <= 0 || exitVol < MIN_EXIT_INSTABUYS_WEEK) continue
+      if (out.ask <= 0 || exitVol < MIN_EXIT_INSTABUYS_WEEK) continue
 
-      const outputSellOffer = Math.round((out.buyPrice - 0.1) * 100) / 100
-      const outputInstaSell = Math.round(out.sellPrice * 100) / 100
+      const outputSellOffer = Math.round((out.ask - 0.1) * 100) / 100
+      const outputInstaSell = Math.round(out.bid * 100) / 100
       const revenue = Math.round(bazaarNet(outputSellOffer) * 100) / 100
       const instaExitRevenue = Math.round(bazaarNet(outputInstaSell) * 100) / 100
 
@@ -152,15 +172,15 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
         const qty = Math.pow(2, outputTier - inputTier)
         if (qty > 64) continue   // > 6 combine levels isn't a realistic session
 
-        if (inp.sellPrice <= 0 && inp.buyPrice <= 0) continue
-        const unitOrder = inp.sellPrice > 0 ? inp.sellPrice + 0.1 : inp.buyPrice
+        if (inp.bid <= 0 && inp.ask <= 0) continue
+        const unitOrder = inp.bid > 0 ? inp.bid + 0.1 : inp.ask
         if (inp.sellMovingWeek < qty * MIN_INPUT_FILL_RATIO) continue
 
         totalCandidates++
 
         const inputBuyOrder = Math.round(unitOrder * 100) / 100
         const inputTotalCost = Math.round(unitOrder * qty * 100) / 100
-        const inputInstaCost = Math.round(inp.buyPrice * qty * 100) / 100
+        const inputInstaCost = Math.round(inp.ask * qty * 100) / 100
 
         const profit = Math.round((revenue - inputTotalCost) * 100) / 100
         if (profit <= 0) continue

@@ -1,17 +1,23 @@
-// Hypixel Bazaar API field semantics (confirmed from live data):
-//   quick_status.buyPrice  = lowest ask  (you pay this to buy instantly)
-//   quick_status.sellPrice = highest bid (you get this when selling instantly)
-//   buyPrice > sellPrice is normal — the spread is your flip opportunity
+// Hypixel Bazaar API field semantics (verified against live data):
+//   buy_summary  = the side YOU can buy from → buy_summary[0]  = LOWEST ASK
+//   sell_summary = the side YOU can sell to  → sell_summary[0] = HIGHEST BID
+//   (named from the player's action, not the order type)
+//   quick_status.buyPrice/sellPrice are weighted averages of the top 2% of
+//   each side — they drift from the real top-of-book, sometimes by hundreds
+//   of thousands of coins. Order placement must use the summaries;
+//   quick_status is only good for volume statistics.
 
 export interface BazaarProduct {
   product_id: string
+  buy_summary: Array<{ amount: number; pricePerUnit: number; orders: number }>   // asks (low → high)
+  sell_summary: Array<{ amount: number; pricePerUnit: number; orders: number }>  // bids (high → low)
   quick_status: {
     productId: string
-    buyPrice: number        // lowest ask — what you pay to buy instantly
+    buyPrice: number        // weighted avg ask — stats only
     buyVolume: number
     buyMovingWeek: number
     buyOrders: number
-    sellPrice: number       // highest bid — what you get selling instantly
+    sellPrice: number       // weighted avg bid — stats only
     sellVolume: number
     sellMovingWeek: number
     sellOrders: number
@@ -104,24 +110,26 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
     const { quick_status: q } = product
     const id = product.product_id
 
-    // Need real prices and a positive spread
-    if (!q.buyPrice || !q.sellPrice) continue
-    const spread = q.buyPrice - q.sellPrice
+    // Real top-of-book prices; quick_status only as a last-resort fallback
+    const ask = product.buy_summary?.[0]?.pricePerUnit ?? q.buyPrice   // insta-buy cost
+    const bid = product.sell_summary?.[0]?.pricePerUnit ?? q.sellPrice  // insta-sell receive
+    if (!ask || !bid || ask <= 0 || bid <= 0) continue
+    const spread = ask - bid
     if (spread <= 0) continue
 
-    // Order flip: undercut both sides by 0.1 to jump the queue
-    const buyOrder = fmt(q.sellPrice + 0.1)
-    const sellOrder = fmt(q.buyPrice - 0.1)
+    // Order flip: outbid the top bid and undercut the lowest ask by 0.1
+    const buyOrder = fmt(bid + 0.1)
+    const sellOrder = fmt(ask - 0.1)
     const orderProfit = fmt(sellOrder * (1 - TAX) - buyOrder)
     const orderMargin = fmt((orderProfit / buyOrder) * 100)
     if (orderProfit <= 0) continue
 
     // Fast flip: pay ask, receive bid immediately (almost always negative — shown for reference)
-    const instantProfit = fmt(q.sellPrice * (1 - TAX) - q.buyPrice)
-    const instantMargin = fmt((instantProfit / q.buyPrice) * 100)
+    const instantProfit = fmt(bid * (1 - TAX) - ask)
+    const instantMargin = fmt((instantProfit / ask) * 100)
 
     // Hybrid: patient buy order in, instant-sell out — fast liquidation exit
-    const hybridProfit = fmt(q.sellPrice * (1 - TAX) - buyOrder)
+    const hybridProfit = fmt(bid * (1 - TAX) - buyOrder)
     const hybridMargin = fmt((hybridProfit / buyOrder) * 100)
 
     // ── Liquidity: log-scaled on the THINNER side of the market ──
@@ -138,7 +146,7 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
     ))
 
     // ── Stability: tight spread relative to price = stable two-sided market ──
-    const spreadPct = (spread / q.buyPrice) * 100
+    const spreadPct = (spread / ask) * 100
     const stabilityScore = Math.max(0, Math.min(100, Math.round(100 - spreadPct * 3)))
 
     // ── Manipulation detection ──
@@ -149,7 +157,7 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
       manipulationReason = 'Huge margin on thin volume — classic manipulation signature'
     } else if (q.sellOrders < 3 && q.buyOrders < 3 && orderMargin > 15) {
       manipulationReason = 'Nearly empty order book — price discovery unreliable'
-    } else if (q.sellPrice < q.buyPrice * 0.2 && q.buyPrice > 10_000) {
+    } else if (bid < ask * 0.2 && ask > 10_000) {
       manipulationReason = 'Bid collapsed far below ask — one-sided market'
     }
     const manipulationFlag = manipulationReason !== null
@@ -165,8 +173,8 @@ export async function fetchBazaarFlips(): Promise<BazaarFlipsResult> {
       sellOrder,
       orderProfit,
       orderMargin,
-      instantBuyPrice: q.buyPrice,
-      instantSellPrice: q.sellPrice,
+      instantBuyPrice: fmt(ask),
+      instantSellPrice: fmt(bid),
       instantProfit,
       instantMargin,
       hybridProfit,

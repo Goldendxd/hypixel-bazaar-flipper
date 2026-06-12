@@ -4,12 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
-import { Chip, ItemIcon, Oracle, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Chip, FlipCard, FlipGrid, FlipSkeletons, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
-const GRID = '30px minmax(180px, 1.5fr) 110px 100px 100px 84px 90px 80px'
-
 type SortKey = 'profit' | 'roi' | 'perHour' | 'volume'
+
+const SORTS: Array<{ key: SortKey; label: string }> = [
+  { key: 'profit', label: 'Net profit' },
+  { key: 'roi', label: 'ROI %' },
+  { key: 'perHour', label: 'Coins per hour' },
+  { key: 'volume', label: 'Sales volume' },
+]
 
 function fmtHours(h: number): string {
   if (h < 1) return `${Math.round(h * 60)}m`
@@ -64,17 +69,6 @@ export default function PetsFlipPage() {
 
   const best = filtered[0]?.profit ?? 0
 
-  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
-    { label: '#' },
-    { label: 'Pet upgrade' },
-    { label: 'Total cost', align: 'right' },
-    { label: 'Sells for', align: 'right' },
-    { label: 'Profit', sort: 'profit', align: 'right' },
-    { label: 'ROI', sort: 'roi', align: 'right' },
-    { label: 'Coins/h', sort: 'perHour', align: 'right' },
-    { label: 'Sales', sort: 'volume', align: 'right' },
-  ]
-
   return (
     <Shell>
       <PageHead
@@ -85,8 +79,8 @@ export default function PetsFlipPage() {
         lastUpdated={lastUpdated}
         error={error}
       >
-        <StatCard label="Best flip" value={best} format={(n) => `+${coinsShort(n)}`} accent="var(--green)" sub="After AH fees" />
-        <StatCard label="Routes live" value={filtered.length} accent="var(--gold)" sub="With real sales volume" />
+        <StatCard label="Best flip" value={best} format={(n) => `+${coinsShort(n)}`} accent="var(--up)" sub="After AH fees" />
+        <StatCard label="Routes live" value={filtered.length} accent="var(--accent)" sub="With real sales volume" />
       </PageHead>
 
       <Oracle text={aiSummary} />
@@ -104,103 +98,87 @@ export default function PetsFlipPage() {
             onChange={e => setMaxHours(e.target.value === '' ? '' : Number(e.target.value))} />
         </div>
         <button className={`pill${riskFilter === 'LOW' ? ' on-green' : ''}`} onClick={() => setRiskFilter(f => f === 'ALL' ? 'LOW' : 'ALL')}>
-          {riskFilter === 'LOW' ? '✓ Low risk only' : 'All risk levels'}
+          {riskFilter === 'LOW' ? 'Low risk only' : 'All risk levels'}
         </button>
+        <SortSelect value={sortKey} onChange={setSortKey} options={SORTS} />
       </div>
 
-      <div className="grid-table">
-        <div className="gt-head" style={{ gridTemplateColumns: GRID }}>
-          {HEAD.map((h, i) => (
-            <div
-              key={i}
-              className={h.sort ? `sortable${sortKey === h.sort ? ' sorted' : ''}` : undefined}
-              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
-              style={{ textAlign: h.align ?? 'left' }}
-            >
-              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
-            </div>
-          ))}
+      {!loading && filtered.length === 0 && (
+        <div className="card">
+          <Void glyph="—" title="No Kat flips match" sub="Raise the budget / hours, or include higher-risk routes" />
         </div>
+      )}
 
-        {loading && <SkelRows n={10} />}
-
-        {!loading && filtered.length === 0 && (
-          <Void glyph="♟" title="No Kat flips match" sub="Raise the budget / hours, or include higher-risk routes" />
-        )}
-
+      <FlipGrid>
+        {loading && <FlipSkeletons n={10} />}
         {!loading && filtered.map((r, i) => {
           const key = `${r.tag}-${r.buyRarity}-${r.sellRarity}`
           const isOpen = expanded === key
           return (
-            <div key={key}>
-              <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : key)}>
-                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.tag} size={26} /></div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '0.83rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {r.name}
-                      {r.risk !== 'LOW' && <Chip label={r.risk === 'HIGH' ? '⚠ HIGH' : '◆ MED'} tone={r.risk === 'HIGH' ? 'red' : 'orange'} />}
-                    </div>
-                    <div className="mono" style={{ fontSize: '0.62rem' }}>
-                      <span className={`rar-${r.buyRarity}`}>{r.buyRarity}</span>
-                      <span style={{ color: 'var(--faint)' }}> → </span>
-                      <span className={`rar-${r.sellRarity}`}>{r.sellRarity}</span>
-                      <span style={{ color: 'var(--faint)' }}> · {fmtHours(r.upgradeHours)}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--blue)' }}>{coinsShort(r.totalCost)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--gold-hi)' }}>{coinsShort(r.sellPrice)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--green)' }}>+{coinsShort(r.profit)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: r.roi > 50 ? 'var(--green)' : 'var(--dim)' }}>{r.roi.toFixed(0)}%</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', color: 'var(--purple)' }}>{coinsShort(r.profitPerHour)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', color: 'var(--dim)' }}>{r.weeklySales}</div>
-              </div>
-
-              {isOpen && (
-                <div className="gt-expand">
-                  {r.riskReason && (
-                    <div style={{ marginBottom: 12, fontSize: '0.76rem', color: r.risk === 'HIGH' ? 'var(--red)' : 'var(--orange)', fontWeight: 700 }}>
-                      ⚠ {r.riskReason}
-                    </div>
-                  )}
-                  {r.aiTip && (
-                    <div style={{ marginBottom: 12, fontSize: '0.78rem', color: 'var(--purple)' }}>✦ {r.aiTip}</div>
-                  )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: r.materials.length > 0 ? 12 : 0 }}>
-                    {[
-                      { label: 'Pet purchase', val: coins(r.buyPrice), color: 'var(--blue)' },
-                      { label: 'Kat fee', val: coins(r.upgradeCost), color: 'var(--orange)' },
-                      { label: 'Materials', val: r.materialCost > 0 ? coins(r.materialCost) : '—', color: 'var(--orange)' },
-                      { label: 'Gross sale (median)', val: coins(r.grossSell), color: 'var(--accent)' },
-                      { label: 'AH fees', val: `−${coins(r.grossSell - r.sellPrice)}`, color: 'var(--down)' },
-                      { label: 'Net after fees', val: coins(r.sellPrice), color: 'var(--accent)' },
-                      { label: 'Upgrade time', val: fmtHours(r.upgradeHours), color: 'var(--text)' },
-                    ].map(({ label, val, color }) => (
-                      <div key={label}>
-                        <div className="mini-label">{label}</div>
-                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {r.materials.length > 0 && (
-                    <div className="recipe-strip">
-                      <span className="mini-label" style={{ marginBottom: 0 }}>Materials</span>
-                      {r.materials.map(m => (
-                        <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}>
-                          <ItemIcon id={m.id} size={18} />
-                          <span className="mono" style={{ color: 'var(--text)' }}>{m.qty}×</span> {m.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+            <FlipCard
+              key={key}
+              rank={i + 1}
+              iconId={r.tag}
+              title={r.name}
+              titleClass={`rar-${r.sellRarity}`}
+              chips={r.risk !== 'LOW' ? <Chip label={r.risk === 'HIGH' ? 'HIGH RISK' : 'MED RISK'} tone={r.risk === 'HIGH' ? 'red' : 'orange'} /> : undefined}
+              sub={<>
+                <span className={`rar-${r.buyRarity}`}>{r.buyRarity.toLowerCase()}</span>
+                {' to '}
+                <span className={`rar-${r.sellRarity}`}>{r.sellRarity.toLowerCase()}</span>
+                {' · '}{fmtHours(r.upgradeHours)} with Kat
+              </>}
+              stats={[
+                { label: 'Total cost', value: coinsShort(r.totalCost), color: 'var(--info)' },
+                { label: 'Sells for', value: coinsShort(r.sellPrice), color: 'var(--accent)' },
+                { label: 'ROI', value: `${r.roi.toFixed(0)}%`, color: r.roi > 50 ? 'var(--up)' : 'var(--dim)' },
+                { label: 'Coins/h', value: coinsShort(r.profitPerHour), color: 'var(--purple)' },
+                { label: 'Sales', value: String(r.weeklySales), color: 'var(--dim)' },
+              ]}
+              net={`+${coinsShort(r.profit)}`}
+              netSub="net profit"
+              open={isOpen}
+              onToggle={() => setExpanded(isOpen ? null : key)}
+            >
+              {r.riskReason && (
+                <div style={{ marginBottom: 12, fontSize: '0.76rem', color: r.risk === 'HIGH' ? 'var(--down)' : '#d97e06', fontWeight: 700 }}>
+                  {r.riskReason}
                 </div>
               )}
-            </div>
+              {r.aiTip && (
+                <div style={{ marginBottom: 12, fontSize: '0.78rem', color: 'var(--purple)' }}>{r.aiTip}</div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: r.materials.length > 0 ? 12 : 0 }}>
+                {[
+                  { label: 'Pet purchase', val: coins(r.buyPrice), color: 'var(--info)' },
+                  { label: 'Kat fee', val: coins(r.upgradeCost), color: '#d97e06' },
+                  { label: 'Materials', val: r.materialCost > 0 ? coins(r.materialCost) : '—', color: '#d97e06' },
+                  { label: 'Gross sale (median)', val: coins(r.grossSell), color: 'var(--accent)' },
+                  { label: 'AH fees', val: `−${coins(r.grossSell - r.sellPrice)}`, color: 'var(--down)' },
+                  { label: 'Net after fees', val: coins(r.sellPrice), color: 'var(--accent)' },
+                  { label: 'Upgrade time', val: fmtHours(r.upgradeHours), color: 'var(--text)' },
+                ].map(({ label, val, color }) => (
+                  <div key={label}>
+                    <div className="mini-label">{label}</div>
+                    <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              {r.materials.length > 0 && (
+                <div className="recipe-strip">
+                  <span className="mini-label" style={{ marginBottom: 0 }}>Materials</span>
+                  {r.materials.map(m => (
+                    <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}>
+                      <ItemIcon id={m.id} size={18} />
+                      <span className="mono" style={{ color: 'var(--text)' }}>{m.qty}×</span> {m.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </FlipCard>
           )
         })}
-      </div>
+      </FlipGrid>
 
       <RefreshTimer intervalMs={60_000} lastUpdated={lastUpdated} />
     </Shell>

@@ -200,6 +200,93 @@ export function Oracle({ text, label = 'Oracle · AI Market Read' }: { text: str
   )
 }
 
+// ─── FlipCard — ranked result card with inline stats and expandable detail ──
+
+export function FlipGrid({ children }: { children: React.ReactNode }) {
+  return <div className="fliplist">{children}</div>
+}
+
+export function FlipCard({ rank, iconId, iconSrc, title, titleClass, chips, sub, stats, net, netSub, netColor = 'var(--up)', actions, open, onToggle, children }: {
+  rank: number
+  iconId: string
+  iconSrc?: string
+  title: React.ReactNode
+  titleClass?: string
+  chips?: React.ReactNode
+  sub?: React.ReactNode
+  stats: Array<{ label: string; value: string; color?: string }>
+  net: string
+  netSub?: string
+  netColor?: string
+  actions?: React.ReactNode
+  open?: boolean
+  onToggle?: () => void
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="card lift fcard" onClick={onToggle}>
+      <div className="fcard-head">
+        <span className="fcard-rank">{rank}</span>
+        <div className="ifr" style={{ width: 38, height: 38 }}><ItemIcon id={iconId} src={iconSrc} size={30} /></div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+            <span className={titleClass} style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: titleClass ? undefined : 'var(--text)' }}>{title}</span>
+            {chips}
+          </div>
+          {sub && <div className="mono" style={{ fontSize: '0.64rem', color: 'var(--faint)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div className="mono" style={{ fontSize: '0.98rem', fontWeight: 800, color: netColor }}>{net}</div>
+          {netSub && <div style={{ fontSize: '0.62rem', color: 'var(--faint)', marginTop: 1 }}>{netSub}</div>}
+        </div>
+        {actions && <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>{actions}</div>}
+      </div>
+
+      <div className="fcard-stats">
+        {stats.map(s => (
+          <div key={s.label}>
+            <div className="mini-label">{s.label}</div>
+            <div className="mono" style={{ fontSize: '0.78rem', fontWeight: 700, color: s.color ?? 'var(--text)' }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {open && children && (
+        <div className="fcard-expand" onClick={(e) => e.stopPropagation()}>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Sort selector for the toolbar
+export function SortSelect<T extends string>({ value, onChange, options }: {
+  value: T
+  onChange: (v: T) => void
+  options: Array<{ key: T; label: string }>
+}) {
+  return (
+    <div className="field">
+      <label>Sort by</label>
+      <select value={value} onChange={e => onChange(e.target.value as T)}>
+        {options.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+      </select>
+    </div>
+  )
+}
+
+// Skeleton placeholders shaped like flip cards
+export function FlipSkeletons({ n = 8 }: { n?: number }) {
+  return (
+    <>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="skel" style={{ height: 112, borderRadius: 'var(--r-lg)' }} />
+      ))}
+    </>
+  )
+}
+
 // ─── Empty / skeleton states ─────────────────────────────────────────────────
 
 export function Void({ glyph = '◇', title, sub }: { glyph?: string; title: string; sub?: string }) {

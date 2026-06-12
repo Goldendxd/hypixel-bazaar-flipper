@@ -524,6 +524,63 @@ input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
   animation: fadeIn 0.2s ease both;
 }
 
+/* Data tables scroll horizontally on narrow screens instead of crushing */
+@media (max-width: 900px) {
+  .grid-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .gt-head, .gt-row, .gt-expand { min-width: 740px; }
+  .gt-head { position: static; }
+  .gt-expand { padding-left: 18px; }
+}
+
+/* ═══ FLIP CARDS — ranked results as a card grid ═══ */
+.fliplist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+  gap: 12px;
+  animation: riseIn 0.45s var(--ease-out) 0.09s both;
+}
+@media (max-width: 560px) {
+  .fliplist { grid-template-columns: 1fr; }
+}
+
+.fcard { padding: 13px 15px; cursor: pointer; align-self: start; }
+
+.fcard-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+
+.fcard-rank {
+  font-family: var(--font-data);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--faint);
+  background: var(--panel3);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  min-width: 24px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+.fcard-stats {
+  display: flex;
+  gap: 16px 22px;
+  flex-wrap: wrap;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px dashed var(--line);
+}
+
+.fcard-expand {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  animation: fadeIn 0.2s ease both;
+  cursor: default;
+}
+
 /* ═══ ICON FRAME ═══ */
 .ifr {
   width: 34px; height: 34px;

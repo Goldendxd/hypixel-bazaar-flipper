@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchBazaarFlips, FlipRow } from '@/lib/api'
 import RefreshTimer from '@/components/RefreshTimer'
-import { Chip, ItemIcon, PageHead, SkelRows, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Chip, FlipCard, FlipGrid, FlipSkeletons, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { STRATEGIES, StrategyMode } from '@/lib/strategy'
 import { useDebounced } from '@/components/hooks'
 
@@ -18,9 +18,9 @@ const FLOW_CAPTURE = 0.05
 type ExecMode = 'CONSERVATIVE' | 'FAST' | 'HYBRID'
 
 const MODES: Array<{ key: ExecMode; label: string; hint: string }> = [
-  { key: 'CONSERVATIVE', label: '⏳ Conservative', hint: 'Buy order → sell offer' },
-  { key: 'HYBRID',       label: '⚡ Hybrid',       hint: 'Buy order → insta-sell' },
-  { key: 'FAST',         label: '🔥 Fast',         hint: 'Insta-buy → insta-sell' },
+  { key: 'CONSERVATIVE', label: 'Conservative', hint: 'Buy order → sell offer' },
+  { key: 'HYBRID',       label: 'Hybrid',       hint: 'Buy order → insta-sell' },
+  { key: 'FAST',         label: 'Fast',         hint: 'Insta-buy → insta-sell' },
 ]
 
 function modeNumbers(r: FlipRow, mode: ExecMode) {
@@ -37,9 +37,14 @@ function realisticQty(r: FlipRow, buyPrice: number, budget: number | '', maxItem
   return Math.max(0, q === Infinity ? 1 : q)
 }
 
-const GRID = '30px minmax(170px, 1.5fr) 92px 92px 70px 92px 84px 104px 58px 64px'
-
 type SortKey = 'estProfit' | 'margin' | 'profitItem' | 'fill'
+
+const SORTS: Array<{ key: SortKey; label: string }> = [
+  { key: 'estProfit', label: 'Est. net profit' },
+  { key: 'margin', label: 'Margin %' },
+  { key: 'profitItem', label: 'Net per item' },
+  { key: 'fill', label: 'Fill probability' },
+]
 
 export default function FlipFinder() {
   const [rows, setRows] = useState<FlipRow[]>([])
@@ -118,19 +123,6 @@ export default function FlipFinder() {
   const topEst = enriched[0]?.estProfit ?? 0
   const modeDef = MODES.find(m => m.key === mode)!
 
-  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
-    { label: '#' },
-    { label: 'Item' },
-    { label: mode === 'FAST' ? 'Insta Buy' : 'Buy Order', align: 'right' },
-    { label: mode === 'CONSERVATIVE' ? 'Sell Offer' : 'Insta Sell', align: 'right' },
-    { label: 'Margin', sort: 'margin', align: 'right' },
-    { label: 'Net/item', sort: 'profitItem', align: 'right' },
-    { label: 'Real Qty', align: 'right' },
-    { label: 'Est Net', sort: 'estProfit', align: 'right' },
-    { label: 'Fill', sort: 'fill', align: 'right' },
-    { label: '' },
-  ]
-
   return (
     <div>
       <PageHead
@@ -179,96 +171,78 @@ export default function FlipFinder() {
         <button className={`pill${showFilter === 'starred' ? ' on' : ''}`} onClick={() => setShowFilter(f => f === 'all' ? 'starred' : 'all')}>
           ★ Starred
         </button>
+        <SortSelect value={sortKey} onChange={setSortKey} options={SORTS} />
         <span className="mono" style={{ marginLeft: 'auto', fontSize: '0.6rem', color: 'var(--faint)' }}>
           QTY = MIN(BUDGET, MAX ITEMS, {FLOW_CAPTURE * 100}% WK FLOW)
         </span>
       </div>
 
-      <div className="grid-table">
-        <div className="gt-head" style={{ gridTemplateColumns: GRID }}>
-          {HEAD.map((h, i) => (
-            <div
-              key={i}
-              className={h.sort ? `sortable${sortKey === h.sort ? ' sorted' : ''}` : undefined}
-              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
-              style={{ textAlign: h.align ?? 'left' }}
-            >
-              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
-            </div>
-          ))}
+      {!loading && enriched.length === 0 && (
+        <div className="card">
+          <Void glyph="—" title="No flips match your filters" sub={mode === 'FAST' ? 'Fast mode is rarely profitable — spreads must exceed double tax' : 'Try the Balanced or High Risk preset'} />
         </div>
+      )}
 
-        {loading && <SkelRows n={10} />}
-
-        {!loading && enriched.length === 0 && (
-          <Void glyph="⊘" title="No flips match your filters" sub={mode === 'FAST' ? 'Fast mode is rarely profitable — spreads must exceed double tax' : 'Try the Balanced or High Risk preset'} />
-        )}
-
+      <FlipGrid>
+        {loading && <FlipSkeletons n={10} />}
         {!loading && enriched.map(({ row, nums, qty, estProfit }, i) => {
           const isOpen = expanded === row.id
           const marginColor = nums.margin >= 8 ? 'var(--up)' : nums.margin >= 3 ? 'var(--accent)' : 'var(--dim)'
           const fillColor = row.fillProbability > 60 ? 'var(--up)' : row.fillProbability > 30 ? 'var(--accent)' : 'var(--down)'
           return (
-            <div key={row.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 52px' } as React.CSSProperties}>
-              <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : row.id)}>
-                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                  <div className="ifr" style={{ width: 30, height: 30 }}><ItemIcon id={row.id} size={24} /></div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '0.81rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {row.name}
-                      {row.manipulationFlag && <Chip label="⚠" tone="red" />}
-                      {starred.has(row.id) && <span style={{ color: 'var(--accent)', fontSize: '0.65rem' }}>★</span>}
-                    </div>
-                    <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--faint)' }}>
-                      vol {coinsShort(Math.min(row.weeklyVolume, row.sellMovingWeek))}/wk
-                    </div>
-                  </div>
-                </div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--info)' }}>{coins(nums.buy)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent)' }}>{coins(nums.sell)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 700, color: marginColor }}>{nums.margin.toFixed(1)}%</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', fontWeight: 600, color: nums.profit > 0 ? 'var(--text)' : 'var(--down)' }}>{coins(nums.profit)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--dim)' }}>{qty.toLocaleString()}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--up)' }}>+{coinsShort(estProfit)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.74rem', fontWeight: 700, color: fillColor }}>{row.fillProbability}%</div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                  <button className={`iconbtn${starred.has(row.id) ? ' lit' : ''}`} onClick={(e) => { e.stopPropagation(); toggleStar(row.id) }} title="Star">★</button>
-                  <button className="iconbtn" onClick={(e) => { e.stopPropagation(); toggleBlock(row.id) }} title="Hide">✕</button>
-                </div>
-              </div>
-
-              {isOpen && (
-                <div className="gt-expand">
-                  {row.manipulationFlag && (
-                    <div style={{ marginBottom: 10, fontSize: '0.76rem', color: 'var(--down)', fontWeight: 700 }}>
-                      ⚠ {row.manipulationReason}
-                    </div>
-                  )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
-                    {[
-                      { label: 'Total cost', val: coinsShort(nums.buy * qty), color: 'var(--down)' },
-                      { label: 'Conservative net', val: coins(row.orderProfit), color: row.orderProfit > 0 ? 'var(--up)' : 'var(--down)' },
-                      { label: 'Hybrid net', val: coins(row.hybridProfit), color: row.hybridProfit > 0 ? 'var(--up)' : 'var(--down)' },
-                      { label: 'Fast net', val: coins(row.instantProfit), color: row.instantProfit > 0 ? 'var(--up)' : 'var(--down)' },
-                      { label: 'Liquidity score', val: `${row.liquidityScore}/100`, color: row.liquidityScore > 60 ? 'var(--up)' : 'var(--accent)' },
-                      { label: 'Stability', val: `${row.stabilityScore}/100`, color: row.stabilityScore > 60 ? 'var(--up)' : 'var(--accent)' },
-                      { label: 'Hourly flow', val: `${coinsShort(row.hourlyThroughput)} items`, color: 'var(--text)' },
-                      { label: 'Open buy orders', val: row.buyOrders.toLocaleString(), color: 'var(--dim)' },
-                      { label: 'Open sell orders', val: row.sellOrders.toLocaleString(), color: 'var(--dim)' },
-                    ].map(({ label, val, color }) => (
-                      <div key={label}>
-                        <div className="mini-label">{label}</div>
-                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
-                      </div>
-                    ))}
-                  </div>
+            <FlipCard
+              key={row.id}
+              rank={i + 1}
+              iconId={row.id}
+              title={row.name}
+              chips={<>
+                {row.manipulationFlag && <Chip label="!" tone="red" />}
+                {starred.has(row.id) && <span style={{ color: 'var(--warn)', fontSize: '0.7rem' }}>★</span>}
+              </>}
+              sub={<>vol {coinsShort(Math.min(row.weeklyVolume, row.sellMovingWeek))}/wk · qty {qty.toLocaleString()}</>}
+              stats={[
+                { label: mode === 'FAST' ? 'Insta buy' : 'Buy order', value: coins(nums.buy), color: 'var(--info)' },
+                { label: mode === 'CONSERVATIVE' ? 'Sell offer' : 'Insta sell', value: coins(nums.sell), color: 'var(--accent)' },
+                { label: 'Margin', value: `${nums.margin.toFixed(1)}%`, color: marginColor },
+                { label: 'Net/item', value: coins(nums.profit), color: nums.profit > 0 ? 'var(--text)' : 'var(--down)' },
+                { label: 'Fill', value: `${row.fillProbability}%`, color: fillColor },
+              ]}
+              net={`+${coinsShort(estProfit)}`}
+              netSub="est. net"
+              open={isOpen}
+              onToggle={() => setExpanded(isOpen ? null : row.id)}
+              actions={<>
+                <button className={`iconbtn${starred.has(row.id) ? ' lit' : ''}`} onClick={(e) => { e.stopPropagation(); toggleStar(row.id) }} title="Star">★</button>
+                <button className="iconbtn" onClick={(e) => { e.stopPropagation(); toggleBlock(row.id) }} title="Hide">✕</button>
+              </>}
+            >
+              {row.manipulationFlag && (
+                <div style={{ marginBottom: 10, fontSize: '0.76rem', color: 'var(--down)', fontWeight: 700 }}>
+                  {row.manipulationReason}
                 </div>
               )}
-            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+                {[
+                  { label: 'Total cost', val: coinsShort(nums.buy * qty), color: 'var(--down)' },
+                  { label: 'Conservative net', val: coins(row.orderProfit), color: row.orderProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                  { label: 'Hybrid net', val: coins(row.hybridProfit), color: row.hybridProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                  { label: 'Fast net', val: coins(row.instantProfit), color: row.instantProfit > 0 ? 'var(--up)' : 'var(--down)' },
+                  { label: 'Liquidity score', val: `${row.liquidityScore}/100`, color: row.liquidityScore > 60 ? 'var(--up)' : 'var(--accent)' },
+                  { label: 'Stability', val: `${row.stabilityScore}/100`, color: row.stabilityScore > 60 ? 'var(--up)' : 'var(--accent)' },
+                  { label: 'Hourly flow', val: `${coinsShort(row.hourlyThroughput)} items`, color: 'var(--text)' },
+                  { label: 'Open buy orders', val: row.buyOrders.toLocaleString(), color: 'var(--dim)' },
+                  { label: 'Open sell orders', val: row.sellOrders.toLocaleString(), color: 'var(--dim)' },
+                ].map(({ label, val, color }) => (
+                  <div key={label}>
+                    <div className="mini-label">{label}</div>
+                    <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </FlipCard>
           )
         })}
-      </div>
+      </FlipGrid>
 
       <RefreshTimer intervalMs={60_000} lastUpdated={lastUpdated} />
     </div>

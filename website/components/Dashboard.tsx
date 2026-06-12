@@ -208,7 +208,7 @@ export default function Dashboard() {
       {/* ── Welcome header ── */}
       <div className="pagehead" style={{ marginBottom: 16 }}>
         <div>
-          <h1 className="ph-title">{greeting}, Flipper 👋</h1>
+          <h1 className="ph-title">{greeting}, Flipper</h1>
           <p className="ph-sub">Your SkyBlock market briefing — every number is net of taxes and fees.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

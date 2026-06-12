@@ -4,12 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchForgeFlips, ForgeFlipRow } from '@/lib/forgeFlips'
-import { Chip, ItemIcon, Oracle, PageHead, SkelRows, StatCard, Void, coins, coinsShort, fmtDuration } from '@/components/ui'
+import { Chip, FlipCard, FlipGrid, FlipSkeletons, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort, fmtDuration } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
-const GRID = '30px minmax(190px, 1.6fr) 90px 110px 110px 104px 100px 70px'
-
 type SortKey = 'perHour' | 'profit' | 'margin'
+
+const SORTS: Array<{ key: SortKey; label: string }> = [
+  { key: 'perHour', label: 'Coins per hour' },
+  { key: 'profit', label: 'Net profit' },
+  { key: 'margin', label: 'Margin %' },
+]
 
 // Quick Forge HotM perk: up to −30% forge time at max level
 const QF_MULT = 0.7
@@ -64,17 +68,6 @@ export default function ForgeFlipPage() {
 
   const best = filtered[0]?.effPerHour ?? 0
 
-  const HEAD: Array<{ label: string; sort?: SortKey; align?: 'right' }> = [
-    { label: '#' },
-    { label: 'Forge item' },
-    { label: 'Time', align: 'right' },
-    { label: 'Cost', align: 'right' },
-    { label: 'Sells for', align: 'right' },
-    { label: 'Profit', sort: 'profit', align: 'right' },
-    { label: 'Coins/h', sort: 'perHour', align: 'right' },
-    { label: 'Margin', sort: 'margin', align: 'right' },
-  ]
-
   const SOURCE_TONE = { BZ: 'blue', AH: 'purple', FORGE: 'orange', COIN: 'gold' } as const
 
   return (
@@ -82,13 +75,13 @@ export default function ForgeFlipPage() {
       <PageHead
         title="Forge"
         highlight="Flips"
-        sub={`Queue Dwarven Forge recipes, collect the profit — ${totalForgeItems || 120} recipes priced live, ranked by coins per hour per slot`}
+        sub={`Queue Dwarven Forge recipes, collect the profit — ${totalForgeItems || 112} recipes priced through full dependency chains, ranked by coins per hour per slot`}
         live
         lastUpdated={lastUpdated}
         error={error}
       >
-        <StatCard label="Best slot rate" value={best} format={(n) => `${coinsShort(n)}/h`} accent="var(--green)" sub="Per forge slot" />
-        <StatCard label="Profitable recipes" value={filtered.length} accent="var(--gold)" sub="Passing filters" />
+        <StatCard label="Best slot rate" value={best} format={(n) => `${coinsShort(n)}/h`} accent="var(--up)" sub="Per forge slot" />
+        <StatCard label="Profitable recipes" value={filtered.length} accent="var(--accent)" sub="Passing filters" />
       </PageHead>
 
       <Oracle text={aiSummary} />
@@ -106,103 +99,84 @@ export default function ForgeFlipPage() {
             onChange={e => setMaxHours(e.target.value === '' ? '' : Number(e.target.value))} />
         </div>
         <button className={`pill${quickForge ? ' on-orange' : ''}`} onClick={() => setQuickForge(v => !v)} title="Quick Forge HotM perk: −30% forge time">
-          {quickForge ? '✓ Quick Forge −30%' : 'Quick Forge off'}
+          {quickForge ? 'Quick Forge −30%' : 'Quick Forge off'}
         </button>
+        <SortSelect value={sortKey} onChange={setSortKey} options={SORTS} />
       </div>
 
-      <div className="grid-table">
-        <div className="gt-head" style={{ gridTemplateColumns: GRID }}>
-          {HEAD.map((h, i) => (
-            <div
-              key={i}
-              className={h.sort ? `sortable${sortKey === h.sort ? ' sorted' : ''}` : undefined}
-              onClick={h.sort ? () => setSortKey(h.sort!) : undefined}
-              style={{ textAlign: h.align ?? 'left' }}
-            >
-              {h.label}{h.sort && sortKey === h.sort ? ' ▾' : ''}
-            </div>
-          ))}
+      {!loading && filtered.length === 0 && (
+        <div className="card">
+          <Void glyph="—" title="No forge flips match" sub="Raise the HotM / time limits or clear the search" />
         </div>
+      )}
 
-        {loading && <SkelRows n={10} />}
-
-        {!loading && filtered.length === 0 && (
-          <Void glyph="♨" title="No forge flips match" sub="Raise the HotM / time limits or clear the search" />
-        )}
-
+      <FlipGrid>
+        {loading && <FlipSkeletons n={10} />}
         {!loading && filtered.map((r, i) => {
           const isOpen = expanded === r.id
           return (
-            <div key={r.id}>
-              <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : r.id)}>
-                <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.id} size={26} /></div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '0.83rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {r.name}
-                      {r.warning && <Chip label="⚠" tone="orange" />}
-                    </div>
-                    <div className="mono" style={{ fontSize: '0.6rem', color: 'var(--faint)', display: 'flex', gap: 8 }}>
-                      {r.hotm && <span>HotM {r.hotm}</span>}
-                      <span>exit: {r.sellSource}</span>
-                      {r.chainDepth > 1 && <span style={{ color: 'var(--warn)' }}>{r.chainDepth}-deep chain</span>}
-                      {r.outputCount > 1 && <span>×{r.outputCount}</span>}
-                    </div>
-                  </div>
-                </div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.74rem', color: 'var(--dim)' }}>{fmtDuration(r.effDuration)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--blue)' }}>{coinsShort(r.ingredientCost)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.78rem', color: 'var(--gold-hi)' }}>{coinsShort(r.sellPrice)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.83rem', fontWeight: 800, color: 'var(--green)' }}>+{coinsShort(r.profit)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.8rem', fontWeight: 700, color: 'var(--purple)' }}>{coinsShort(r.effPerHour)}</div>
-                <div className="mono" style={{ textAlign: 'right', fontSize: '0.76rem', fontWeight: 700, color: r.margin > 25 ? 'var(--green)' : 'var(--dim)' }}>{r.margin.toFixed(0)}%</div>
-              </div>
-
-              {isOpen && (
-                <div className="gt-expand">
-                  {r.warning && (
-                    <div style={{ marginBottom: 12, fontSize: '0.76rem', color: 'var(--orange)', fontWeight: 700 }}>⚠ {r.warning}</div>
-                  )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
-                    {[
-                      { label: 'Forge step', val: fmtDuration(r.duration * timeMult), color: 'var(--text)' },
-                      { label: 'Full chain', val: fmtDuration(r.effDuration), color: 'var(--text)' },
-                      { label: 'Gross sale', val: coins(r.sellPrice * r.outputCount), color: 'var(--accent)' },
-                      { label: r.sellSource === 'BZ' ? 'Bazaar tax (1.25%)' : 'AH fees', val: `−${coins(r.fees)}`, color: 'var(--down)' },
-                      { label: 'Net revenue', val: coins(r.revenue), color: 'var(--accent)' },
-                      { label: 'Tree cost (optimal)', val: coins(r.ingredientCost), color: 'var(--info)' },
-                      { label: 'Buy-everything cost', val: coins(r.naiveCost), color: 'var(--dim)' },
-                      { label: 'Chain savings', val: r.naiveCost > r.ingredientCost ? coins(r.naiveCost - r.ingredientCost) : '—', color: 'var(--up)' },
-                      { label: 'Exit market', val: r.sellSource === 'BZ' ? 'Bazaar sell offer' : 'AH lowest BIN', color: 'var(--dim)' },
-                      { label: 'Weekly demand', val: r.weeklyVolume > 0 ? r.weeklyVolume.toLocaleString() : 'AH — unknown', color: 'var(--text)' },
-                      { label: 'HotM required', val: r.hotm ? `Tier ${r.hotm}` : 'None', color: 'var(--dim)' },
-                    ].map(({ label, val, color }) => (
-                      <div key={label}>
-                        <div className="mini-label">{label}</div>
-                        <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="recipe-strip">
-                    <span className="mini-label" style={{ marginBottom: 0 }}>Inputs</span>
-                    {r.ingredients.map(ing => (
-                      <span key={ing.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}
-                        title={ing.forgeCheaper ? `Sub-forging beats buying (market: ${coinsShort(ing.marketPrice)})` : undefined}>
-                        <ItemIcon id={ing.id} size={18} />
-                        <span className="mono" style={{ color: 'var(--text)' }}>{ing.qty.toLocaleString()}×</span>
-                        {ing.name}
-                        <Chip label={ing.forgeCheaper ? 'FORGE ↓' : ing.source} tone={SOURCE_TONE[ing.source]} />
-                        <span className="mono" style={{ color: 'var(--faint)' }}>({coinsShort(ing.totalPrice)})</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
+            <FlipCard
+              key={r.id}
+              rank={i + 1}
+              iconId={r.id}
+              title={r.name}
+              chips={r.warning ? <Chip label="!" tone="orange" /> : undefined}
+              sub={<>
+                {r.hotm ? `HotM ${r.hotm} · ` : ''}exit {r.sellSource}
+                {r.chainDepth > 1 ? ` · ${r.chainDepth}-deep chain` : ''}
+                {r.outputCount > 1 ? ` · x${r.outputCount}` : ''}
+              </>}
+              stats={[
+                { label: 'Time', value: fmtDuration(r.effDuration), color: 'var(--dim)' },
+                { label: 'Cost', value: coinsShort(r.ingredientCost), color: 'var(--info)' },
+                { label: 'Sells for', value: coinsShort(r.sellPrice), color: 'var(--accent)' },
+                { label: 'Coins/h', value: coinsShort(r.effPerHour), color: 'var(--purple)' },
+                { label: 'Margin', value: `${r.margin.toFixed(0)}%`, color: r.margin > 25 ? 'var(--up)' : 'var(--dim)' },
+              ]}
+              net={`+${coinsShort(r.profit)}`}
+              netSub="net profit"
+              open={isOpen}
+              onToggle={() => setExpanded(isOpen ? null : r.id)}
+            >
+              {r.warning && (
+                <div style={{ marginBottom: 12, fontSize: '0.76rem', color: '#d97e06', fontWeight: 700 }}>{r.warning}</div>
               )}
-            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, marginBottom: 12 }}>
+                {[
+                  { label: 'Forge step', val: fmtDuration(r.duration * timeMult), color: 'var(--text)' },
+                  { label: 'Full chain', val: fmtDuration(r.effDuration), color: 'var(--text)' },
+                  { label: 'Gross sale', val: coins(r.sellPrice * r.outputCount), color: 'var(--accent)' },
+                  { label: r.sellSource === 'BZ' ? 'Bazaar tax (1.25%)' : 'AH fees', val: `−${coins(r.fees)}`, color: 'var(--down)' },
+                  { label: 'Net revenue', val: coins(r.revenue), color: 'var(--accent)' },
+                  { label: 'Tree cost (optimal)', val: coins(r.ingredientCost), color: 'var(--info)' },
+                  { label: 'Buy-everything cost', val: coins(r.naiveCost), color: 'var(--dim)' },
+                  { label: 'Chain savings', val: r.naiveCost > r.ingredientCost ? coins(r.naiveCost - r.ingredientCost) : '—', color: 'var(--up)' },
+                  { label: 'Exit market', val: r.sellSource === 'BZ' ? 'Bazaar sell offer' : 'AH lowest BIN', color: 'var(--dim)' },
+                  { label: 'Weekly demand', val: r.weeklyVolume > 0 ? r.weeklyVolume.toLocaleString() : 'AH — unknown', color: 'var(--text)' },
+                ].map(({ label, val, color }) => (
+                  <div key={label}>
+                    <div className="mini-label">{label}</div>
+                    <div className="mono" style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="recipe-strip">
+                <span className="mini-label" style={{ marginBottom: 0 }}>Inputs</span>
+                {r.ingredients.map(ing => (
+                  <span key={ing.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.76rem', color: 'var(--dim)' }}
+                    title={ing.forgeCheaper ? `Sub-forging beats buying (market: ${coinsShort(ing.marketPrice)})` : undefined}>
+                    <ItemIcon id={ing.id} size={18} />
+                    <span className="mono" style={{ color: 'var(--text)' }}>{ing.qty.toLocaleString()}×</span>
+                    {ing.name}
+                    <Chip label={ing.forgeCheaper ? 'FORGE cheaper' : ing.source} tone={SOURCE_TONE[ing.source]} />
+                    <span className="mono" style={{ color: 'var(--faint)' }}>({coinsShort(ing.totalPrice)})</span>
+                  </span>
+                ))}
+              </div>
+            </FlipCard>
           )
         })}
-      </div>
+      </FlipGrid>
 
       <RefreshTimer intervalMs={300_000} lastUpdated={lastUpdated} />
     </Shell>

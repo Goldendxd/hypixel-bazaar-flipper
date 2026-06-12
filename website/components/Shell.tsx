@@ -52,7 +52,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     <>
       <aside className="side">
         <Link href="/" className="side-logo">
-          <div className="coin-mark">GF</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.png" alt="Golden Flipper" width={36} height={36} style={{ display: 'block', flexShrink: 0 }} />
           <div className="side-name">GoldenFlipper<span>_</span></div>
         </Link>
 
