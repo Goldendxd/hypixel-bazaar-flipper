@@ -87,10 +87,11 @@ function iconCacheSet(id: string, src: string) {
 }
 
 export function ItemIcon({ id, size = 28, alt, src }: { id: string; size?: number; alt?: string; src?: string }) {
+  // sky.shiiyu.moe now hotlink-blocks (403) — coflnet's static icon CDN is
+  // the reliable source for items, pets and books alike.
   const fallbacks = [
     ...(src ? [src] : []),
-    `https://sky.shiiyu.moe/item/${id}`,
-    `https://sky.lea.moe/item/${id}`,
+    `https://sky.coflnet.com/static/icon/${id}`,
     GENERIC_ICON,
   ]
   const cached = typeof window !== 'undefined' ? iconCacheGet(id) : null

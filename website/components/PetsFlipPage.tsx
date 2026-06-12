@@ -136,7 +136,7 @@ export default function PetsFlipPage() {
               <div className="gt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setExpanded(isOpen ? null : key)}>
                 <div className="mono" style={{ fontSize: '0.66rem', color: 'var(--faint)' }}>{i + 1}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.tag} src={r.iconUrl} size={26} /></div>
+                  <div className="ifr" style={{ width: 32, height: 32 }}><ItemIcon id={r.tag} size={26} /></div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '0.83rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {r.name}

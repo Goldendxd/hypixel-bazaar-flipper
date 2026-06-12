@@ -10,6 +10,7 @@ import { fetchBookFlips, BookFlipRow } from '@/lib/bookFlips'
 import { fetchCraftFlips, CraftFlipRow } from '@/lib/craftFlips'
 import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
 import { fetchForgeFlips, ForgeFlipRow } from '@/lib/forgeFlips'
+import { fetchFusionFlips, FusionFlipRow } from '@/lib/fusionFlips'
 import { fetchMayorData, MayorData } from '@/lib/mayorData'
 
 // ─── Types (mirror /api/market-intel) ────────────────────────────────────────
@@ -90,6 +91,54 @@ function MetricCard({ label, value, format = coinsShort, delta, deltaGood, sub, 
   )
 }
 
+// ─── Item tile — compact per-item card for the section grids ────────────────
+
+function ItemTile({ id, icon, name, sub, value, valueSub, href, rarityClass }: {
+  id: string
+  icon?: string          // explicit icon url override
+  name: string
+  sub: React.ReactNode
+  value: string          // e.g. "+23.3M"
+  valueSub?: string      // e.g. "147% ROI"
+  href: string
+  rarityClass?: string
+}) {
+  return (
+    <Link href={href} className="card lift" style={{ padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, textDecoration: 'none', color: 'inherit' }}>
+      <div className="ifr" style={{ width: 38, height: 38 }}><ItemIcon id={id} src={icon} size={30} /></div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className={rarityClass} style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: rarityClass ? undefined : 'var(--text)' }}>{name}</div>
+        <div className="mono" style={{ fontSize: '0.63rem', color: 'var(--faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{sub}</div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div className="mono" style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--up)' }}>{value}</div>
+        {valueSub && <div style={{ fontSize: '0.6rem', color: 'var(--faint)', marginTop: 1 }}>{valueSub}</div>}
+      </div>
+    </Link>
+  )
+}
+
+function TileGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(255px, 1fr))', gap: 11 }}>
+      {children}
+    </div>
+  )
+}
+
+function TileSkeletons({ n = 6 }: { n?: number }) {
+  return <>{Array.from({ length: n }).map((_, i) => <div key={i} className="skel" style={{ height: 62, borderRadius: 'var(--r-lg)' }} />)}</>
+}
+
+function SectionHead({ title, href }: { title: string; href: string }) {
+  return (
+    <div className="sect">
+      {title}
+      <Link href={href} style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View all →</Link>
+    </div>
+  )
+}
+
 // ─── Recommendation row ──────────────────────────────────────────────────────
 
 function RecRow({ ico, text, chip, chipTone, href }: {
@@ -114,6 +163,7 @@ export default function Dashboard() {
   const [crafts, setCrafts] = useState<CraftFlipRow[] | null>(null)
   const [kats, setKats] = useState<KatFlipRow[] | null>(null)
   const [forge, setForge] = useState<ForgeFlipRow[] | null>(null)
+  const [fusion, setFusion] = useState<FusionFlipRow[] | null>(null)
   const [mayor, setMayor] = useState<MayorData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -127,6 +177,7 @@ export default function Dashboard() {
     fetchCraftFlips().then(d => setCrafts(d.rows)).catch(() => setCrafts([]))
     fetchKatFlips().then(d => setKats(d.rows)).catch(() => setKats([]))
     fetchForgeFlips().then(d => setForge(d.rows)).catch(() => setForge([]))
+    fetchFusionFlips().then(d => setFusion(d.rows)).catch(() => setFusion([]))
     fetchMayorData().then(setMayor).catch(() => null)
   }, [])
 
@@ -286,6 +337,97 @@ export default function Dashboard() {
           spark={forge?.slice(0, 12).map(f => f.coinsPerHour)} color="var(--purple)" href="/forge"
         />
       </div>
+
+      {/* ── Top bazaar spreads ── */}
+      <SectionHead title="Top bazaar spreads" href="/orders" />
+      <TileGrid>
+        {!intel && <TileSkeletons />}
+        {intel?.flips.filter(f => !f.manipulationFlag).slice(0, 6).map(f => (
+          <ItemTile
+            key={f.id} id={f.id} name={f.name} href="/orders"
+            sub={<>buy {coinsShort(f.buyOrder)} → sell {coinsShort(f.sellOrder)}</>}
+            value={`${coinsShort(f.hourlyPotential)}/h`}
+            valueSub={`${f.marginPct.toFixed(1)}% · fill ${f.fillProbability}%`}
+          />
+        ))}
+      </TileGrid>
+
+      {/* ── Craft flips ── */}
+      <SectionHead title="Craft flips" href="/craft" />
+      <TileGrid>
+        {!crafts && <TileSkeletons />}
+        {crafts?.filter(c => !c.manipulated).slice(0, 6).map(c => (
+          <ItemTile
+            key={c.id} id={c.id} name={c.name} href="/craft"
+            sub={<>craft {coinsShort(c.craftCostOrder)} → sell {coinsShort(c.sellPrice)}</>}
+            value={`+${coinsShort(c.profitOrder)}`}
+            valueSub={`${c.marginOrder.toFixed(0)}% net`}
+          />
+        ))}
+      </TileGrid>
+
+      {/* ── Book combines ── */}
+      <SectionHead title="Book combines" href="/books" />
+      <TileGrid>
+        {!books && <TileSkeletons />}
+        {books?.filter(b => !b.warning).slice(0, 6).map(b => (
+          <ItemTile
+            key={`${b.outputId}-${b.inputTier}`} id="ENCHANTED_BOOK" name={b.outputName} href="/books"
+            sub={<>{b.inputQty}× T{b.inputTier} · {b.combineSteps} combine{b.combineSteps !== 1 ? 's' : ''} · {coinsShort(b.inputTotalCost)}</>}
+            value={`+${coinsShort(b.profit)}`}
+            valueSub={`${b.margin.toFixed(0)}% net`}
+          />
+        ))}
+      </TileGrid>
+
+      {/* ── Kat flips ── */}
+      <SectionHead title="Kat pet flips" href="/pets" />
+      <TileGrid>
+        {!kats && <TileSkeletons />}
+        {kats?.slice(0, 6).map(k => (
+          <ItemTile
+            key={`${k.tag}-${k.sellRarity}`} id={k.tag} name={k.name} href="/pets"
+            rarityClass={`rar-${k.sellRarity}`}
+            sub={<>{k.buyRarity.toLowerCase()} → {k.sellRarity.toLowerCase()} · {Math.round(k.upgradeHours)}h · {coinsShort(k.totalCost)} in</>}
+            value={`+${coinsShort(k.profit)}`}
+            valueSub={`${k.roi.toFixed(0)}% ROI`}
+          />
+        ))}
+      </TileGrid>
+
+      {/* ── Shard fusion ── */}
+      <SectionHead title="Shard fusion" href="/fusion" />
+      <TileGrid>
+        {!fusion && <TileSkeletons n={3} />}
+        {fusion && fusion.length === 0 && (
+          <div className="card" style={{ padding: '16px', gridColumn: '1 / -1', textAlign: 'center', color: 'var(--faint)', fontSize: '0.78rem' }}>
+            No profitable fusions right now — shard prices are tight. Check back in a minute.
+          </div>
+        )}
+        {fusion?.slice(0, 6).map(f => (
+          <ItemTile
+            key={f.id} id={f.id} icon={f.iconUrl} name={f.name} href="/fusion"
+            rarityClass={`rar-${f.rarity?.toUpperCase()}`}
+            sub={<>{f.input1.qty}× {f.input1.name} + {f.input2.qty}× {f.input2.name}</>}
+            value={`+${coinsShort(f.profitPerFusion)}`}
+            valueSub={`${f.margin.toFixed(0)}% per fusion`}
+          />
+        ))}
+      </TileGrid>
+
+      {/* ── Forge ── */}
+      <SectionHead title="Forge slots" href="/forge" />
+      <TileGrid>
+        {!forge && <TileSkeletons />}
+        {forge?.slice(0, 6).map(f => (
+          <ItemTile
+            key={f.id} id={f.id} name={f.name} href="/forge"
+            sub={<>cost {coinsShort(f.ingredientCost)} · {Math.round(f.totalDuration / 3600 * 10) / 10}h{f.hotm ? ` · HotM ${f.hotm}` : ''}</>}
+            value={`${coinsShort(f.coinsPerHour)}/h`}
+            valueSub={`+${coinsShort(f.profit)} net`}
+          />
+        ))}
+      </TileGrid>
 
       {/* ── Alerts ── */}
       {intel && intel.alerts.length > 0 && (

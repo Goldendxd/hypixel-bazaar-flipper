@@ -10,15 +10,15 @@
 
 :root {
   /* surfaces */
-  --bg:      #eceef3;            /* page canvas */
-  --bg2:     #f4f5f8;            /* inset fields / expand panels */
+  --bg:      #f4f5f8;            /* page canvas — soft, barely-gray */
+  --bg2:     #f8f9fb;            /* inset fields / expand panels */
   --panel:   #ffffff;
   --panel-solid: #ffffff;
-  --panel2:  #fafbfd;
-  --panel3:  #f1f3f7;
+  --panel2:  #fbfcfd;
+  --panel3:  #f3f5f8;
 
-  --line:    #e6e9ef;
-  --line2:   #d3d9e3;
+  --line:    #e9ecf1;
+  --line2:   #dde2ea;
 
   /* text */
   --text:    #1c2536;
