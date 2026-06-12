@@ -260,18 +260,61 @@ export function FlipCard({ rank, iconId, iconSrc, title, titleClass, chips, sub,
   )
 }
 
-// Sort selector for the toolbar
-export function SortSelect<T extends string>({ value, onChange, options }: {
+// Sort selector for the toolbar — fully custom dropdown (the native <select>
+// popup can't be styled and clashes with the theme)
+export function SortSelect<T extends string>({ value, onChange, options, label = 'Sort by' }: {
   value: T
   onChange: (v: T) => void
   options: Array<{ key: T; label: string }>
+  label?: string
 }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const current = options.find(o => o.key === value)
+
   return (
-    <div className="field">
-      <label>Sort by</label>
-      <select value={value} onChange={e => onChange(e.target.value as T)}>
-        {options.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-      </select>
+    <div className={`dd${open ? ' open' : ''}`} ref={ref}>
+      <button type="button" className="field dd-btn" onClick={() => setOpen(o => !o)}>
+        <label style={{ cursor: 'pointer' }}>{label}</label>
+        <span className="dd-val">{current?.label ?? '—'}</span>
+        <svg className="dd-chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="dd-menu">
+          {options.map(o => (
+            <button
+              key={o.key}
+              type="button"
+              className={`dd-item${o.key === value ? ' on' : ''}`}
+              onClick={() => { onChange(o.key); setOpen(false) }}
+            >
+              {o.label}
+              {o.key === value && (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

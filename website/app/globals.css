@@ -447,26 +447,69 @@ body {
   font-weight: 600;
   width: 92px;
 }
-.field select {
-  width: auto;
+.field select { width: auto; cursor: pointer; }
+
+/* ═══ CUSTOM DROPDOWN (sort / category pickers) ═══ */
+.dd { position: relative; }
+
+.dd-btn {
   cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding: 0 18px 0 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2398a1b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 2px center;
-  line-height: 1.4;
+  font-family: inherit;
+  gap: 8px;
 }
-.field select:hover { color: var(--accent-deep); }
-.field select option {
-  background: var(--panel);
+.dd-btn:hover { border-color: var(--line2); }
+
+.dd-val {
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--text);
-  font-family: var(--font-ui);
-  font-weight: 500;
-  padding: 6px 10px;
+  white-space: nowrap;
 }
+
+.dd-chev {
+  color: var(--faint);
+  flex-shrink: 0;
+  transition: transform 0.16s var(--ease-out);
+}
+.dd.open .dd-chev { transform: rotate(180deg); }
+.dd.open .dd-btn { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.dd-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: var(--r-md);
+  box-shadow: 0 14px 36px -10px rgba(16, 24, 40, 0.2);
+  padding: 5px;
+  z-index: 45;
+  animation: popIn 0.14s var(--ease-out) both;
+}
+
+.dd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 7px 11px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.dd-item:hover { background: var(--panel3); color: var(--text); }
+.dd-item.on { background: var(--accent-soft); color: var(--accent-deep); font-weight: 700; }
 input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
 
 .search {

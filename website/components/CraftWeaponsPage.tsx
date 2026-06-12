@@ -100,13 +100,12 @@ export default function CraftWeaponsPage() {
 
       <div className="bar">
         <input className="search" placeholder="Search weapon…" value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
-        <div className="field">
-          <label>Category</label>
-          <select value={category} onChange={e => setCategory(e.target.value as WeaponCategory | 'ALL')}>
-            <option value="ALL">All</option>
-            {WEAPON_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-          </select>
-        </div>
+        <SortSelect
+          label="Category"
+          value={category}
+          onChange={setCategory}
+          options={[{ key: 'ALL' as const, label: 'All' }, ...WEAPON_CATEGORIES.map(c => ({ key: c.key, label: c.label }))]}
+        />
         <button className={`pill${craftableOnly ? ' on-green' : ''}`} onClick={() => setCraftableOnly(v => !v)}>
           {craftableOnly ? 'Profitable crafts' : 'All weapons'}
         </button>
