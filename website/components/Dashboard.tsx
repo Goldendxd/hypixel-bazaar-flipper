@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Shell from '@/components/Shell'
 import Ticker from '@/components/Ticker'
 import RefreshTimer from '@/components/RefreshTimer'
-import { AnimatedNumber, Chip, ItemIcon, PriceChart, coins, coinsShort, heatColor } from '@/components/ui'
+import { AnimatedNumber, Chip, ItemIcon, PriceChart, Reveal, coins, coinsShort, heatColor } from '@/components/ui'
 import { fetchBookFlips, BookFlipRow } from '@/lib/bookFlips'
 import { fetchCraftFlips, CraftFlipRow } from '@/lib/craftFlips'
 import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
@@ -120,9 +120,9 @@ function ItemTile({ id, icon, name, sub, value, valueSub, href, rarityClass }: {
 
 function TileGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(255px, 1fr))', gap: 11 }}>
+    <Reveal stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(255px, 1fr))', gap: 11 }}>
       {children}
-    </div>
+    </Reveal>
   )
 }
 
@@ -132,10 +132,12 @@ function TileSkeletons({ n = 6 }: { n?: number }) {
 
 function SectionHead({ title, href }: { title: string; href: string }) {
   return (
-    <div className="sect">
-      {title}
-      <Link href={href} style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View all →</Link>
-    </div>
+    <Reveal>
+      <div className="sect">
+        {title}
+        <Link href={href} style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View all →</Link>
+      </div>
+    </Reveal>
   )
 }
 
@@ -288,8 +290,8 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bazaar metrics ── */}
-      <div className="sect">Bazaar</div>
-      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
+      <Reveal><div className="sect">Bazaar</div></Reveal>
+      <Reveal stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
         <MetricCard
           label="Products tracked" value={intel?.totalTracked ?? null} format={(n) => Math.round(n).toLocaleString()}
           sub="live bazaar feed" spark={intel?.flips.slice(0, 14).map(f => f.weeklyBuyVol)} color="var(--info)" href="/orders"
@@ -311,11 +313,11 @@ export default function Dashboard() {
           sub={`${spikes.length} spikes detected`} spark={intel?.flips.slice(0, 14).map(f => f.volatility)}
           color={crashes.length > 0 ? 'down' : 'var(--purple)'} href="/orders"
         />
-      </div>
+      </Reveal>
 
       {/* ── Engine metrics ── */}
-      <div className="sect">Profit engines</div>
-      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
+      <Reveal><div className="sect">Profit engines</div></Reveal>
+      <Reveal stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 13 }}>
         <MetricCard
           label="Best craft flip" value={topCraft?.profitOrder ?? (crafts ? 0 : null)} format={(n) => `+${coinsShort(n)}`}
           delta={topCraft ? `${topCraft.marginOrder.toFixed(0)}%` : undefined} deltaGood sub={topCraft?.name ?? 'no clean flips'}
@@ -336,7 +338,7 @@ export default function Dashboard() {
           delta={topForge ? `${topForge.margin.toFixed(0)}%` : undefined} deltaGood sub={topForge?.name ?? 'computing chains…'}
           spark={forge?.slice(0, 12).map(f => f.coinsPerHour)} color="var(--purple)" href="/forge"
         />
-      </div>
+      </Reveal>
 
       {/* ── Top bazaar spreads ── */}
       <SectionHead title="Top bazaar spreads" href="/orders" />
@@ -432,8 +434,8 @@ export default function Dashboard() {
       {/* ── Alerts ── */}
       {intel && intel.alerts.length > 0 && (
         <>
-          <div className="sect">Anomaly alerts</div>
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+          <Reveal><div className="sect">Anomaly alerts</div></Reveal>
+          <Reveal stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
             {intel.alerts.map((a, i) => {
               const isCrash = a.type === 'CRASH'
               return (
@@ -453,15 +455,15 @@ export default function Dashboard() {
                 </div>
               )
             })}
-          </div>
+          </Reveal>
         </>
       )}
 
       {/* ── Mayor strip ── */}
       {mayor && (
         <>
-          <div className="sect">Mayor watch</div>
-          <Link href="/mayor" className="card lift" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 15, flexWrap: 'wrap', textDecoration: 'none', color: 'inherit' }}>
+          <Reveal><div className="sect">Mayor watch</div></Reveal>
+          <Reveal><Link href="/mayor" className="card lift" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 15, flexWrap: 'wrap', textDecoration: 'none', color: 'inherit' }}>
             <div className="coin-mark" style={{ width: 40, height: 40, fontSize: 17 }}>♛</div>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3, flexWrap: 'wrap' }}>
@@ -475,15 +477,15 @@ export default function Dashboard() {
               </div>
             </div>
             <span className="corner-btn">↗</span>
-          </Link>
+          </Link></Reveal>
         </>
       )}
 
       {/* ── Heatmap ── */}
       {intel && intel.heatmap.length > 0 && (
         <>
-          <div className="sect">Market heatmap</div>
-          <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 9 }}>
+          <Reveal><div className="sect">Market heatmap</div></Reveal>
+          <Reveal stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 9 }}>
             {intel.heatmap.map(cell => (
               <div key={cell.id} className="card lift" style={{ padding: '10px 12px', background: heatColor(cell.intensity) }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
@@ -496,7 +498,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-          </div>
+          </Reveal>
         </>
       )}
 

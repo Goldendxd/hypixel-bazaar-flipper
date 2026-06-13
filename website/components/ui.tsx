@@ -2,6 +2,28 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Lottie from 'lottie-react'
+import { useInView } from '@/components/hooks'
+
+// ─── Reveal — slides/fades children up as they scroll into view ──────────────
+
+export function Reveal({ children, delay = 0, className = '', stagger = false, style }: {
+  children: React.ReactNode
+  delay?: number
+  className?: string
+  stagger?: boolean
+  style?: React.CSSProperties
+}) {
+  const { ref, inView } = useInView<HTMLDivElement>()
+  return (
+    <div
+      ref={ref}
+      className={`reveal${inView ? ' in' : ''}${stagger ? ' reveal-stagger' : ''} ${className}`}
+      style={{ ...style, transitionDelay: inView ? `${delay}ms` : '0ms' }}
+    >
+      {children}
+    </div>
+  )
+}
 
 // ─── Coin formatters ─────────────────────────────────────────────────────────
 
@@ -391,8 +413,8 @@ export function Spark({ values, color = 'var(--gold)', w = 64, h = 20, fill = fa
   const line = pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')
   return (
     <svg width={w} height={h} style={{ display: 'block', flexShrink: 0 }}>
-      {fill && <polygon points={`0,${h} ${line} ${w},${h}`} fill={color} opacity={0.12} />}
-      <polyline points={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      {fill && <polygon className="chart-area" points={`0,${h} ${line} ${w},${h}`} fill={color} opacity={0.12} />}
+      <polyline className="chart-line" pathLength={1} points={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
 }
@@ -429,8 +451,8 @@ export function PriceChart({ points, w = 560, h = 140, color = 'var(--up)' }: {
         }}
         onMouseLeave={() => setHover(null)}
       >
-        <polygon points={`${pad},${h - pad} ${line} ${w - pad},${h - pad}`} fill={color} opacity={0.08} />
-        <polyline points={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+        <polygon className="chart-area" points={`${pad},${h - pad} ${line} ${w - pad},${h - pad}`} fill={color} opacity={0.08} />
+        <polyline className="chart-line" pathLength={1} points={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
         {hover != null && (
           <>
             <line x1={xs(hover)} y1={pad} x2={xs(hover)} y2={h - pad} stroke="var(--line2)" strokeWidth="1" strokeDasharray="3 3" />
