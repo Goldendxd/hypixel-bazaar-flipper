@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { BAZAAR_TAX, bazaarNet } from '@/lib/economy'
+import { combineMaxFor } from '@/lib/enchantCombineMax'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,15 +12,21 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY ?? ''
 
 // ── Enchantment combining model ──────────────────────────────────────────────
 // Anvil combining is a strict binary tree: 2× Tier N → 1× Tier N+1.
-// Reaching tier T from base tier B therefore costs 2^(T−B) base books and
-// 2^(T−B) − 1 anvil combines (exponential compounding, not linear).
+// Reaching tier T from base tier B costs 2^(T−B) base books and 2^(T−B) − 1
+// anvil combines (exponential compounding, not linear).
+//
+// THE HARD PART (why book flips are tricky): each enchant has its OWN max
+// combinable level, NOT a flat "V". The bazaar lists e.g. Looting IV and V,
+// but Looting only combines to III — IV/V come from the Experimentation Table
+// and CANNOT be crafted by combining. Suggesting "2× Looting IV → V" is a fake
+// flip. We use the per-enchant cap from lib/enchantCombineMax.ts (NEU data) so
+// only genuinely craftable output tiers are ever shown.
 //
 // HOUSE RULES:
-//  • Output is capped at Tier V (e.g. Ultimate Wise V). Classic T6/T7 books
-//    are drop-only and their bids are routinely phantom.
-//  • Stacking enchants (Expertise, Compact, …) level through gameplay, not
-//    anvil combining — they are excluded entirely.
-const MAX_OUTPUT_TIER = 5
+//  • Output tier ≤ that enchant's real combinable max (≤ 5 universally).
+//  • Stacking enchants (Expertise, Compact, …) level through gameplay, not the
+//    anvil — excluded entirely.
+const HARD_CEILING = 5
 
 const NON_COMBINABLE = new Set([
   'ENCHANTMENT_EXPERTISE',
@@ -146,9 +153,12 @@ async function compute(): Promise<{ rows: BookFlipRow[]; totalCandidates: number
     const tierNums = Object.keys(tiers).map(Number).sort((a, b) => a - b)
     if (tierNums.length < 2) continue       // stacking/single-tier books can't be combined upward
     const baseTier = tierNums[0]
+    // The real combinable ceiling for THIS enchant (e.g. Looting → 3).
+    const combineMax = Math.min(HARD_CEILING, combineMaxFor(base))
 
     for (const outputTier of tierNums) {
-      if (outputTier <= baseTier || outputTier > MAX_OUTPUT_TIER) continue
+      // Only output tiers that are actually reachable by combining this enchant
+      if (outputTier <= baseTier || outputTier > combineMax) continue
       const out = tiers[outputTier]
 
       // Exit liquidity: your sell offer is consumed by insta-buyers
