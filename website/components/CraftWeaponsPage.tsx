@@ -5,7 +5,7 @@ import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchWeaponFlips, fetchWeaponHistory, WeaponRow, PricePoint } from '@/lib/weaponFlips'
 import { WEAPON_CATEGORIES, WeaponCategory } from '@/lib/weaponCatalog'
-import { Chip, FlipCard, FlipGrid, FlipSkeletons, ItemIcon, PageHead, PriceChart, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Loader, Chip, FlipCard, FlipGrid, ItemIcon, PageHead, PriceChart, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
 type SortKey = 'profit' | 'roi' | 'price' | 'demand'
@@ -119,7 +119,7 @@ export default function CraftWeaponsPage() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={12} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && filtered.map((r, i) => {
           const isOpen = expanded === r.id
           const catLabel = WEAPON_CATEGORIES.find(c => c.key === r.category)?.label ?? r.category

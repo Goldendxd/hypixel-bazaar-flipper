@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchBazaarFlips, FlipRow } from '@/lib/api'
 import RefreshTimer from '@/components/RefreshTimer'
-import { Chip, FlipCard, FlipGrid, FlipSkeletons, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Loader, Chip, FlipCard, FlipGrid, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { STRATEGIES, StrategyMode } from '@/lib/strategy'
 import { useDebounced } from '@/components/hooks'
 
@@ -184,7 +184,7 @@ export default function FlipFinder() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={10} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && enriched.map(({ row, nums, qty, estProfit }, i) => {
           const isOpen = expanded === row.id
           const marginColor = nums.margin >= 8 ? 'var(--up)' : nums.margin >= 3 ? 'var(--accent)' : 'var(--dim)'

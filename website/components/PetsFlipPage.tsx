@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchKatFlips, KatFlipRow } from '@/lib/petsFlips'
-import { Chip, FlipCard, FlipGrid, FlipSkeletons, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Loader, Chip, FlipCard, FlipGrid, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
 type SortKey = 'profit' | 'roi' | 'perHour' | 'volume'
@@ -110,7 +110,7 @@ export default function PetsFlipPage() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={10} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && filtered.map((r, i) => {
           const key = `${r.tag}-${r.buyRarity}-${r.sellRarity}`
           const isOpen = expanded === key

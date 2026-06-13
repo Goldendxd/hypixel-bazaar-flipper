@@ -6,6 +6,11 @@ node_modules/
 # Next.js build output
 website/.next/
 website/out/
+*.tsbuildinfo
+
+# Scratch / temp data dumps (API probes, generated intermediates, logs)
+.tmp/
+*.log
 
 # Env files — never commit these
 .env

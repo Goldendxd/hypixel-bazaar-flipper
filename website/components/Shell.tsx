@@ -5,6 +5,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const NAV: Array<{ section: string; links: Array<{ href: string; ico: string; label: string }> }> = [
   {
@@ -26,9 +27,10 @@ const NAV: Array<{ section: string; links: Array<{ href: string; ico: string; la
   {
     section: 'Speculation',
     links: [
-      { href: '/books', ico: '✦', label: 'Book Combines' },
-      { href: '/pets',  ico: '♟', label: 'Kat Flips' },
-      { href: '/mayor', ico: '♛', label: 'Mayor Plays' },
+      { href: '/books',     ico: '✦', label: 'Book Combines' },
+      { href: '/pets',      ico: '♟', label: 'Kat Flips' },
+      { href: '/pet-level', ico: '♞', label: 'Pet Leveling' },
+      { href: '/mayor',     ico: '♛', label: 'Mayor Plays' },
     ],
   },
 ]
@@ -51,11 +53,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <aside className="side">
-        <Link href="/" className="side-logo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark.png" alt="Golden Flipper" width={36} height={36} style={{ display: 'block', flexShrink: 0 }} />
-          <div className="side-name">GoldenFlipper<span>_</span></div>
-        </Link>
+        <div className="side-head">
+          <Link href="/" className="side-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.png" alt="Golden Flipper" width={36} height={36} style={{ display: 'block', flexShrink: 0 }} />
+            <div className="side-name">GoldenFlipper<span>_</span></div>
+          </Link>
+          <ThemeToggle />
+        </div>
 
         {NAV.map(group => (
           <div key={group.section}>
@@ -82,6 +87,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           {allLinks.map(({ href, label }) => (
             <Link key={href} href={href} className={path === href ? 'on' : ''}>{label}</Link>
           ))}
+          <div style={{ marginLeft: 'auto', paddingLeft: 6 }}><ThemeToggle /></div>
         </nav>
         {children}
       </main>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Lottie from 'lottie-react'
 
 // ─── Coin formatters ─────────────────────────────────────────────────────────
 
@@ -327,6 +328,28 @@ export function FlipSkeletons({ n = 8 }: { n?: number }) {
         <div key={i} className="skel" style={{ height: 112, borderRadius: 'var(--r-lg)' }} />
       ))}
     </>
+  )
+}
+
+// ─── Lottie loader — branded loading animation ───────────────────────────────
+
+let loaderData: object | null = null
+
+export function Loader({ label = 'Loading live market data', size = 120 }: { label?: string; size?: number }) {
+  const [data, setData] = useState<object | null>(loaderData)
+  useEffect(() => {
+    if (loaderData) return
+    fetch('/anim/loader.json').then(r => r.json()).then(j => { loaderData = j; setData(j) }).catch(() => {})
+  }, [])
+  return (
+    <div className="loader-wrap">
+      <div style={{ width: size, height: size }}>
+        {data
+          ? <Lottie animationData={data} loop style={{ width: size, height: size }} />
+          : <div className="coin-spin" style={{ width: size * 0.5, height: size * 0.5, margin: 'auto' }} />}
+      </div>
+      <div className="loader-label">{label}<span className="loader-dots" /></div>
+    </div>
   )
 }
 

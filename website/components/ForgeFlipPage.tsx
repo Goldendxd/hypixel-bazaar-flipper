@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchForgeFlips, ForgeFlipRow } from '@/lib/forgeFlips'
-import { Chip, FlipCard, FlipGrid, FlipSkeletons, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort, fmtDuration } from '@/components/ui'
+import { Loader, Chip, FlipCard, FlipGrid, ItemIcon, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort, fmtDuration } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
 type SortKey = 'perHour' | 'profit' | 'margin'
@@ -111,7 +111,7 @@ export default function ForgeFlipPage() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={10} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && filtered.map((r, i) => {
           const isOpen = expanded === r.id
           return (

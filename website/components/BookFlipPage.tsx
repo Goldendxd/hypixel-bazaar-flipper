@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchBookFlips, BookFlipRow } from '@/lib/bookFlips'
-import { Chip, FlipCard, FlipGrid, FlipSkeletons, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Loader, Chip, FlipCard, FlipGrid, Oracle, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V']
@@ -101,7 +101,7 @@ export default function BookFlipPage() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={10} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && filtered.map((r, i) => {
           const key = `${r.outputId}-${r.inputTier}`
           const isOpen = expanded === key

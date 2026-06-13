@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Shell from '@/components/Shell'
 import RefreshTimer from '@/components/RefreshTimer'
 import { fetchFusionFlips, FusionFlipRow } from '@/lib/fusionFlips'
-import { FlipCard, FlipGrid, FlipSkeletons, ItemIcon, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
+import { Loader, FlipCard, FlipGrid, ItemIcon, PageHead, SortSelect, StatCard, Void, coins, coinsShort } from '@/components/ui'
 import { useDebounced } from '@/components/hooks'
 
 type SortKey = 'total' | 'perFusion' | 'margin'
@@ -92,7 +92,7 @@ export default function FusionFlipPage() {
       )}
 
       <FlipGrid>
-        {loading && <FlipSkeletons n={8} />}
+        {loading && <div className="grid-span"><Loader /></div>}
         {!loading && filtered.map((r, i) => {
           const isOpen = expanded === r.id
           return (
