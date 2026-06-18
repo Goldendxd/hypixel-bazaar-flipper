@@ -28,13 +28,19 @@ WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 # %), not a normal 5-10% bazaar spread.
 TAX             = 0.0125
 CRASH_MARGIN    = 100.0       # % — minimum spread to count as "crashed" (normal ≈ 5-10%)
-MIN_PROFIT      = 1_000_000   # absolute profit per flip cycle must be in the millions
-# Liquidity is judged on DAILY throughput (weekly moving / 7), not weekly totals,
-# so "a ton of daily sales" actually means a lot moves every single day.
-MIN_DAILY_BUY   = 100_000     # items bought per day — must be heavily traded (100k+/day)
-MIN_DAILY_SELL  = 10_000      # items sold per day — enough demand to offload, low risk
+MIN_PROFIT      = 5_000_000   # absolute profit per flip cycle must be at least 5M
+MAX_FLIP        = 1_000       # cap flip size — ~1k items is realistic to actually fill
+# Liquidity is judged on DAILY throughput (weekly moving / 7), not weekly totals.
+# NOTE: a small ~1k flip clearing 5M needs ~5k profit/item, which only pricier items
+# give — and those don't trade 100k/day. So the daily floor is a modest sanity check;
+# the real selection is the crash margin + 5M profit on a realistic flip size.
+MIN_DAILY_BUY   = 5_000       # items bought per day — modest floor so it's actually live
+MIN_DAILY_SELL  = 5_000       # items sold per day — enough demand to offload, low risk
 TOP_N           = 10
 BUDGET          = 100_000_000
+
+# Test mode: send one random item (ignores every filter) so you can eyeball the look.
+TEST_MODE = os.environ.get("TEST_MODE", "").strip().lower() in ("1", "true", "yes")
 
 # Role to ping when crashes are found. Set SNIPER_ROLE_ID to the Discord role id so
 # it actually pings; otherwise we fall back to a plain "@Sniper" mention text.
@@ -51,11 +57,40 @@ def pretty(s):
     return " ".join(w.capitalize() for w in s.replace(":", "_").split("_"))
 
 def icon_url(item_id):
-    # sky.shiiyu.moe hotlink-blocks (403) inside Discord embeds — coflnet's static
-    # icon CDN serves real PNGs that render reliably.
-    return f"https://sky.coflnet.com/static/icon/{item_id}"
+    # coflnet icons come in mixed native sizes (16x16 and 64x64), so Discord renders
+    # the thumbnails at different sizes. Route through the wsrv.nl resizer to force a
+    # uniform 128x128 PNG so every card's image looks the same.
+    src = f"sky.coflnet.com/static/icon/{item_id}"
+    return f"https://wsrv.nl/?url={src}&w=128&h=128&fit=contain&output=png"
 
 # ── Fetch + compute ───────────────────────────────────────────────────────────
+
+def compute_test(products):
+    """Pick one random tradeable item, ignoring every filter — just to preview look."""
+    import random
+    pool = []
+    for pid, prod in products.items():
+        qs  = prod.get("quick_status", {})
+        ask = qs.get("buyPrice", 0)
+        bid = qs.get("sellPrice", 0)
+        if not ask or not bid or ask <= bid: continue
+        pool.append((pid, qs, ask, bid))
+    if not pool:
+        return []
+    pid, qs, ask, bid = random.choice(pool)
+    buy_o  = bid + 0.1
+    sell_o = ask - 0.1
+    profit = sell_o * (1 - TAX) - buy_o
+    qty    = max(1, min(int(BUDGET / buy_o), MAX_FLIP))
+    return [{
+        "id": pid, "name": pretty(pid),
+        "buy_o": buy_o, "sell_o": sell_o,
+        "profit": profit, "margin": profit / buy_o * 100 if buy_o else 0,
+        "dbuy": qs.get("buyMovingWeek", 0) / 7.0,
+        "dsell": qs.get("sellMovingWeek", 0) / 7.0,
+        "qty": qty, "total": profit * qty, "cost": buy_o * qty,
+    }]
+
 
 def compute_flips(products):
     """Return only CRASHED, low-risk, flippable items.
@@ -86,10 +121,10 @@ def compute_flips(products):
         margin = profit / buy_o * 100
         if margin < CRASH_MARGIN: continue   # not crashed — ignore normal spreads
 
-        # Cap size by budget, single-order max, and daily demand we can offload.
-        qty = max(1, min(int(BUDGET / buy_o), 71_680, int(dsell)))
+        # Cap size by budget, a realistic ~1k flip cap, and daily demand we can offload.
+        qty = max(1, min(int(BUDGET / buy_o), MAX_FLIP, int(dsell)))
         total = profit * qty
-        if total < MIN_PROFIT: continue       # must be millions in margin
+        if total < MIN_PROFIT: continue       # must clear at least 5M
 
         results.append({
             "id": pid, "name": pretty(pid),
@@ -103,23 +138,33 @@ def compute_flips(products):
     return results[:TOP_N]
 
 
-def post_embeds(results, products, ts):
+def post_embeds(results, products, ts, test=False):
     # Only ping when there's something worth pinging for — don't spam "nothing"
     # every few minutes.
     if not results:
         print("[OK] No crashed flips matched — nothing to post.")
         return
 
-    header = {
-        "title": "🚨  Crashed Bazaar Flips",
-        "description": (
-            f"**{len(results)}** crashed item(s) you can snipe right now — buy the dip, "
-            f"flip into heavy daily demand.\n"
-            f"-# Updated {ts} · scanned {len(products):,} products · always double-check "
-            f"in-game for price manipulation"
-        ),
-        "color": 0xe23b3b,
-    }
+    if test:
+        header = {
+            "title": "🧪  Test Alert",
+            "description": (
+                f"Random sample item — checking embed layout & icons.\n"
+                f"-# Updated {ts} · scanned {len(products):,} products"
+            ),
+            "color": 0x6c8ebf,
+        }
+    else:
+        header = {
+            "title": "🚨  Crashed Bazaar Flips",
+            "description": (
+                f"**{len(results)}** crashed item(s) you can snipe right now — buy the dip, "
+                f"flip into heavy daily demand.\n"
+                f"-# Updated {ts} · scanned {len(products):,} products · always double-check "
+                f"in-game for price manipulation"
+            ),
+            "color": 0xe23b3b,
+        }
 
     cards = []
     for i, f in enumerate(results):
@@ -157,10 +202,13 @@ def post_embeds(results, products, ts):
             raise RuntimeError("DISCORD_WEBHOOK_URL is not set; set it or use DRY_RUN=1 for testing")
         return requests.post(WEBHOOK_URL, json=payload, timeout=15)
 
-    allowed = {"parse": ["roles"]} if SNIPER_ROLE_ID else {"parse": []}
+    allowed = {"parse": []} if test else ({"parse": ["roles"]} if SNIPER_ROLE_ID else {"parse": []})
     for i in range(0, len(embeds), 10):
         # Only the first chunk carries the ping so we don't ping per 10-embed batch.
-        content = f"{SNIPER_PING} Crashed flips detected." if i == 0 else ""
+        if test:
+            content = "🧪 Test message" if i == 0 else ""
+        else:
+            content = f"{SNIPER_PING} Crashed flips detected." if i == 0 else ""
         payload = {"content": content, "embeds": embeds[i:i+10], "allowed_mentions": allowed}
         r = send_payload(payload)
         print(f"POST {r.status_code}")
@@ -183,8 +231,8 @@ def run_once():
     products = data.get("products", {})
     updated  = data.get("lastUpdated", 0)
     ts = time.strftime("%I:%M:%S %p", time.gmtime(updated / 1000)) if updated else time.strftime("%I:%M:%S %p", time.gmtime())
-    results = compute_flips(products)
-    post_embeds(results, products, ts)
+    results = compute_test(products) if TEST_MODE else compute_flips(products)
+    post_embeds(results, products, ts, test=TEST_MODE)
 
 
 if __name__ == "__main__":

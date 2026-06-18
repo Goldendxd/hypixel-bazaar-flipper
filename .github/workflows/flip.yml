@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '*/3 * * * *'
   workflow_dispatch:
+    inputs:
+      test:
+        description: 'Send one random test item (ignores all filters)'
+        type: boolean
+        default: false
 
 concurrency:
   group: bazaar-flip-alerts
@@ -29,5 +34,6 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           SNIPER_ROLE_ID: '1517055658413785178'
+          TEST_MODE: ${{ inputs.test }}
           SINGLE_RUN: '1'
         run: python -u bot/webhook_post.py
