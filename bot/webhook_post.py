@@ -20,11 +20,24 @@ def load_local_env():
 
 load_local_env()
 WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-TAX         = 0.0125
-MIN_MARGIN  = 5.0
-MIN_VOL     = 50_000
-TOP_N       = 5
-BUDGET      = 10_000_000
+
+# ── Crash-flip tuning ──────────────────────────────────────────────────────────
+# We only care about CRASHED items: the buy-order side has collapsed far below the
+# sell side, so we can place a cheap buy order and resell into the still-high price.
+# That shows up as an abnormally large spread (margin in the hundreds/thousands of
+# %), not a normal 5-10% bazaar spread.
+TAX           = 0.0125
+CRASH_MARGIN  = 100.0       # % — minimum spread to count as "crashed" (normal ≈ 5-10%)
+MIN_PROFIT    = 1_000_000   # absolute profit per flip cycle must be in the millions
+MIN_BUY_VOL   = 40_000      # weekly buy volume  — so the crash is real, not a dead item
+MIN_SELL_VOL  = 40_000      # weekly sell volume — demand to offload = low risk
+TOP_N         = 10
+BUDGET        = 100_000_000
+
+# Role to ping when crashes are found. Set SNIPER_ROLE_ID to the Discord role id so
+# it actually pings; otherwise we fall back to a plain "@Sniper" mention text.
+SNIPER_ROLE_ID = os.environ.get("SNIPER_ROLE_ID", "").strip()
+SNIPER_PING    = f"<@&{SNIPER_ROLE_ID}>" if SNIPER_ROLE_ID else "@Sniper"
 
 def fmt(n):
     if abs(n) >= 1e9: return f"{n/1e9:.2f}B"
@@ -41,6 +54,14 @@ def icon_url(item_id):
 # ── Fetch + compute ───────────────────────────────────────────────────────────
 
 def compute_flips(products):
+    """Return only CRASHED, low-risk, flippable items.
+
+    A crash = the buy-order side has collapsed, leaving an abnormally large spread
+    (margin >= CRASH_MARGIN). We additionally require real two-sided volume so the
+    item can actually be bought cheap AND offloaded with little risk, and we cap the
+    quantity by weekly demand so the estimated profit is something the market can
+    really absorb.
+    """
     results = []
     for pid, prod in products.items():
         qs   = prod.get("quick_status", {})
@@ -48,20 +69,29 @@ def compute_flips(products):
         bid  = qs.get("sellPrice", 0)
         vol  = qs.get("buyMovingWeek", 0)
         svol = qs.get("sellMovingWeek", 0)
-        if not ask or not bid or ask <= bid or vol < MIN_VOL: continue
+        if not ask or not bid or ask <= bid: continue
+        # Liquidity on both sides → the crash is real and we can exit with low risk.
+        if vol < MIN_BUY_VOL or svol < MIN_SELL_VOL: continue
+
         buy_o  = bid + 0.1
         sell_o = ask - 0.1
         profit = sell_o * (1 - TAX) - buy_o
         if profit <= 0: continue
+
         margin = profit / buy_o * 100
-        if margin < MIN_MARGIN: continue
-        qty  = max(1, min(int(BUDGET / buy_o), 71_680))
+        if margin < CRASH_MARGIN: continue   # not crashed — ignore normal spreads
+
+        # Cap size by budget, single-order max, and weekly demand we can offload.
+        qty = max(1, min(int(BUDGET / buy_o), 71_680, int(svol)))
+        total = profit * qty
+        if total < MIN_PROFIT: continue       # must be millions in margin
+
         results.append({
             "id": pid, "name": pretty(pid),
             "buy_o": buy_o, "sell_o": sell_o,
             "profit": profit, "margin": margin,
             "vol": vol, "svol": svol,
-            "qty": qty, "total": profit * qty, "cost": buy_o * qty,
+            "qty": qty, "total": total, "cost": buy_o * qty,
         })
 
     results.sort(key=lambda x: x["total"], reverse=True)
@@ -69,27 +99,19 @@ def compute_flips(products):
 
 
 def post_embeds(results, products, ts):
+    # Only ping when there's something worth pinging for — don't spam "nothing"
+    # every few minutes.
     if not results:
-        payload = {
-            "content": "Bazaar flip check completed.",
-            "embeds": [{
-                "title": "Best Flips",
-                "description": f"✓ Data updated at {ts} ({len(products)} products)\nNo profitable flips matched the current filters.",
-                "color": 0x6c8ebf,
-                "footer": {"text": "ALWAYS DOUBLE CHECK INGAME PRICES FOR PRICE MANIPULATION"},
-            }]
-        }
-        r = requests.post(WEBHOOK_URL, json=payload, timeout=15)
-        print(f"POST {r.status_code}")
-        if r.status_code >= 400:
-            raise RuntimeError(f"Webhook request failed: {r.status_code} {r.text}")
-        print("[OK] Posted 0 flips.")
+        print("[OK] No crashed flips matched — nothing to post.")
         return
 
     header = {
-        "title": "Best Flips",
-        "description": f"✓ Data updated at {ts} ({len(products)} products)",
-        "color": 0x6c8ebf,
+        "title": "🚨 Crashed Bazaar Flips",
+        "description": (
+            f"{SNIPER_PING} — **{len(results)}** crashed item(s) you can snipe.\n"
+            f"✓ Data updated at {ts} ({len(products)} products)"
+        ),
+        "color": 0xe23b3b,
         "footer": {"text": "ALWAYS DOUBLE CHECK INGAME PRICES FOR PRICE MANIPULATION"},
     }
 
@@ -128,8 +150,11 @@ def post_embeds(results, products, ts):
             raise RuntimeError("DISCORD_WEBHOOK_URL is not set; set it or use DRY_RUN=1 for testing")
         return requests.post(WEBHOOK_URL, json=payload, timeout=15)
 
+    allowed = {"parse": ["roles"]} if SNIPER_ROLE_ID else {"parse": []}
     for i in range(0, len(embeds), 10):
-        payload = {"content": "Bazaar flip check completed.", "embeds": embeds[i:i+10]}
+        # Only the first chunk carries the ping so we don't ping per 10-embed batch.
+        content = f"{SNIPER_PING} Crashed flips detected." if i == 0 else ""
+        payload = {"content": content, "embeds": embeds[i:i+10], "allowed_mentions": allowed}
         r = send_payload(payload)
         print(f"POST {r.status_code}")
         if r.status_code == 429:

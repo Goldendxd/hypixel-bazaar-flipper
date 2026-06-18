@@ -11,10 +11,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* Apply the saved theme before first paint so there's no light flash */}
+        {/* Dark is the default theme. Apply it before first paint (unless the
+            user has explicitly opted into light) so there's no theme flash. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem('gf_theme')==='dark')document.documentElement.setAttribute('data-theme','dark')}catch(e){}`,
+            __html: `try{if(localStorage.getItem('gf_theme')!=='light')document.documentElement.setAttribute('data-theme','dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -33,6 +33,12 @@ const NAV: Array<{ section: string; links: Array<{ href: string; ico: string; la
       { href: '/mayor',     ico: '♛', label: 'Mayor Plays' },
     ],
   },
+  {
+    section: 'More',
+    links: [
+      { href: '/support', ico: '♥', label: 'Support Me' },
+    ],
+  },
 ]
 
 function Clock() {
