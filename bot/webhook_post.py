@@ -26,13 +26,15 @@ WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 # sell side, so we can place a cheap buy order and resell into the still-high price.
 # That shows up as an abnormally large spread (margin in the hundreds/thousands of
 # %), not a normal 5-10% bazaar spread.
-TAX           = 0.0125
-CRASH_MARGIN  = 100.0       # % — minimum spread to count as "crashed" (normal ≈ 5-10%)
-MIN_PROFIT    = 1_000_000   # absolute profit per flip cycle must be in the millions
-MIN_BUY_VOL   = 40_000      # weekly buy volume  — so the crash is real, not a dead item
-MIN_SELL_VOL  = 40_000      # weekly sell volume — demand to offload = low risk
-TOP_N         = 10
-BUDGET        = 100_000_000
+TAX             = 0.0125
+CRASH_MARGIN    = 100.0       # % — minimum spread to count as "crashed" (normal ≈ 5-10%)
+MIN_PROFIT      = 1_000_000   # absolute profit per flip cycle must be in the millions
+# Liquidity is judged on DAILY throughput (weekly moving / 7), not weekly totals,
+# so "a ton of daily sales" actually means a lot moves every single day.
+MIN_DAILY_BUY   = 100_000     # items bought per day — must be heavily traded (100k+/day)
+MIN_DAILY_SELL  = 10_000      # items sold per day — enough demand to offload, low risk
+TOP_N           = 10
+BUDGET          = 100_000_000
 
 # Role to ping when crashes are found. Set SNIPER_ROLE_ID to the Discord role id so
 # it actually pings; otherwise we fall back to a plain "@Sniper" mention text.
@@ -49,7 +51,9 @@ def pretty(s):
     return " ".join(w.capitalize() for w in s.replace(":", "_").split("_"))
 
 def icon_url(item_id):
-    return f"https://sky.shiiyu.moe/item/{item_id}"
+    # sky.shiiyu.moe hotlink-blocks (403) inside Discord embeds — coflnet's static
+    # icon CDN serves real PNGs that render reliably.
+    return f"https://sky.coflnet.com/static/icon/{item_id}"
 
 # ── Fetch + compute ───────────────────────────────────────────────────────────
 
@@ -57,21 +61,22 @@ def compute_flips(products):
     """Return only CRASHED, low-risk, flippable items.
 
     A crash = the buy-order side has collapsed, leaving an abnormally large spread
-    (margin >= CRASH_MARGIN). We additionally require real two-sided volume so the
-    item can actually be bought cheap AND offloaded with little risk, and we cap the
-    quantity by weekly demand so the estimated profit is something the market can
-    really absorb.
+    (margin >= CRASH_MARGIN). We additionally require heavy DAILY throughput so the
+    item can be bought cheap AND offloaded fast with little risk, and we cap the
+    quantity by daily demand so the estimated profit is something you can realistically
+    flip in a day.
     """
     results = []
     for pid, prod in products.items():
         qs   = prod.get("quick_status", {})
         ask  = qs.get("buyPrice", 0)
         bid  = qs.get("sellPrice", 0)
-        vol  = qs.get("buyMovingWeek", 0)
-        svol = qs.get("sellMovingWeek", 0)
+        # The API only exposes weekly moving volume; daily ≈ weekly / 7.
+        dbuy  = qs.get("buyMovingWeek", 0)  / 7.0
+        dsell = qs.get("sellMovingWeek", 0) / 7.0
         if not ask or not bid or ask <= bid: continue
-        # Liquidity on both sides → the crash is real and we can exit with low risk.
-        if vol < MIN_BUY_VOL or svol < MIN_SELL_VOL: continue
+        # Heavy daily flow on both sides → real crash and a fast, low-risk exit.
+        if dbuy < MIN_DAILY_BUY or dsell < MIN_DAILY_SELL: continue
 
         buy_o  = bid + 0.1
         sell_o = ask - 0.1
@@ -81,8 +86,8 @@ def compute_flips(products):
         margin = profit / buy_o * 100
         if margin < CRASH_MARGIN: continue   # not crashed — ignore normal spreads
 
-        # Cap size by budget, single-order max, and weekly demand we can offload.
-        qty = max(1, min(int(BUDGET / buy_o), 71_680, int(svol)))
+        # Cap size by budget, single-order max, and daily demand we can offload.
+        qty = max(1, min(int(BUDGET / buy_o), 71_680, int(dsell)))
         total = profit * qty
         if total < MIN_PROFIT: continue       # must be millions in margin
 
@@ -90,7 +95,7 @@ def compute_flips(products):
             "id": pid, "name": pretty(pid),
             "buy_o": buy_o, "sell_o": sell_o,
             "profit": profit, "margin": margin,
-            "vol": vol, "svol": svol,
+            "dbuy": dbuy, "dsell": dsell,
             "qty": qty, "total": total, "cost": buy_o * qty,
         })
 
@@ -106,34 +111,36 @@ def post_embeds(results, products, ts):
         return
 
     header = {
-        "title": "🚨 Crashed Bazaar Flips",
+        "title": "🚨  Crashed Bazaar Flips",
         "description": (
-            f"{SNIPER_PING} — **{len(results)}** crashed item(s) you can snipe.\n"
-            f"✓ Data updated at {ts} ({len(products)} products)"
+            f"**{len(results)}** crashed item(s) you can snipe right now — buy the dip, "
+            f"flip into heavy daily demand.\n"
+            f"-# Updated {ts} · scanned {len(products):,} products · always double-check "
+            f"in-game for price manipulation"
         ),
         "color": 0xe23b3b,
-        "footer": {"text": "ALWAYS DOUBLE CHECK INGAME PRICES FOR PRICE MANIPULATION"},
     }
 
     cards = []
     for i, f in enumerate(results):
-        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
-        medal  = medals[i] if i < len(medals) else f"#{i+1}"
+        medals = ["🥇", "🥈", "🥉"]
+        medal  = medals[i] if i < len(medals) else f"`#{i+1}`"
         cards.append({
             "author": {
                 "name": f"{medal}  {f['name']}",
                 "icon_url": icon_url(f["id"]),
             },
             "color": 0x00c896,
+            "description": (
+                f"📉 **Crashed** · margin **{f['margin']:,.0f}%**\n"
+                f"**Buy** `{fmt(f['buy_o'])}`  →  **Sell** `{fmt(f['sell_o'])}`"
+            ),
             "fields": [
-                {"name": "BUY PRICE",   "value": f"**{fmt(f['buy_o'])}**",  "inline": True},
-                {"name": "SELL PRICE",  "value": f"**{fmt(f['sell_o'])}**", "inline": True},
-                {"name": "MARGIN",      "value": f"**{f['margin']:.1f}%**", "inline": True},
-                {"name": "QUANTITY",    "value": f"**{f['qty']:,}**",        "inline": True},
-                {"name": "TOTAL COST",  "value": f"**{fmt(f['cost'])}**",   "inline": True},
-                {"name": "EST. PROFIT", "value": f"**+{fmt(f['total'])}**", "inline": True},
+                {"name": "💰 Est. Profit", "value": f"**+{fmt(f['total'])}**", "inline": True},
+                {"name": "📦 Flip Size",   "value": f"{f['qty']:,}",           "inline": True},
+                {"name": "🪙 Total Cost",  "value": fmt(f['cost']),            "inline": True},
             ],
-            "footer": {"text": f"Wk buy: {fmt(f['vol'])}  |  Wk sell: {fmt(f['svol'])}"},
+            "footer": {"text": f"📈 {fmt(f['dsell'])} sold/day  ·  {fmt(f['dbuy'])} bought/day"},
             "thumbnail": {"url": icon_url(f["id"])},
         })
 
